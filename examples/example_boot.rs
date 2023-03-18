@@ -27,7 +27,6 @@ fn main() {
 
 fn boot_callback(sample:Sample,node: &mut Node){
     let topic=sample.key_expr.split('/').nth(2).unwrap_or("");
-    node.site=(55.,55.);
     match topic {
         "new" => {
             let data: NewNodeRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
