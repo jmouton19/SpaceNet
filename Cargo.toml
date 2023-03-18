@@ -1,0 +1,14 @@
+[package]
+name = "SpaceNet"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-std = "1.12.0"
+plotters = "0.3.4"
+serde = "1.0.157"
+serde_json = "1.0.94"
+voronator = "0.2.1"
+zenoh = "0.7.0-rc"
