@@ -42,7 +42,7 @@ fn node_callback(sample:Sample,node:&mut Node){
     match topic {
         "new" => {
             let data: NewNodeResponse = serde_json::from_str(&sample.value.to_string()).unwrap();
-            println!("Ok this is the point you gave me boss {:?}",data.site);
+            println!("Given point.... {:?}",data.site);
         },
 
         _ => println!("What topic is that lmao"),
