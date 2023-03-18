@@ -4,13 +4,13 @@ use std::time::Duration;
 
 use SpaceNet::node::*;
 use SpaceNet::message::*;
+use SpaceNet::utils::*;
 
 
 fn main() {
 
     let mut node = Node::new(Config::default());
     println!("node online..... {:?}",node.session.zid());
-
     let node_subscription  = node.session.declare_subscriber(format!("node/{}/*",node.session.zid())).reliable().res().unwrap();
 
     let message = json!(NewNodeRequest{

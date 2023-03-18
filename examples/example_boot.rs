@@ -2,13 +2,20 @@ use std::thread::sleep;
 use std::time::Duration;
 use SpaceNet::node::*;
 use SpaceNet::message::*;
+use SpaceNet::utils::*;
 
 
 fn main() {
 
-    let mut boot_node=Node::new(Config::default());
 
+    let mut boot_node=Node::new(Config::default());
+    println!("boot node online..... {:?}",boot_node.session.zid());
     let boot_subscriber = boot_node.session.declare_subscriber("node/boot/*").reliable().res().unwrap();
+
+    //draw initial voronoi
+    boot_node.site= (50.,50.);
+    let diagram = voronoi(boot_node.site,&boot_node.neighbours.sites);
+    draw_voronoi(&diagram);
 
     loop {
         // Handle messages in the queue
@@ -20,7 +27,6 @@ fn main() {
         // Wait for some time before starting to handle messages again
         sleep(Duration::from_secs(1));
     }
-
 
 }
 
@@ -43,3 +49,5 @@ fn boot_callback(sample:Sample,node: &mut Node){
 
     }
 }
+
+
