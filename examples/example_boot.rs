@@ -16,6 +16,7 @@ fn main() {
 
     //set boot node point
     boot_node.site= (50.,50.);
+    let mut reply_counter=0;
 
     //add boot node to cluster
     let mut cluster=SiteIdPairs{
@@ -30,7 +31,7 @@ fn main() {
     loop {
         // Handle messages in the queue
         while let Ok(sample) = boot_subscriber.try_recv(){
-            boot_callback(sample, &mut boot_node,&mut cluster);
+            boot_callback(sample, &mut boot_node,&mut cluster,&mut reply_counter);
             // Process the message here
         }
         while let Ok(sample) = node_subscriber.try_recv(){
@@ -49,7 +50,7 @@ fn main() {
 
         // Perform other tasks here
         // Wait for some time before starting to handle messages again
-        sleep(Duration::from_secs(1));
+        //sleep(Duration::from_secs(1));
     }
 }
 

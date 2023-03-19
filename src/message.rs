@@ -38,3 +38,17 @@ pub struct NeighboursResponse{
     pub neighbours: SiteIdPairs,
     pub sender_id: ZenohId,
 }
+
+#[derive(Deserialize,Serialize)]
+pub struct NewVoronoiResponse{
+    pub value: String,
+    pub success: bool,
+    pub sender_id: ZenohId,
+}
+
+#[derive(Deserialize,Serialize)]
+pub struct ExpectedNodes{
+    pub value: String,
+    pub number: usize,
+    pub sender_id: ZenohId,
+}

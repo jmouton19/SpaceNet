@@ -39,6 +39,15 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             node.session.put(format!("node/{}/new_neighbours_reply",data.sender_id), message.clone()).res().unwrap();
 
 
+
+            let message = json!(ExpectedNodes{
+            value:"This is how many node you gotta wait for".to_string(),
+            sender_id:node.session.zid(),
+            number:node.neighbours.sites.len()+2,});
+
+            //tell boot how many nodes to wait for (me,new,my neighbours)
+            node.session.put(format!("node/boot/expected_wait"), message.clone()).res().unwrap();
+
             //tell each neighbour to recalculate its voronoi
             let message = json!(NewVoronoiRequest{
             value:"This is the new node".to_string(),
@@ -54,6 +63,8 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             let diagram = Voronoi::new(node.site,&node.neighbours);
             draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str(),false);
             node.neighbours=diagram.get_neighbours();
+            println!("IM DONE BOOT!");
+
         },
 
         "new_neighbours_reply" =>{
@@ -66,6 +77,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str(),false);
             //get new neighbours
             node.neighbours=diagram.get_neighbours();
+            println!("IM DONE BOOT!");
 
         },
 
@@ -80,6 +92,13 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str(),false);
             node.neighbours=diagram.get_neighbours();
 
+            println!("IM DONE BOOT!");
+            let message = json!(NewVoronoiResponse{
+            value:"Im done calculating my voronoi".to_string(),
+            success:true,
+            sender_id:node.session.zid()});
+            node.session.put("node/boot/complete", message.clone()).res().unwrap();
+
         },
         _ => println!("What topic is that lmao"),
     }
@@ -87,7 +106,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
 }
 
 
-pub fn boot_callback(sample:Sample, node: &mut Node, cluster: &mut SiteIdPairs){
+pub fn boot_callback(sample:Sample, node: &mut Node, cluster: &mut SiteIdPairs, reply_counter: &mut usize){
     let topic=sample.key_expr.split('/').nth(2).unwrap_or("");
     println!("Topic... {:?}",topic);
     match topic {
@@ -120,6 +139,11 @@ pub fn boot_callback(sample:Sample, node: &mut Node, cluster: &mut SiteIdPairs){
 
             let _ = node.session.put(format!("node/{}/new_reply",data.sender_id), json_message).res();
         }
+        "expected_wait"=>{
+            let data: ExpectedNodes = serde_json::from_str(&sample.value.to_string()).unwrap();
+            println!("Im waiting for {} nodes to reply...",data.number);
+            *reply_counter=data.number;
+        },
         _=> println!("what topic is that lmao?"),
 
     }
