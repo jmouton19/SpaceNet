@@ -4,7 +4,7 @@ pub use zenoh::prelude::sync::*;
 use serde::{Deserialize,Serialize};
 
 
-#[derive(Clone,Deserialize,Serialize)]
+#[derive(Clone,Debug,Deserialize,Serialize)]
 pub struct SiteIdPairs{
     pub sites:Vec<(f64,f64)>,
     pub ids:Vec<ZenohId>,
@@ -24,6 +24,12 @@ impl Node{
             site:(-1.,-1.),
             neighbours:SiteIdPairs{sites:vec![],ids:vec![]},
         }
+    }
+
+    pub fn push_pair_list(&mut self, list:SiteIdPairs){
+        self.neighbours.sites.extend(list.sites);
+        self.neighbours.ids.extend(list.ids);
+
     }
 
 }

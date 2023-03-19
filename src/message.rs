@@ -13,6 +13,7 @@ pub struct NewNodeResponse{
     pub value: String,
     pub site:(f64,f64),
     pub land_owner: ZenohId,
+    pub land_owner_site: (f64,f64),
     pub sender_id: ZenohId,
 }
 
@@ -20,6 +21,14 @@ pub struct NewNodeResponse{
 pub struct NeighboursRequest{
     pub value: String,
     pub site:(f64,f64),
+    pub sender_id: ZenohId,
+}
+
+#[derive(Deserialize,Serialize)]
+pub struct NewVoronoiRequest{
+    pub value: String,
+    pub new_site:(f64,f64),
+    pub new_zid:ZenohId,
     pub sender_id: ZenohId,
 }
 
