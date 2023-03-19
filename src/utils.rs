@@ -1,7 +1,7 @@
 use voronator::delaunator::Point;
 use voronator::VoronoiDiagram;
 use plotters::prelude::*;
-use rand::prelude::*;
+pub use rand::prelude::*;
 
 pub fn draw_voronoi(diagram:&VoronoiDiagram<Point>){
 
