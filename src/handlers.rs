@@ -11,7 +11,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
     match topic {
         "new_reply" => {
             let data: NewNodeResponse = serde_json::from_str(&sample.value.to_string()).unwrap();
-            println!("Given point.... {:?} owner... {:?}", data.site, data.land_owner);
+            println!("New point.... {:?} owner... {:?}", data.site, data.land_owner);
 
             //set site to given site
             node.site=data.site;
@@ -21,7 +21,6 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
 
             //request neighbour list from land owner
             let message = json!(NeighboursRequest{
-            value:"Hello, imma join you".to_string(),
             sender_id:node.session.zid(),
             site:node.site});
             node.session.put(format!("node/{}/new_neighbours",data.land_owner), message).res().unwrap();
@@ -33,24 +32,20 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
 
             //send list of neighbour back to new node
             let message = json!(NeighboursResponse{
-            value:"Here's a list of my neighbours".to_string(),
             sender_id:node.session.zid(),
             neighbours:node.neighbours.clone()});
             node.session.put(format!("node/{}/new_neighbours_reply",data.sender_id), message.clone()).res().unwrap();
 
 
-
+            //tell boot how many nodes to wait for (me,new,my neighbours)
             let message = json!(ExpectedNodes{
-            value:"This is how many node you gotta wait for".to_string(),
             sender_id:node.session.zid(),
             number:node.neighbours.sites.len()+2,});
+            node.session.put(format!("counter/expected_wait"), message.clone()).res().unwrap();
 
-            //tell boot how many nodes to wait for (me,new,my neighbours)
-            node.session.put(format!("node/boot/expected_wait"), message.clone()).res().unwrap();
 
             //tell each neighbour to recalculate its voronoi
             let message = json!(NewVoronoiRequest{
-            value:"This is the new node".to_string(),
             new_zid:data.sender_id,
             new_site:data.site,
             sender_id:node.session.zid()});
@@ -63,7 +58,12 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             let diagram = Voronoi::new(node.site,&node.neighbours);
             draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str(),false);
             node.neighbours=diagram.get_neighbours();
+
             println!("IM DONE BOOT!");
+            let message = json!(NewVoronoiResponse{
+            success:true,
+            sender_id:node.session.zid()});
+            node.session.put("counter/complete", message.clone()).res().unwrap();
 
         },
 
@@ -77,12 +77,16 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str(),false);
             //get new neighbours
             node.neighbours=diagram.get_neighbours();
+
             println!("IM DONE BOOT!");
+            let message = json!(NewVoronoiResponse{
+            success:true,
+            sender_id:node.session.zid()});
+            node.session.put("counter/complete", message.clone()).res().unwrap();
 
         },
 
         "new_voronoi" =>{
-
             let data: NewVoronoiRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
             println!("Recalculating my voronoi with site... {:?}", data.new_site);
 
@@ -94,25 +98,23 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
 
             println!("IM DONE BOOT!");
             let message = json!(NewVoronoiResponse{
-            value:"Im done calculating my voronoi".to_string(),
             success:true,
             sender_id:node.session.zid()});
-            node.session.put("node/boot/complete", message.clone()).res().unwrap();
+            node.session.put("counter/complete", message.clone()).res().unwrap();
 
         },
-        _ => println!("What topic is that lmao"),
+        _ => println!("UNKNOWN NODE TOPIC"),
     }
 
 }
 
 
-pub fn boot_callback(sample:Sample, node: &mut Node, cluster: &mut SiteIdPairs, reply_counter: &mut usize){
+pub fn boot_callback(sample:Sample, node: &mut Node, cluster: &mut SiteIdPairs){
     let topic=sample.key_expr.split('/').nth(2).unwrap_or("");
     println!("Topic... {:?}",topic);
     match topic {
         "new" => {
             let data: NewNodeRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
-            println!("{}.... from {}",data.value,data.sender_id);
 
             //get random point to give to new node
             let mut rng = rand::thread_rng();
@@ -121,6 +123,9 @@ pub fn boot_callback(sample:Sample, node: &mut Node, cluster: &mut SiteIdPairs, 
                 point = (rng.gen_range(10.0..=90.0), rng.gen_range(10.0..=90.0)); // if tuple is in exclude list, generate a new one
             }
 
+            println!("------------------------------------");
+            println!("Giving point {:?}.... to {:?}",point,data.sender_id);
+            println!("------------------------------------");
 
             //find closest node to new point
             let index=cluster.closest_point(point);
@@ -130,7 +135,6 @@ pub fn boot_callback(sample:Sample, node: &mut Node, cluster: &mut SiteIdPairs, 
             cluster.push_pair(point,data.sender_id);
 
             let json_message = json!(NewNodeResponse{
-                value:"New node acknowledged... ".to_string(),
                 site:point,
                 land_owner:land_owner,
                 land_owner_site:cluster.sites[index],
@@ -139,12 +143,25 @@ pub fn boot_callback(sample:Sample, node: &mut Node, cluster: &mut SiteIdPairs, 
 
             let _ = node.session.put(format!("node/{}/new_reply",data.sender_id), json_message).res();
         }
+        _=> println!("UNKNOWN BOOT TOPIC"),
+
+    }
+}
+pub fn counter_callback(sample:Sample, expected_counter:&mut i32,counter: &mut i32){
+    let topic=sample.key_expr.split('/').nth(1).unwrap_or("");
+    println!("Topic... {:?}",topic);
+    match topic {
         "expected_wait"=>{
             let data: ExpectedNodes = serde_json::from_str(&sample.value.to_string()).unwrap();
             println!("Im waiting for {} nodes to reply...",data.number);
-            *reply_counter=data.number;
+            *expected_counter=data.number as i32;
         },
-        _=> println!("what topic is that lmao?"),
+        "complete"=>{
+            *counter+=1;
+            let data: NewVoronoiResponse = serde_json::from_str(&sample.value.to_string()).unwrap();
+            println!("{:?}... has completed his task.",data.sender_id);
+        },
+        _=> println!("UNKNOWN COUNTER TOPIC"),
 
     }
 }

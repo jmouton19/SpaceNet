@@ -14,7 +14,6 @@ fn main() {
     let node_subscription = node.session.declare_subscriber(format!("node/{}/*", node.session.zid())).reliable().res().unwrap();
 
     let message = json!(NewNodeRequest{
-        value:"Hello im new".to_string(),
         sender_id:node.session.zid(),
     });
 
