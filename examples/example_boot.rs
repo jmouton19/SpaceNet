@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io;
 use std::thread::sleep;
 use std::time::Duration;
@@ -6,6 +7,7 @@ use SpaceNet::node::*;
 use SpaceNet::message::*;
 use SpaceNet::utils::*;
 use SpaceNet::handlers::*;
+use linked_hash_map::LinkedHashMap;
 
 
 //
@@ -36,29 +38,34 @@ fn main() {
 
     //set boot node point
     boot_node.site= (50.,50.);
-
     //add boot node to cluster
-    let mut cluster=SiteIdPairs{
-        sites:vec![boot_node.site],
-        ids:vec![boot_node.session.zid()],
-    };
+    let mut cluster= OrderedMapPairs::new();
+    cluster.insert(boot_node.zid.to_string(),boot_node.site);
+
 
     let diagram = Voronoi::new(boot_node.site,&boot_node.neighbours);
     let polygon= diagram.diagram.cells()[0].points().iter().map(|x|(x.x, x.y)).collect();
-    let mut polygon_list:Vec<Vec<(f64,f64)>>=vec!();
 
-    let mut correct_polygon_list:Vec<Vec<(f64,f64)>>=vec!();
 
-    polygon_list.push(polygon);
-    draw_voronoi_full(&cluster.sites,&polygon_list,"initial");
+    let mut polygon_list=OrderedMapPolygon::new();
+    polygon_list.insert(boot_node.zid.to_string(),polygon);
+
+    let mut correct_polygon_list=OrderedMapPolygon::new();
+
+
+    draw_voronoi_full(&cluster,&polygon_list,"initial");
     let mut draw_count=1;
 
 
+    let mut node_expected_wait=-1;
+    let mut node_counter=0;
     loop {
         // Handle messages in the queue
         if let Ok(sample) = boot_subscriber.try_recv(){
             let mut expected_counter=-1;
             let mut counter=0;
+
+
             boot_callback(sample, &mut boot_node,&mut polygon_list,&mut cluster);
             // Process the message here
 
@@ -69,27 +76,33 @@ fn main() {
                 }
 
                 while let Ok(sample) = node_subscriber.try_recv(){
-                    node_callback(sample, &mut boot_node);
+                    node_callback(sample, &mut boot_node,&mut node_expected_wait,&mut node_counter);
                     // Process the message here
                 }
             }
             //redraw total voronoi
-            draw_voronoi_full(&cluster.sites,&polygon_list,format!("voronoi{}",draw_count).as_str());
+            draw_voronoi_full(&cluster,&polygon_list,format!("voronoi{}",draw_count).as_str());
+
+
 
 
             //draw correct voronoi
-            let temp_cluster= SiteIdPairs{
-                ids:cluster.ids[1..].to_vec(),
-                sites:cluster.sites[1..].to_vec(),
+            let mut temp_cluster =cluster.clone();
+            temp_cluster.remove(boot_node.zid.as_str());
+
+            let hash_map: HashMap<String, (f64, f64)> = temp_cluster.into_iter().collect();
+            let temphash= SiteIdList{
+                sites:hash_map,
             };
-            let diagram = Voronoi::new(cluster.sites[0],&temp_cluster);
+
+            let diagram = Voronoi::new(*cluster.values().nth(0).unwrap(),&temphash);
 
             for cell in diagram.diagram.cells() {
                 let polygon= cell.points().iter().map(|x|(x.x, x.y)).collect();
-                correct_polygon_list.push(polygon);
+                correct_polygon_list.insert("".to_string(),polygon);
             }
 
-            draw_voronoi_full(&cluster.sites,&correct_polygon_list,format!("confirm{}",draw_count).as_str());
+            draw_voronoi_full(&cluster,&correct_polygon_list,format!("confirm{}",draw_count).as_str());
 
             // for (i,cell) in correct_polygon_list.iter().enumerate(){
             //     let correct=approx_equal_lists(&correct_polygon_list[i],&polygon_list[i]);

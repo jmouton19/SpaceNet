@@ -3,9 +3,9 @@ use voronator::VoronoiDiagram;
 use plotters::prelude::*;
 pub use rand::prelude::*;
 use std::path::Path;
-use crate::node::SiteIdList;
+use crate::node::{OrderedMapPairs, OrderedMapPolygon, SiteIdList};
 
-pub fn draw_voronoi_full(sites:&Vec<(f64,f64)>,polygons:&Vec<Vec<(f64,f64)>>,name:&str){
+pub fn draw_voronoi_full(MapPairs:&OrderedMapPairs,MapPolygon:&OrderedMapPolygon,name:&str){
     let boundary_width=100.;
     let boundary_height=100.;
     let scale=10.;
@@ -25,7 +25,7 @@ pub fn draw_voronoi_full(sites:&Vec<(f64,f64)>,polygons:&Vec<Vec<(f64,f64)>>,nam
         );
     };
 
-    for cell in polygons {
+    for cell in MapPolygon.values() {
         let p: Vec<(i32, i32)> = cell.into_iter()
             .map(|x| ((x.0*scale) as i32, (x.1*scale) as i32))
             .collect();
@@ -39,7 +39,7 @@ pub fn draw_voronoi_full(sites:&Vec<(f64,f64)>,polygons:&Vec<Vec<(f64,f64)>>,nam
 
     }
 
-    for (i,site) in sites.iter().enumerate(){
+    for (i,site) in MapPairs.values().enumerate(){
         // println!("{:?}", site);
         let p=((site.0*scale) as i32,(site.1*scale) as i32);
         root.draw(&dot_and_label(p.0,p.1,i)).unwrap();

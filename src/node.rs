@@ -3,8 +3,10 @@ use voronator::delaunator::Point;
 pub use zenoh::prelude::sync::*;
 use serde::{Deserialize,Serialize};
 use std::collections::{HashMap, HashSet};
+use linked_hash_map::LinkedHashMap;
 
-// pub type SiteIdList=HashMap<String,(f64,f64)>;
+pub type OrderedMapPairs=LinkedHashMap<String,(f64,f64)>;
+pub type OrderedMapPolygon=LinkedHashMap<String,Vec<(f64, f64)>>;
 
 
 #[derive(Clone,Debug,Deserialize,Serialize)]
@@ -32,12 +34,6 @@ impl Node{
             neighbours:SiteIdList::new(),
         }
     }
-//no need
-    // pub fn push_pair_list(&mut self, list:SiteIdList){
-    //     self.neighbours.sites.extend(list.sites);
-    //
-    // }
-
 }
 
 
@@ -45,11 +41,6 @@ impl SiteIdList{
     pub fn new() -> SiteIdList {
         SiteIdList { sites: HashMap::new() }
     }
-
-    //not needed
-    //pub fn push_pair(&mut self, site:(f64, f64), zid:String){
-      //  self.sites.insert(zid,site);
-    //}
 
     pub fn closest_point(&mut self, site:(f64, f64)) -> String {
         let mut closest_zid = "";

@@ -35,12 +35,12 @@ pub fn node_callback(sample: Sample, node: &mut Node, expected_counter: &mut i32
             println!("New point at site... {:?} from... {:?}", data.new_site, data.sender_id);
 
             //tell new NODE how many nodes to wait for (my neighbours)
-            let message = json!(ExpectedNodes{
-            sender_id:node.zid.clone(),
-            number:node.neighbours.sites.len()+2,});
-            *expected_counter=node.neighbours.sites.len() as i32;
-            //this isn't needed...
-            //node.session.put(format!("counter/expected_wait"), message.clone()).res().unwrap();
+            // let message = json!(ExpectedNodes{
+            // sender_id:node.zid.clone(),
+            // number:node.neighbours.sites.len(),});
+            // *expected_counter=node.neighbours.sites.len() as i32;
+            //
+            // node.session.put(format!("counter/expected_wait"), message.clone()).res().unwrap();
 
 
             //request neighbours from neighbours and send it to new node
@@ -96,8 +96,8 @@ pub fn node_callback(sample: Sample, node: &mut Node, expected_counter: &mut i32
                 println!("IM DONE BOOT!");
                 let polygon = diagram.diagram.cells()[0].points().iter().map(|x| (x.x, x.y)).collect();
                 let message = json!(NewVoronoiResponse{
-            polygon:polygon,
-            sender_id:node.zid.clone()});
+                polygon:polygon,
+                sender_id:node.zid.clone()});
                 node.session.put("counter/complete", message.clone()).res().unwrap();
             }//else do nothing
         },
@@ -125,7 +125,7 @@ pub fn node_callback(sample: Sample, node: &mut Node, expected_counter: &mut i32
 }
 
 
-pub fn boot_callback(sample:Sample, node: &mut Node, polygon_list: &mut Vec<Vec<(f64, f64)>>, cluster: &mut SiteIdList){
+pub fn boot_callback(sample:Sample, node: &mut Node, polygon_list: &mut OrderedMapPolygon, cluster: &mut OrderedMapPairs){
     let topic=sample.key_expr.split('/').nth(2).unwrap_or("");
     println!("Topic... {:?}",topic);
     match topic {
@@ -135,23 +135,25 @@ pub fn boot_callback(sample:Sample, node: &mut Node, polygon_list: &mut Vec<Vec<
             //get random point to give to new node
             let mut rng = rand::thread_rng();
             let mut point = (rng.gen_range(10.0..=90.0), rng.gen_range(10.0..=90.0)); // generate random (f64, f64) tuple
-            while cluster.contains(point) {
-                point = (rng.gen_range(10.0..=90.0), rng.gen_range(10.0..=90.0)); // if tuple is in exclude list, generate a new one
-            }
+
+            //DO THIS TO AVOID SAME SITES
+            // while cluster.sites.values().contains(&point) {
+            //     point = (rng.gen_range(10.0..=90.0), rng.gen_range(10.0..=90.0)); // if tuple is in exclude list, generate a new one
+            // }
 
             println!("------------------------------------");
             println!("Giving point {:?}.... to {:?}",point,data.sender_id);
             println!("------------------------------------");
 
             //find closest node to new point
-            let land_owner=cluster.closest_point(point);
+            let land_owner=closest_point(&cluster,point);
+            println!("{}",land_owner);
+
 
             //add node to cluster
-            cluster.sites.insert(data.sender_id.to_string(),point);
+            cluster.insert(data.sender_id.to_string(),point);
 
-            //NB REWORK POLGYON LIST
-            //linked hash map?
-            polygon_list.push(vec!());
+            polygon_list.insert( data.sender_id.to_string(),vec![]);
 
 
             let json_message = json!(NewNodeResponse{
@@ -166,7 +168,7 @@ pub fn boot_callback(sample:Sample, node: &mut Node, polygon_list: &mut Vec<Vec<
 
     }
 }
-pub fn counter_callback(sample:Sample, expected_counter:&mut i32, counter: &mut i32, polygon_list: &mut Vec<Vec<(f64, f64)>>, cluster: &mut SiteIdList){
+pub fn counter_callback(sample:Sample, expected_counter:&mut i32, counter: &mut i32, polygon_list: &mut OrderedMapPolygon, cluster: &mut OrderedMapPairs){
     let topic=sample.key_expr.split('/').nth(1).unwrap_or("");
     println!("Topic... {:?}",topic);
     match topic {
@@ -178,12 +180,26 @@ pub fn counter_callback(sample:Sample, expected_counter:&mut i32, counter: &mut 
         "complete"=>{
             *counter+=1;
             let data: NewVoronoiResponse = serde_json::from_str(&sample.value.to_string()).unwrap();
-
-                //this can be wrong ,ORDER IS IMPORTANT! redo with hashmaps
+            polygon_list.insert(data.sender_id,data.polygon);
                 //polygon_list[index]=data.polygon;
         },
         _=> println!("UNKNOWN COUNTER TOPIC"),
 
     }
+}
+
+fn closest_point(pairs:&OrderedMapPairs, site:(f64, f64)) -> String {
+    let mut closest_zid = "";
+    let mut min_distance = f64::INFINITY;
+
+    for (zid, map_point) in pairs.iter() {
+        let distance = ((map_point.0 - site.0).powi(2) + (map_point.1 - site.1).powi(2)).sqrt();
+        if distance < min_distance {
+            min_distance = distance;
+            closest_zid = zid;
+        }
+    }
+
+    closest_zid.to_string()
 }
 

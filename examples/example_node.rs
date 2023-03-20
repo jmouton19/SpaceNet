@@ -14,16 +14,18 @@ fn main() {
     let node_subscription = node.session.declare_subscriber(format!("node/{}/*", node.session.zid())).reliable().res().unwrap();
 
     let message = json!(NewNodeRequest{
-        sender_id:node.session.zid(),
+        sender_id:node.session.zid().to_string(),
     });
 
     //message boot node
     node.session.put("node/boot/new", message).res().unwrap();
 
+    let mut node_expected_wait=-1;
+    let mut node_counter=0;
     loop {
         // Handle messages in the queue
         while let Ok(sample) = node_subscription.try_recv() {
-            node_callback(sample, &mut node);
+            node_callback(sample, &mut node,&mut node_expected_wait,&mut node_counter);
             // Process the message here
         }
 
