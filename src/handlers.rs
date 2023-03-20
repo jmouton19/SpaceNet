@@ -30,6 +30,12 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             let data: NeighboursRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
             println!("New point at site... {:?} from... {:?}", data.site, data.sender_id);
 
+
+            //request neighbours from neighbours and send it to new node
+
+
+
+
             //send list of neighbour back to new node
             let message = json!(NeighboursResponse{
             sender_id:node.session.zid(),
@@ -56,14 +62,19 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             //recalculate own voronoi
             node.neighbours.push_pair(data.site,data.sender_id);
             let diagram = Voronoi::new(node.site,&node.neighbours);
-            draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str(),false);
+            draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str());
             node.neighbours=diagram.get_neighbours();
 
             println!("IM DONE BOOT!");
+            let polygon=diagram.diagram.cells()[0].points().iter().map(|x|(x.x, x.y)).collect();
             let message = json!(NewVoronoiResponse{
-            success:true,
+            polygon:polygon,
             sender_id:node.session.zid()});
             node.session.put("counter/complete", message.clone()).res().unwrap();
+
+        },
+
+        "neighbours_neighbours" =>{
 
         },
 
@@ -74,13 +85,14 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             //calculate cell of new node
             node.push_pair_list(data.neighbours);
             let diagram = Voronoi::new(node.site,&node.neighbours);
-            draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str(),false);
+            draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str());
             //get new neighbours
             node.neighbours=diagram.get_neighbours();
 
             println!("IM DONE BOOT!");
+            let polygon=diagram.diagram.cells()[0].points().iter().map(|x|(x.x, x.y)).collect();
             let message = json!(NewVoronoiResponse{
-            success:true,
+            polygon:polygon,
             sender_id:node.session.zid()});
             node.session.put("counter/complete", message.clone()).res().unwrap();
 
@@ -93,12 +105,13 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             //recalculate own voronoi
             node.neighbours.push_pair(data.new_site,data.new_zid);
             let diagram = Voronoi::new(node.site,&node.neighbours);
-            draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str(),false);
+            draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str());
             node.neighbours=diagram.get_neighbours();
 
             println!("IM DONE BOOT!");
+            let polygon=diagram.diagram.cells()[0].points().iter().map(|x|(x.x, x.y)).collect();
             let message = json!(NewVoronoiResponse{
-            success:true,
+            polygon:polygon,
             sender_id:node.session.zid()});
             node.session.put("counter/complete", message.clone()).res().unwrap();
 
@@ -109,7 +122,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
 }
 
 
-pub fn boot_callback(sample:Sample, node: &mut Node, cluster: &mut SiteIdPairs){
+pub fn boot_callback(sample:Sample, node: &mut Node, polygon_list: &mut Vec<Vec<(f64, f64)>>, cluster: &mut SiteIdPairs){
     let topic=sample.key_expr.split('/').nth(2).unwrap_or("");
     println!("Topic... {:?}",topic);
     match topic {
@@ -133,6 +146,8 @@ pub fn boot_callback(sample:Sample, node: &mut Node, cluster: &mut SiteIdPairs){
 
             //add node to cluster
             cluster.push_pair(point,data.sender_id);
+            polygon_list.push(vec!());
+
 
             let json_message = json!(NewNodeResponse{
                 site:point,
@@ -147,7 +162,7 @@ pub fn boot_callback(sample:Sample, node: &mut Node, cluster: &mut SiteIdPairs){
 
     }
 }
-pub fn counter_callback(sample:Sample, expected_counter:&mut i32,counter: &mut i32){
+pub fn counter_callback(sample:Sample, expected_counter:&mut i32, counter: &mut i32, polygon_list: &mut Vec<Vec<(f64, f64)>>, cluster: &mut SiteIdPairs){
     let topic=sample.key_expr.split('/').nth(1).unwrap_or("");
     println!("Topic... {:?}",topic);
     match topic {
@@ -159,7 +174,10 @@ pub fn counter_callback(sample:Sample, expected_counter:&mut i32,counter: &mut i
         "complete"=>{
             *counter+=1;
             let data: NewVoronoiResponse = serde_json::from_str(&sample.value.to_string()).unwrap();
-            println!("{:?}... has completed his task.",data.sender_id);
+
+            if let Some(index) = cluster.ids.iter().position(|&id| id == data.sender_id) {
+                polygon_list[index]=data.polygon;
+            };
         },
         _=> println!("UNKNOWN COUNTER TOPIC"),
 

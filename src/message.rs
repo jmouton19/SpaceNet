@@ -1,5 +1,7 @@
 use serde::{Deserialize,Serialize};
 pub use serde_json::json;
+use voronator::delaunator::Point;
+use voronator::polygon::Polygon;
 use crate::node::{SiteIdPairs, ZenohId};
 
 
@@ -36,7 +38,7 @@ pub struct NeighboursResponse{
 
 #[derive(Deserialize,Serialize)]
 pub struct NewVoronoiResponse{
-    pub success: bool,
+    pub polygon:Vec<(f64,f64)>,
     pub sender_id: ZenohId,
 }
 
