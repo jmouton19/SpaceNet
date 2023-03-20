@@ -2,56 +2,70 @@ use std::sync::Arc;
 use voronator::delaunator::Point;
 pub use zenoh::prelude::sync::*;
 use serde::{Deserialize,Serialize};
+use std::collections::{HashMap, HashSet};
+
+// pub type SiteIdList=HashMap<String,(f64,f64)>;
 
 
 #[derive(Clone,Debug,Deserialize,Serialize)]
-pub struct SiteIdPairs{
-    pub sites:Vec<(f64,f64)>,
-    pub ids:Vec<ZenohId>,
+pub struct SiteIdList{
+   pub sites:HashMap<String,(f64,f64)>
 }
+
 
 #[derive(Clone)]
 pub struct Node{
     pub session:Arc<Session>,
     pub site:(f64, f64),
-    pub neighbours:SiteIdPairs,
+    pub neighbours: SiteIdList,
+    pub zid:String,
 }
+
 
 impl Node{
     pub fn new(config:Config)-> Self{
+        let session=zenoh::open(Config::default()).res().unwrap().into_arc();
         Self{
-            session:zenoh::open(Config::default()).res().unwrap().into_arc(),
+            zid:session.zid().to_string(),
+            session,
             site:(-1.,-1.),
-            neighbours:SiteIdPairs{sites:vec![],ids:vec![]},
+            neighbours:SiteIdList::new(),
         }
     }
 
-    pub fn push_pair_list(&mut self, list:SiteIdPairs){
+    pub fn push_pair_list(&mut self, list:SiteIdList){
         self.neighbours.sites.extend(list.sites);
-        self.neighbours.ids.extend(list.ids);
 
     }
 
 }
 
-impl SiteIdPairs{
-    pub fn push_pair(&mut self, site:(f64, f64), zid:ZenohId){
-        self.sites.push(site);
-        self.ids.push(zid);
+
+impl SiteIdList{
+    pub fn new() -> SiteIdList {
+        SiteIdList { sites: HashMap::new() }
+    }
+    pub fn push_pair(&mut self, site:(f64, f64), zid:String){
+        self.sites.insert(zid,site);
     }
 
-    pub fn closest_point(&mut self, site:(f64, f64)) -> usize {
-        let mut closest_idx = 0;
-        let mut closest_dist = f64::INFINITY;
+    pub fn closest_point(&mut self, site:(f64, f64)) -> String {
+        let mut closest_zid = "";
+        let mut min_distance = f64::INFINITY;
 
-        for (i, point) in self.sites.iter().enumerate() {
-            let dist = ((point.0 - site.0).powi(2) + (point.1 - site.1).powi(2)).sqrt();
-            if dist < closest_dist {
-                closest_idx = i;
-                closest_dist = dist;
+        for (zid, map_point) in self.sites.iter() {
+            let distance = ((map_point.0 - site.0).powi(2) + (map_point.1 - site.1).powi(2)).sqrt();
+            if distance < min_distance {
+                min_distance = distance;
+                closest_zid = zid;
             }
         }
-        closest_idx
+
+        closest_zid.to_string()
+    }
+
+    pub fn contains(&mut self, site:(f64, f64)) -> bool {
+        self.sites.values().any(|v| *v == site)
     }
 
 }

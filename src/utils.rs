@@ -3,7 +3,7 @@ use voronator::VoronoiDiagram;
 use plotters::prelude::*;
 pub use rand::prelude::*;
 use std::path::Path;
-use crate::node::SiteIdPairs;
+use crate::node::SiteIdList;
 
 pub fn draw_voronoi_full(sites:&Vec<(f64,f64)>,polygons:&Vec<Vec<(f64,f64)>>,name:&str){
     let boundary_width=100.;
@@ -87,15 +87,17 @@ pub fn draw_voronoi(diagram:&VoronoiDiagram<Point>,name:&str){
 
 pub struct Voronoi{
     pub diagram:VoronoiDiagram<Point>,
-    pub neighbours:SiteIdPairs,
+    pub neighbours:SiteIdList,
     pub site:(f64,f64),
     pub length:usize,
 }
 
 impl Voronoi {
-    pub fn new(site:(f64, f64), neighbours:&SiteIdPairs)-> Self{
+    pub fn new(site:(f64, f64), neighbours:&SiteIdList)-> Self{
         let mut points = vec![site];
-        points.extend(&neighbours.sites);
+        let neigh=&neighbours.sites.values();
+
+        points.extend(neigh.clone());
 
         let boundary_width=100.;
         let boundary_height=100.;
@@ -108,13 +110,16 @@ impl Voronoi {
         }
     }
 
-    pub fn get_neighbours(&self)-> SiteIdPairs{
+    pub fn get_neighbours(&self)-> SiteIdList{
         let mut friends= self.diagram.neighbors[0].clone();
         friends.retain(|&x| x < self.length-4);
-        SiteIdPairs{
-            sites:  friends.iter().map(|&i| self.neighbours.sites[i-1]).collect(),
-            ids: friends.iter().map(|&i| self.neighbours.ids[i-1]).collect(),
+        let mut site_id_list = SiteIdList::new();
+        for i in friends {
+            let site_id = &self.neighbours.sites.keys().nth(i - 1).unwrap();
+            let site_coords = &self.neighbours.sites.values().nth(i - 1).unwrap();
+            site_id_list.sites.insert(site_id.clone().to_string(), *site_coords.clone());
         }
+        site_id_list
     }
 
     // pub fn get_polygon(&self)-> i32{
