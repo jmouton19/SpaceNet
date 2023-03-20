@@ -32,11 +32,11 @@ impl Node{
             neighbours:SiteIdList::new(),
         }
     }
-
-    pub fn push_pair_list(&mut self, list:SiteIdList){
-        self.neighbours.sites.extend(list.sites);
-
-    }
+//no need
+    // pub fn push_pair_list(&mut self, list:SiteIdList){
+    //     self.neighbours.sites.extend(list.sites);
+    //
+    // }
 
 }
 
@@ -45,9 +45,11 @@ impl SiteIdList{
     pub fn new() -> SiteIdList {
         SiteIdList { sites: HashMap::new() }
     }
-    pub fn push_pair(&mut self, site:(f64, f64), zid:String){
-        self.sites.insert(zid,site);
-    }
+
+    //not needed
+    //pub fn push_pair(&mut self, site:(f64, f64), zid:String){
+      //  self.sites.insert(zid,site);
+    //}
 
     pub fn closest_point(&mut self, site:(f64, f64)) -> String {
         let mut closest_zid = "";

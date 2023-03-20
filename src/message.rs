@@ -18,8 +18,14 @@ pub struct NewNodeResponse{
 
 #[derive(Deserialize,Serialize)]
 pub struct NeighboursRequest{
-    pub site:(f64,f64),
+    pub new_site:(f64,f64),
     pub sender_id: String,
+}
+
+#[derive(Deserialize,Serialize)]
+pub struct NeighboursNeighboursRequest{
+    pub sender_id: String,
+    pub new_zid:String,
 }
 
 #[derive(Deserialize,Serialize)]
