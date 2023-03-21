@@ -10,9 +10,7 @@ pub fn node_callback(sample: Sample, node: &mut Node, expected_counter: &mut i32
 
     match topic {
         "new_reply" => {
-            //idk bout this
-            *expected_counter=-1;
-            *counter=0;
+
             let data: NewNodeResponse = serde_json::from_str(&sample.value.to_string()).unwrap();
             println!("New point.... {:?} owner... {:?}", data.site, data.land_owner);
 
@@ -34,23 +32,88 @@ pub fn node_callback(sample: Sample, node: &mut Node, expected_counter: &mut i32
             let data: NeighboursRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
             println!("New point at site... {:?} from... {:?}", data.new_site, data.sender_id);
 
-            //tell new NODE how many nodes to wait for (my neighbours)
-            // let message = json!(ExpectedNodes{
-            // sender_id:node.zid.clone(),
-            // number:node.neighbours.sites.len(),});
-            // *expected_counter=node.neighbours.sites.len() as i32;
-            //
-            // node.session.put(format!("counter/expected_wait"), message.clone()).res().unwrap();
+            let neigh_len=node.neighbours.sites.len() as i32;
+            println!("{:?}",node.neighbours);
 
+
+            //get new message type?
+            //if have no neighbour just voronoi.
+            if neigh_len==0{
+                //tell boot node wait 2
+                let message = json!(ExpectedNodes{
+                number:2,
+                sender_id:node.zid.clone()});
+                node.session.put("counter/expected_wait", message.clone()).res().unwrap();
+
+                //calc my voronoi
+                node.neighbours.sites.insert(data.sender_id.to_string(),data.new_site);
+                let diagram = Voronoi::new(node.site, &node.neighbours);
+               // draw_voronoi(&diagram.diagram, format!("new_{}", node.session.zid()).as_str());
+
+
+                //get my visible neighbours
+                node.neighbours = diagram.get_neighbours();
+                println!("NEW NEIGHTBORs {:?}",node.neighbours);
+                println!("IM DONE BOOT!");
+                let polygon = diagram.diagram.cells()[0].points().iter().map(|x| (x.x, x.y)).collect();
+                let message = json!(NewVoronoiResponse{
+                polygon:polygon,
+                sender_id:node.zid.clone()});
+                node.session.put("counter/complete", message.clone()).res().unwrap();
+
+
+                //tell new site to make voronoi
+                let message = json!(NoNeighbours{
+                sender_id:node.zid.clone(),
+                site:node.site});
+                node.session.put(format!("node/{}/no_neighbours",data.sender_id), message.clone()).res().unwrap();
+
+
+
+            }else{
+                //tell new node how many to wait for
+                let message = json!(ExpectedNodes{
+                number:neigh_len+1,
+                sender_id:node.zid.clone()});
+                node.session.put(format!("node/{}/neighbours_expected",data.sender_id), message.clone()).res().unwrap();
+
+                //send my neighbors
+                let message = json!(NeighboursResponse{
+                sender_id:node.zid.clone(),
+                neighbours:node.neighbours.clone()});
+                node.session.put(format!("node/{}/neighbours_neighbours_reply",data.sender_id), message.clone()).res().unwrap();
 
             //request neighbours from neighbours and send it to new node
-            //get new message type?
-            let message = json!(NeighboursNeighboursRequest{
-            new_zid:data.sender_id,
-            sender_id:node.zid.clone()});
-            for neighbour_id in node.neighbours.sites.keys(){
-                node.session.put(format!("node/{}/neighbours_neighbours",neighbour_id), message.clone()).res().unwrap();
-            };
+                let message = json!(NeighboursNeighboursRequest{
+               new_zid:data.sender_id,
+               sender_id:node.zid.clone()});
+                for neighbour_id in node.neighbours.sites.keys(){
+                    node.session.put(format!("node/{}/neighbours_neighbours",neighbour_id), message.clone()).res().unwrap();
+                };
+            }
+        },
+        "no_neighbours" =>{
+            let data: NoNeighbours = serde_json::from_str(&sample.value.to_string()).unwrap();
+
+            node.neighbours.sites.insert(data.sender_id.to_string(),data.site);
+            let diagram = Voronoi::new(node.site, &node.neighbours);
+           // draw_voronoi(&diagram.diagram, format!("new_{}", node.session.zid()).as_str());
+            //get my visible neighbours
+            node.neighbours = diagram.get_neighbours();
+            println!("NEW NEIGHTBORs {:?}",node.neighbours);
+
+            println!("IM DONE BOOT!");
+            let polygon = diagram.diagram.cells()[0].points().iter().map(|x| (x.x, x.y)).collect();
+            let message = json!(NewVoronoiResponse{
+                polygon:polygon,
+                sender_id:node.zid.clone()});
+            node.session.put("counter/complete", message.clone()).res().unwrap();
+
+        },
+        "neighbours_expected" =>{
+            let data: ExpectedNodes = serde_json::from_str(&sample.value.to_string()).unwrap();
+            *expected_counter=data.number as i32;
+            println!("Im expecting {expected_counter} neighbor responses...");
         },
 
         "neighbours_neighbours" =>{
@@ -67,19 +130,20 @@ pub fn node_callback(sample: Sample, node: &mut Node, expected_counter: &mut i32
             let data: NeighboursResponse = serde_json::from_str(&sample.value.to_string()).unwrap();
             node.neighbours.sites.extend(data.neighbours.sites);
             *counter+=1;
-
+        println!("ive got ur kids {} from {} expecting {}",counter,data.sender_id,expected_counter);
         if expected_counter==counter {
+            *counter=0;
+            *expected_counter=-1;
 
             //tell boot how many to wait for
             let message = json!(ExpectedNodes{
-                number:node.neighbours.sites.len(),
+                number:node.neighbours.sites.len() as i32 +1,
                 sender_id:node.zid.clone()});
                 node.session.put("counter/expected_wait", message.clone()).res().unwrap();
 
 
                 //tell all neighbours to calc new voronoi with my new site.
                 let message = json!(NewVoronoiRequest{
-                new_zid:data.sender_id,
                 new_site:node.site,
                 sender_id:node.zid.clone()});
                 for neighbour_id in node.neighbours.sites.keys() {
@@ -89,7 +153,7 @@ pub fn node_callback(sample: Sample, node: &mut Node, expected_counter: &mut i32
 
                 //calc my own voronoi with all neighbours.
                 let diagram = Voronoi::new(node.site, &node.neighbours);
-                draw_voronoi(&diagram.diagram, format!("new_{}", node.session.zid()).as_str());
+              //  draw_voronoi(&diagram.diagram, format!("new_{}", node.session.zid()).as_str());
                 //get my visible neighbours
                 node.neighbours = diagram.get_neighbours();
 
@@ -105,10 +169,13 @@ pub fn node_callback(sample: Sample, node: &mut Node, expected_counter: &mut i32
             let data: NewVoronoiRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
             println!("Recalculating my voronoi with site... {:?}", data.new_site);
 
+
             //recalculate own voronoi
-            node.neighbours.sites.insert(data.new_zid.to_string(),data.new_site);
+            node.neighbours.sites.insert(data.sender_id.to_string(),data.new_site);
+            println!("and neighbours {:?}", node.neighbours);
+
             let diagram = Voronoi::new(node.site,&node.neighbours);
-            draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str());
+           // draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str());
             //my new visible neighbours
             node.neighbours=diagram.get_neighbours();
             println!("IM DONE BOOT!");

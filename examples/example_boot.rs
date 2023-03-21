@@ -86,23 +86,23 @@ fn main() {
 
 
 
-            //draw correct voronoi
-            let mut temp_cluster =cluster.clone();
-            temp_cluster.remove(boot_node.zid.as_str());
-
-            let hash_map: HashMap<String, (f64, f64)> = temp_cluster.into_iter().collect();
-            let temphash= SiteIdList{
-                sites:hash_map,
-            };
-
-            let diagram = Voronoi::new(*cluster.values().nth(0).unwrap(),&temphash);
-
-            for cell in diagram.diagram.cells() {
-                let polygon= cell.points().iter().map(|x|(x.x, x.y)).collect();
-                correct_polygon_list.insert("".to_string(),polygon);
-            }
-
-            draw_voronoi_full(&cluster,&correct_polygon_list,format!("confirm{}",draw_count).as_str());
+            // //draw correct voronoi
+            // let mut temp_cluster =cluster.clone();
+            // temp_cluster.remove(boot_node.zid.as_str());
+            //
+            // let hash_map: HashMap<String, (f64, f64)> = temp_cluster.into_iter().collect();
+            // let temphash= SiteIdList{
+            //     sites:hash_map,
+            // };
+            //
+            // let diagram = Voronoi::new(*cluster.values().nth(0).unwrap(),&temphash);
+            //
+            // for cell in diagram.diagram.cells() {
+            //     let polygon= cell.points().iter().map(|x|(x.x, x.y)).collect();
+            //     correct_polygon_list.insert("".to_string(),polygon);
+            // }
+            //
+            // draw_voronoi_full(&cluster,&correct_polygon_list,format!("confirm{}",draw_count).as_str());
 
             // for (i,cell) in correct_polygon_list.iter().enumerate(){
             //     let correct=approx_equal_lists(&correct_polygon_list[i],&polygon_list[i]);

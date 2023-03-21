@@ -12,6 +12,12 @@ pub struct NewNodeRequest{
     pub sender_id: String,
 }
 #[derive(Deserialize,Serialize)]
+pub struct NoNeighbours{
+    pub site:(f64,f64),
+    pub sender_id: String,
+}
+
+#[derive(Deserialize,Serialize)]
 pub struct NewNodeResponse{
     pub site:(f64,f64),
     pub land_owner: String,
@@ -33,7 +39,6 @@ pub struct NeighboursNeighboursRequest{
 #[derive(Deserialize,Serialize)]
 pub struct NewVoronoiRequest{
     pub new_site:(f64,f64),
-    pub new_zid:String,
     pub sender_id: String,
 }
 
@@ -51,6 +56,6 @@ pub struct NewVoronoiResponse{
 
 #[derive(Deserialize,Serialize)]
 pub struct ExpectedNodes{
-    pub number: usize,
+    pub number: i32,
     pub sender_id: String,
 }
