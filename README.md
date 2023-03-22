@@ -12,8 +12,10 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 ### Prereq system libraries (Ubuntu/Debian)
 libfontconfig - Needed for plotters drawing.
+build-essential - GCC
 ```console
 sudo apt-get install libfontconfig libfontconfig1-dev
+sudo apt install build-essential  
 ```
 ### Running examples
 #### Compiling examples
