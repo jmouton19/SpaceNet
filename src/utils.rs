@@ -84,7 +84,6 @@ pub fn draw_voronoi(diagram:&VoronoiDiagram<Point>,name:&str){
 }
 
 
-
 pub struct Voronoi{
     pub diagram:VoronoiDiagram<Point>,
     pub neighbours:SiteIdList,
@@ -122,13 +121,7 @@ impl Voronoi {
         site_id_list
     }
 
-    // pub fn get_polygon(&self)-> i32{
-    //         let x =self.diagram.cells().;
-    //     }
 }
-
-
-
 
 fn random_rgb() -> (u8, u8, u8) {
     let mut rng = thread_rng();

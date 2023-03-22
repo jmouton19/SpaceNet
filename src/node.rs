@@ -3,7 +3,9 @@ use voronator::delaunator::Point;
 pub use zenoh::prelude::sync::*;
 use serde::{Deserialize,Serialize};
 use std::collections::{HashMap, HashSet};
+use std::sync::mpsc::Receiver;
 use linked_hash_map::LinkedHashMap;
+use zenoh::subscriber::Subscriber;
 
 pub type OrderedMapPairs=LinkedHashMap<String,(f64,f64)>;
 pub type OrderedMapPolygon=LinkedHashMap<String,Vec<(f64, f64)>>;
@@ -21,20 +23,41 @@ pub struct Node{
     pub site:(f64, f64),
     pub neighbours: SiteIdList,
     pub zid:String,
+    pub received_counter:i32,
+    pub expected_counter:i32,
 }
+
+// #[derive(Clone)]
+// pub struct BootNode{
+//     pub node:Node,
+//     pub received_counter:i32,
+//     pub expected_counter:i32,
+// }
 
 
 impl Node{
     pub fn new(config:Config)-> Self{
-        let session=zenoh::open(Config::default()).res().unwrap().into_arc();
+        let session=zenoh::open(config).res().unwrap().into_arc();
         Self{
             zid:session.zid().to_string(),
             session,
             site:(-1.,-1.),
             neighbours:SiteIdList::new(),
+            received_counter:0,
+            expected_counter:-1,
         }
     }
 }
+
+// impl BootNode{
+//     pub fn new(config:Config)-> Self{
+//         Self{
+//             node:Node::new(config),
+//             received_counter:0,
+//             expected_counter:-1,
+//         }
+//     }
+// }
 
 
 impl SiteIdList{

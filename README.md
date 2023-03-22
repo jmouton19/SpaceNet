@@ -1,2 +1,45 @@
 # SpaceNet
 A rust library for distributed virtual environments using spatial partitioning.
+### This name sucks...
+
+# Instructions
+Tested on Fedora 37 Workstation and Zorin OS 16.2.
+### Instal rust
+https://www.rust-lang.org/tools/install
+```console
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+### Prereq system libraries (Ubuntu/Debian)
+libfontconfig - Needed for plotters drawing.
+```console
+sudo apt-get install libfontconfig libfontconfig1-dev
+```
+### Running examples
+#### Compiling examples
+```console
+cargo build --examples
+```
+
+#### Running boot node
+```console
+cd target/debug/examples
+./example_boot
+```
+
+#### Running node
+```console
+cd target/debug/examples
+./example_node
+```
+Output pngs saved in /images.
+
+To test multiple nodes simultaneously use grouped terminal sessions. 
+This can be done in Terminator.  
+```console
+sudo apt-get install terminator
+```
+
+
+
+

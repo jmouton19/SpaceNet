@@ -19,7 +19,7 @@ pub struct NoNeighbours{
 
 #[derive(Deserialize,Serialize)]
 pub struct NewNodeResponse{
-    pub site:(f64,f64),
+    pub new_site:(f64,f64),
     pub land_owner: String,
     pub sender_id: String,
 }
