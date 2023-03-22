@@ -32,7 +32,7 @@ cd target/debug/examples
 cd target/debug/examples
 ./example_node
 ```
-Output pngs saved in /images.
+Output pngs saved in /images. (create this file manually... :) )
 
 To test multiple nodes simultaneously use grouped terminal sessions. 
 This can be done in Terminator.  
