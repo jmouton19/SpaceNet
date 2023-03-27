@@ -1,13 +1,7 @@
 use std::collections::HashMap;
-use std::io;
-use std::thread::sleep;
-use std::time::Duration;
-
 use SpaceNet::node::*;
-use SpaceNet::message::*;
 use SpaceNet::utils::*;
 use SpaceNet::handlers::*;
-use linked_hash_map::LinkedHashMap;
 
 
 fn main() {
@@ -46,7 +40,7 @@ fn main() {
 
             while expected_counter!=counter {
                 while let Ok(sample) = counter_subscriber.try_recv(){
-                    counter_callback(sample, &mut expected_counter,&mut counter,&mut polygon_list,&mut cluster);
+                    counter_callback(sample, &mut expected_counter,&mut counter,&mut polygon_list);
                     // Process the message here
                 }
                 while let Ok(sample) = node_subscriber.try_recv(){

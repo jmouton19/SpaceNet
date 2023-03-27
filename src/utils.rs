@@ -5,7 +5,7 @@ pub use rand::prelude::*;
 use std::path::Path;
 use crate::node::{OrderedMapPairs, OrderedMapPolygon, SiteIdList};
 
-pub fn draw_voronoi_full(MapPairs:&OrderedMapPairs,MapPolygon:&OrderedMapPolygon,name:&str){
+pub fn draw_voronoi_full(map_pairs:&OrderedMapPairs,map_polygon:&OrderedMapPolygon,name:&str){
     let boundary_width=100.;
     let boundary_height=100.;
     let scale=10.;
@@ -13,7 +13,7 @@ pub fn draw_voronoi_full(MapPairs:&OrderedMapPairs,MapPolygon:&OrderedMapPolygon
     let path_str=format!("../../../images/{}.png",name);
     let path=Path::new(path_str.as_str());
     let root = BitMapBackend::new(path, ((boundary_width*scale) as u32, (boundary_height*scale) as u32)).into_drawing_area();
-    root.fill(&WHITE);
+    root.fill(&WHITE).unwrap();
 
     let dot_and_label = |x: i32, y: i32,i: usize| {
         return EmptyElement::at((x, y))
@@ -25,7 +25,7 @@ pub fn draw_voronoi_full(MapPairs:&OrderedMapPairs,MapPolygon:&OrderedMapPolygon
         );
     };
 
-    for cell in MapPolygon.values() {
+    for cell in map_polygon.values() {
         let p: Vec<(i32, i32)> = cell.into_iter()
             .map(|x| ((x.0*scale) as i32, (x.1*scale) as i32))
             .collect();
@@ -35,11 +35,11 @@ pub fn draw_voronoi_full(MapPairs:&OrderedMapPairs,MapPolygon:&OrderedMapPolygon
 
         //println!("{:?}", p);
         let polygon = Polygon::new(p.clone(), color);
-        root.draw(&polygon);
+        root.draw(&polygon).unwrap();
 
     }
 
-    for (i,site) in MapPairs.values().enumerate(){
+    for (i,site) in map_pairs.values().enumerate(){
         // println!("{:?}", site);
         let p=((site.0*scale) as i32,(site.1*scale) as i32);
         root.draw(&dot_and_label(p.0,p.1,i)).unwrap();
@@ -55,7 +55,7 @@ pub fn draw_voronoi(diagram:&VoronoiDiagram<Point>,name:&str){
     let path_str=format!("../../../images/{}.png",name);
     let path=Path::new(path_str.as_str());
     let root = BitMapBackend::new(path, ((boundary_width*scale) as u32, (boundary_height*scale) as u32)).into_drawing_area();
-    root.fill(&WHITE);
+    root.fill(&WHITE).unwrap();
 
     let dot_and_label = |x: i32, y: i32,i: usize| {
         return EmptyElement::at((x, y))
@@ -73,7 +73,7 @@ pub fn draw_voronoi(diagram:&VoronoiDiagram<Point>,name:&str){
         let color = RGBColor(r, g, b);
         //println!("{:?}", p);
         let polygon = Polygon::new(p.clone(), color);
-        root.draw(&polygon);
+        root.draw(&polygon).unwrap();
 
 
         //println!("{:?}", diagram.sites[0]);

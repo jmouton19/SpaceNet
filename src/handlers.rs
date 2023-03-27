@@ -187,7 +187,7 @@ pub fn boot_callback(sample:Sample, node: &mut Node, polygon_list: &mut OrderedM
 
             //get random point to give to new node
             let mut rng = rand::thread_rng();
-            let mut point = (rng.gen_range(10.0..=90.0), rng.gen_range(10.0..=90.0)); // generate random (f64, f64) tuple
+            let point = (rng.gen_range(10.0..=90.0), rng.gen_range(10.0..=90.0)); // generate random (f64, f64) tuple
 
             println!("------------------------------------");
             println!("Giving point {:?}.... to {:?}",point,data.sender_id);
@@ -213,7 +213,7 @@ pub fn boot_callback(sample:Sample, node: &mut Node, polygon_list: &mut OrderedM
 
     }
 }
-pub fn counter_callback(sample:Sample, expected_counter:&mut i32, counter: &mut i32, polygon_list: &mut OrderedMapPolygon, cluster: &mut OrderedMapPairs){
+pub fn counter_callback(sample:Sample, expected_counter:&mut i32, counter: &mut i32, polygon_list: &mut OrderedMapPolygon){
     let topic=sample.key_expr.split('/').nth(1).unwrap_or("");
     println!("Topic... {:?}",topic);
     match topic {
