@@ -174,8 +174,9 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 node.expected_counter=-1;
 
                 //tell boot how many to wait for
+                //+1 if wait for node to say its left
                 let message = json!(ExpectedNodes{
-                number:node.neighbours.sites.len() as i32 +1,
+                number:node.neighbours.sites.len() as i32,
                 sender_id:node.zid.clone()});
                 node.session.put("counter/expected_wait", message.clone()).res().unwrap();
 
@@ -188,12 +189,11 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                     node.session.put(format!("node/{}/leave_voronoi", neighbour_id), message.clone()).res().unwrap();
                 };
 
-                //Leave overlay and drop node instance
-                println!("IM LEAVING BOOT!");
-                let message = json!(NewNodeRequest{
-                sender_id:node.zid.clone()});
-                node.session.put("counter/leaving", message.clone()).res().unwrap();
-
+                //drop node instance
+                println!("IM SHUTTING DOWN BOOT!");
+                // let message = json!(NewNodeRequest{
+                // sender_id:node.zid.clone()});
+                // node.session.put("counter/leaving", message.clone()).res().unwrap();
                let _ =node;
 
             }//else do nothing
@@ -299,6 +299,8 @@ pub fn boot_callback(sample:Sample, node: &mut Node, polygon_list: &mut OrderedM
             let data: NewNodeRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
             println!("Node... {} wants to leave....",data.sender_id);
                 node.session.put(format!("node/{}/leave_reply",data.sender_id), "").res().unwrap();
+            polygon_list.remove(data.sender_id.as_str());
+            cluster.remove(data.sender_id.as_str());
 
 
         },
@@ -306,7 +308,7 @@ pub fn boot_callback(sample:Sample, node: &mut Node, polygon_list: &mut OrderedM
 
     }
 }
-pub fn counter_callback(sample:Sample, expected_counter:&mut i32, counter: &mut i32, polygon_list: &mut OrderedMapPolygon, cluster: &mut OrderedMapPairs){
+pub fn counter_callback(sample:Sample, expected_counter:&mut i32, counter: &mut i32, polygon_list: &mut OrderedMapPolygon){
     let topic=sample.key_expr.split('/').nth(1).unwrap_or("");
     println!("Topic... {:?}",topic);
     match topic {
@@ -321,14 +323,14 @@ pub fn counter_callback(sample:Sample, expected_counter:&mut i32, counter: &mut 
             polygon_list.insert(data.sender_id,data.polygon);
                 //polygon_list[index]=data.polygon;
         },
-        "leaving"=>{
-            *counter+=1;
-            let data: NewNodeRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
-            polygon_list.remove(data.sender_id.as_str());
-            cluster.remove(data.sender_id.as_str());
-            println!("He has left");
-
-        },
+        // "leaving"=>{
+        //     *counter+=1;
+        //     let data: NewNodeRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
+        //     polygon_list.remove(data.sender_id.as_str());
+        //     cluster.remove(data.sender_id.as_str());
+        //     println!("He has left");
+        //
+        // },
         _=> println!("UNKNOWN COUNTER TOPIC"),
 
     }

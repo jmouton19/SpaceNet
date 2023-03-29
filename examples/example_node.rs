@@ -21,7 +21,7 @@ fn main() {
 
 
     //if press q msg boot
-    let mut closure_session =node.session.clone();
+    let closure_session =node.session.clone();
     let closure_id=node.zid.clone();
     task::spawn(async move {
         let mut buffer = [0; 1];
