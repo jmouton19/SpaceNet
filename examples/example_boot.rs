@@ -40,7 +40,7 @@ fn main() {
 
             while expected_counter!=counter {
                 while let Ok(sample) = counter_subscriber.try_recv(){
-                    counter_callback(sample, &mut expected_counter,&mut counter,&mut polygon_list);
+                    counter_callback(sample, &mut expected_counter,&mut counter,&mut polygon_list,&mut cluster);
                     // Process the message here
                 }
                 while let Ok(sample) = node_subscriber.try_recv(){

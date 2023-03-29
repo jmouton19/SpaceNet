@@ -181,7 +181,8 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
 
 
                 //tell all neighbours to calc new voronoi without my site.
-                let message = json!(NewNodeRequest{
+                let message = json!(NeighboursResponse{
+                    neighbours:node.neighbours.clone(),
                 sender_id:node.zid.clone()});
                 for neighbour_id in node.neighbours.sites.keys() {
                     node.session.put(format!("node/{}/leave_voronoi", neighbour_id), message.clone()).res().unwrap();
@@ -217,11 +218,13 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
 
         },
         "leave_voronoi" =>{
-            let data: NewNodeRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
+            let data: NeighboursResponse = serde_json::from_str(&sample.value.to_string()).unwrap();
             println!("Recalculating my voronoi without site... {:?}", data.sender_id);
+            //and leavers neighbours....
 
             //recalculate own voronoi
             node.neighbours.sites.remove(data.sender_id.to_string().as_str());
+            node.neighbours.sites.extend(data.neighbours.sites);
             let diagram = Voronoi::new(node.site,&node.neighbours);
             // draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str());
             //my new visible neighbours
@@ -303,7 +306,7 @@ pub fn boot_callback(sample:Sample, node: &mut Node, polygon_list: &mut OrderedM
 
     }
 }
-pub fn counter_callback(sample:Sample, expected_counter:&mut i32, counter: &mut i32, polygon_list: &mut OrderedMapPolygon){
+pub fn counter_callback(sample:Sample, expected_counter:&mut i32, counter: &mut i32, polygon_list: &mut OrderedMapPolygon, cluster: &mut OrderedMapPairs){
     let topic=sample.key_expr.split('/').nth(1).unwrap_or("");
     println!("Topic... {:?}",topic);
     match topic {
