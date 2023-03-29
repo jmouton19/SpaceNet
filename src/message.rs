@@ -7,6 +7,7 @@ use crate::node::{SiteIdList};
 pub struct NewNodeRequest{
     pub sender_id: String,
 }
+
 #[derive(Deserialize,Serialize)]
 pub struct NoNeighbours{
     pub site:(f64,f64),

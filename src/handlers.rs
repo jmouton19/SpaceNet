@@ -113,6 +113,16 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             node.session.put(format!("node/{}/neighbours_neighbours_reply",data.new_zid), message.clone()).res().unwrap();
 
         },
+        "leave_neighbours_neighbours" =>{
+
+            let data: NewNodeRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
+            //send list of neighbours back to leaver
+            let message = json!(NeighboursResponse{
+            sender_id:node.zid.clone(),
+            neighbours:node.neighbours.clone()});
+            node.session.put(format!("node/{}/Leave_neighbours_neighbours_reply",data.sender_id), message.clone()).res().unwrap();
+
+        },
 
         "neighbours_neighbours_reply" =>{
             let data: NeighboursResponse = serde_json::from_str(&sample.value.to_string()).unwrap();
@@ -153,6 +163,40 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 node.session.put("counter/complete", message.clone()).res().unwrap();
             }//else do nothing
         },
+        "Leave_neighbours_neighbours_reply" =>{
+            let data: NeighboursResponse = serde_json::from_str(&sample.value.to_string()).unwrap();
+            node.neighbours.sites.extend(data.neighbours.sites);
+            node.received_counter+=1;
+            println!("Message received from {}....  expecting {} more.",data.sender_id,node.expected_counter-node.received_counter);
+            if node.expected_counter==node.received_counter {
+                node.neighbours.sites.remove(node.zid.as_str());
+                node.received_counter=0;
+                node.expected_counter=-1;
+
+                //tell boot how many to wait for
+                let message = json!(ExpectedNodes{
+                number:node.neighbours.sites.len() as i32 +1,
+                sender_id:node.zid.clone()});
+                node.session.put("counter/expected_wait", message.clone()).res().unwrap();
+
+
+                //tell all neighbours to calc new voronoi without my site.
+                let message = json!(NewNodeRequest{
+                sender_id:node.zid.clone()});
+                for neighbour_id in node.neighbours.sites.keys() {
+                    node.session.put(format!("node/{}/leave_voronoi", neighbour_id), message.clone()).res().unwrap();
+                };
+
+                //Leave overlay and drop node instance
+                println!("IM LEAVING BOOT!");
+                let message = json!(NewNodeRequest{
+                sender_id:node.zid.clone()});
+                node.session.put("counter/leaving", message.clone()).res().unwrap();
+
+               let _ =node;
+
+            }//else do nothing
+        },
         "new_voronoi" =>{
             let data: NewVoronoiRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
             println!("Recalculating my voronoi with site... {:?}", data.new_site);
@@ -170,6 +214,44 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             polygon:polygon,
             sender_id:node.zid.clone()});
             node.session.put("counter/complete", message.clone()).res().unwrap();
+
+        },
+        "leave_voronoi" =>{
+            let data: NewNodeRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
+            println!("Recalculating my voronoi without site... {:?}", data.sender_id);
+
+            //recalculate own voronoi
+            node.neighbours.sites.remove(data.sender_id.to_string().as_str());
+            let diagram = Voronoi::new(node.site,&node.neighbours);
+            // draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str());
+            //my new visible neighbours
+            node.neighbours=diagram.get_neighbours();
+            println!("IM DONE BOOT!");
+            let polygon=diagram.diagram.cells()[0].points().iter().map(|x|(x.x, x.y)).collect();
+            let message = json!(NewVoronoiResponse{
+            polygon:polygon,
+            sender_id:node.zid.clone()});
+            node.session.put("counter/complete", message.clone()).res().unwrap();
+
+        },
+        "leave_reply"=>{
+            //tell me how many to wait for
+            node.expected_counter=node.neighbours.sites.len() as i32;
+            println!("Expecting {} replies... before i leave",node.expected_counter);
+
+            //not needed
+            // let message = json!(ExpectedNodes{
+            //     number:node.neighbours.sites.len(),
+            //     sender_id:node.zid.clone()});
+            // node.session.put(format!("node/{}/neighbours_expected",data.sender_id), message.clone()).res().unwrap();
+
+            //get FULL neighbour list
+            //request neighbours from neighbours and send it back to me
+            let message = json!(NewNodeRequest{
+               sender_id:node.zid.clone()});
+            for neighbour_id in node.neighbours.sites.keys(){
+                node.session.put(format!("node/{}/leave_neighbours_neighbours",neighbour_id), message.clone()).res().unwrap();
+            };
 
         },
         _ => println!("UNKNOWN NODE TOPIC"),
@@ -208,7 +290,15 @@ pub fn boot_callback(sample:Sample, node: &mut Node, polygon_list: &mut OrderedM
             });
 
             let _ = node.session.put(format!("node/{}/new_reply",data.sender_id), json_message).res();
-        }
+        },
+        "leave_request" => {
+            //ack leave request
+            let data: NewNodeRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
+            println!("Node... {} wants to leave....",data.sender_id);
+                node.session.put(format!("node/{}/leave_reply",data.sender_id), "").res().unwrap();
+
+
+        },
         _=> println!("UNKNOWN BOOT TOPIC"),
 
     }
@@ -227,6 +317,14 @@ pub fn counter_callback(sample:Sample, expected_counter:&mut i32, counter: &mut 
             let data: NewVoronoiResponse = serde_json::from_str(&sample.value.to_string()).unwrap();
             polygon_list.insert(data.sender_id,data.polygon);
                 //polygon_list[index]=data.polygon;
+        },
+        "leaving"=>{
+            *counter+=1;
+            let data: NewNodeRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
+            polygon_list.remove(data.sender_id.as_str());
+            cluster.remove(data.sender_id.as_str());
+            println!("He has left");
+
         },
         _=> println!("UNKNOWN COUNTER TOPIC"),
 
