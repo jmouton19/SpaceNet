@@ -4,14 +4,14 @@ A rust library for distributed virtual environments using spatial partitioning.
 
 # Instructions
 Tested on Fedora 37 Workstation and Zorin OS 16.2.
-### Instal rust
+### Install rust
 https://www.rust-lang.org/tools/install
 ```console
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
 ### Prereq system libraries (Ubuntu/Debian)
-libfontconfig - Needed for plotters drawing.
+libfontconfig - Needed for plotters drawing.\
 build-essential - GCC
 ```console
 sudo apt-get install libfontconfig libfontconfig1-dev
@@ -34,7 +34,8 @@ cd target/debug/examples
 cd target/debug/examples
 ./example_node
 ```
-Output pngs saved in /images. (create this folder manually... :) )
+* Output pngs saved in SpaceNet/images. Create this folder manually :)
+* To remove node from overlay enter q into its terminal session.
 
 To test multiple nodes simultaneously use grouped terminal sessions. 
 This can be done in Terminator.  
