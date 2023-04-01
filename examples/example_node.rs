@@ -9,18 +9,6 @@ fn main() {
     //join overlay network
     let mut node = Node::new(Config::default());
     println!("node online..... {:?}", node.zid);
-    let node_subscription = node
-        .session
-        .declare_subscriber(format!("node/{}/*", node.zid))
-        .reliable()
-        .res()
-        .unwrap();
-
-    //message boot node
-    let message = json!(NewNodeRequest {
-        sender_id: node.zid.clone(),
-    });
-    node.session.put("node/boot/new", message).res().unwrap();
 
     //if press q msg boot
     let closure_session = node.session.clone();
@@ -45,11 +33,12 @@ fn main() {
         }
     });
 
-
-    while node.running{
-        while let Ok(sample) = node_subscription.try_recv() {
-            node_callback(sample, &mut node);
-            // Process the message here
+    loop{
+        if !node.running{
+            break;
         }
+        node.run();
+        // other tasks
     }
+
 }
