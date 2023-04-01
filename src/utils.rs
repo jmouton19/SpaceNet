@@ -26,7 +26,7 @@ pub fn draw_voronoi_full(map_pairs:&OrderedMapPairs,map_polygon:&OrderedMapPolyg
     };
 
     for cell in map_polygon.values() {
-        let p: Vec<(i32, i32)> = cell.into_iter()
+        let p: Vec<(i32, i32)> = cell.iter()
             .map(|x| ((x.0*scale) as i32, (x.1*scale) as i32))
             .collect();
 
@@ -66,13 +66,13 @@ pub fn draw_voronoi(diagram:&VoronoiDiagram<Point>,name:&str){
             ("sans-serif", 15.0).into_font(),
         );
     };
-        let p: Vec<(i32, i32)> = diagram.cells()[0].points().into_iter()
+        let p: Vec<(i32, i32)> = diagram.cells()[0].points().iter()
             .map(|x| ((x.x*scale) as i32, (x.y*scale) as i32))
             .collect();
         let (r,g,b)= random_rgb();
         let color = RGBColor(r, g, b);
         //println!("{:?}", p);
-        let polygon = Polygon::new(p.clone(), color);
+        let polygon = Polygon::new(p, color);
         root.draw(&polygon).unwrap();
 
 
@@ -103,9 +103,9 @@ impl Voronoi {
         let diagram = VoronoiDiagram::<Point>::from_tuple(&(0., 0.), &(boundary_width , boundary_height), &points).unwrap();
         Self{
             length:diagram.sites.len(),
-            diagram: diagram,
+            diagram,
             neighbours: neighbours.clone(),
-            site:site,
+            site,
         }
     }
 

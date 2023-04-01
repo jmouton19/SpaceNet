@@ -59,7 +59,7 @@ fn main() {
             let temphash= SiteIdList{
                 sites:hash_map,
             };
-            let diagram = Voronoi::new(*cluster.values().nth(0).unwrap(),&temphash);
+            let diagram = Voronoi::new(*cluster.values().next().unwrap(),&temphash);
             for (i,cell) in diagram.diagram.cells().iter().enumerate() {
                 let polygon= cell.points().iter().map(|x|(x.x, x.y)).collect();
                 correct_polygon_list.insert(format!("{i}").to_string(),polygon);
