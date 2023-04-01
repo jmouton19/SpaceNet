@@ -3,9 +3,9 @@
 use async_std::io;
 use async_std::io::ReadExt;
 use async_std::task;
-use SpaceNet::handlers::*;
-use SpaceNet::message::*;
-use SpaceNet::node::*;
+use space_net::handlers::*;
+use space_net::message::*;
+use space_net::node::*;
 
 fn main() {
     //join overlay network

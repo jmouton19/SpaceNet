@@ -1,7 +1,7 @@
 use std::collections::HashMap;
-use SpaceNet::handlers::*;
-use SpaceNet::node::*;
-use SpaceNet::utils::*;
+use space_net::handlers::*;
+use space_net::node::*;
+use space_net::utils::*;
 
 fn main() {
     let mut boot_node = Node::new(Config::default());
