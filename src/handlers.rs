@@ -286,6 +286,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 // let message = json!(NewNodeRequest{
                 // sender_id:node.zid.clone()});
                 // node.session.put("counter/leaving", message.clone()).res().unwrap();
+                node.running=false;
                 let _ = node;
             } //else do nothing
         }

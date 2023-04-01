@@ -1,5 +1,3 @@
-// use std::thread::sleep;
-// use std::time::Duration;
 use async_std::io;
 use async_std::io::ReadExt;
 use async_std::task;
@@ -47,14 +45,11 @@ fn main() {
         }
     });
 
-    loop {
-        // Handle messages in the queue
+
+    while node.running{
         while let Ok(sample) = node_subscription.try_recv() {
             node_callback(sample, &mut node);
             // Process the message here
         }
-
-        // Wait for some time before starting to handle messages again
-        //sleep(Duration::from_secs(1));
     }
 }

@@ -20,6 +20,7 @@ pub struct Node {
     pub zid: String,
     pub received_counter: i32,
     pub expected_counter: i32,
+    pub running:bool,
 }
 
 // #[derive(Clone)]
@@ -39,6 +40,13 @@ impl Node {
             neighbours: SiteIdList::new(),
             received_counter: 0,
             expected_counter: -1,
+            running:true,
+        }
+    }
+
+    pub fn run(&mut self){
+        while self.running{
+
         }
     }
 }
@@ -80,9 +88,8 @@ impl SiteIdList {
     }
 }
 
- impl Default for SiteIdList {
-        fn default() -> Self {
-               Self::new()
-            }
+impl Default for SiteIdList {
+    fn default() -> Self {
+        Self::new()
     }
-
+}
