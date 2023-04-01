@@ -79,3 +79,10 @@ impl SiteIdList {
         self.sites.values().any(|v| *v == site)
     }
 }
+
+ impl Default for SiteIdList {
+        fn default() -> Self {
+               Self::new()
+            }
+    }
+

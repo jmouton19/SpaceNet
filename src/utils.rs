@@ -139,7 +139,7 @@ impl Voronoi {
             let site_coords = &self.neighbours.sites.values().nth(i - 1).unwrap();
             site_id_list
                 .sites
-                .insert(site_id.clone().to_string(), *site_coords.clone());
+                .insert(site_id.to_string(), **site_coords);
         }
         site_id_list
     }
