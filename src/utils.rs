@@ -1,4 +1,5 @@
 use crate::types::{OrderedMapPairs, OrderedMapPolygon, SiteIdList};
+use plotters::element::ComposedElement;
 use plotters::prelude::*;
 pub use rand::prelude::*;
 use std::path::Path;
@@ -21,16 +22,6 @@ pub fn draw_voronoi_full(map_pairs: &OrderedMapPairs, map_polygon: &OrderedMapPo
     )
     .into_drawing_area();
     root.fill(&WHITE).unwrap();
-
-    let dot_and_label = |x: i32, y: i32, i: usize| {
-        return EmptyElement::at((x, y))
-            + Circle::new((0, 0), 3, ShapeStyle::from(&BLACK).filled())
-            + Text::new(
-                format!("#{}:   ({},{})", i, x, y),
-                (10, 0),
-                ("sans-serif", 15.0).into_font(),
-            );
-    };
 
     for cell in map_polygon.values() {
         let p: Vec<(i32, i32)> = cell
@@ -70,15 +61,6 @@ pub fn draw_voronoi(diagram: &VoronoiDiagram<Point>, name: &str) {
     .into_drawing_area();
     root.fill(&WHITE).unwrap();
 
-    let dot_and_label = |x: i32, y: i32, i: usize| {
-        return EmptyElement::at((x, y))
-            + Circle::new((0, 0), 3, ShapeStyle::from(&BLACK).filled())
-            + Text::new(
-                format!("#{}:   ({},{})", i, x, y),
-                (10, 0),
-                ("sans-serif", 15.0).into_font(),
-            );
-    };
     let p: Vec<(i32, i32)> = diagram.cells()[0]
         .points()
         .iter()
@@ -146,4 +128,23 @@ impl Voronoi {
 fn random_rgb() -> (u8, u8, u8) {
     let mut rng = thread_rng();
     (rng.gen(), rng.gen(), rng.gen())
+}
+
+fn dot_and_label(
+    x: i32,
+    y: i32,
+    i: usize,
+) -> ComposedElement<
+    (i32, i32),
+    BitMapBackend<'static>,
+    Circle<(i32, i32), i32>,
+    Text<'static, (i32, i32), String>,
+> {
+    return EmptyElement::at((x, y))
+        + Circle::new((0, 0), 3, ShapeStyle::from(&BLACK).filled())
+        + Text::new(
+            format!("#{}:   ({},{})", i, x, y),
+            (10, 0),
+            ("sans-serif", 15.0).into_font(),
+        );
 }
