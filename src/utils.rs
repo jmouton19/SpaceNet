@@ -1,4 +1,4 @@
-use crate::node::{OrderedMapPairs, OrderedMapPolygon, SiteIdList};
+use crate::types::{OrderedMapPairs, OrderedMapPolygon, SiteIdList};
 use plotters::prelude::*;
 pub use rand::prelude::*;
 use std::path::Path;

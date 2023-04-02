@@ -1,6 +1,7 @@
 pub mod handlers;
 pub mod message;
 pub mod node;
+pub mod types;
 pub mod utils;
 
 //

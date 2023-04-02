@@ -1,5 +1,6 @@
 use crate::message::*;
 use crate::node::*;
+use crate::types::{OrderedMapPairs, OrderedMapPolygon};
 use crate::utils::Voronoi;
 use rand::Rng;
 use zenoh::prelude::Sample;

@@ -1,4 +1,4 @@
-use crate::node::SiteIdList;
+use crate::types::SiteIdList;
 use serde::{Deserialize, Serialize};
 pub use serde_json::json;
 
