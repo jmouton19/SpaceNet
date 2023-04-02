@@ -1,8 +1,3 @@
-use async_std::io;
-use async_std::io::ReadExt;
-use async_std::task;
-
-use space_net::message::*;
 use space_net::node::*;
 
 fn main() {
@@ -11,27 +6,7 @@ fn main() {
     println!("node online..... {:?}", node.zid);
 
     //if press q msg boot
-    let closure_session = node.session.clone();
-    let closure_id = node.zid.clone();
-    task::spawn(async move {
-        let mut buffer = [0; 1];
-        loop {
-            // Read a single byte from stdin
-            if let Ok(()) = io::stdin().read_exact(&mut buffer).await {
-                if buffer[0] == b'q' {
-                    // Call the function when the user presses 'q'
-                    let message = json!(NewNodeRequest {
-                        sender_id: closure_id,
-                    });
-                    closure_session
-                        .put("node/boot/leave_request", message)
-                        .res()
-                        .unwrap();
-                    break;
-                }
-            }
-        }
-    });
+    leave_on_pressed(node.session.clone(), 'q');
 
     loop {
         if !node.running {

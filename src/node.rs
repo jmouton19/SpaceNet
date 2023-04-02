@@ -2,6 +2,8 @@ use crate::handlers::{boot_callback, counter_callback, node_callback};
 use crate::message::NewNodeRequest;
 use crate::types::{OrderedMapPairs, OrderedMapPolygon, SiteIdList};
 use crate::utils::{draw_voronoi_full, Voronoi};
+use async_std::io::ReadExt;
+use async_std::{io, task};
 use serde_json::json;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -164,4 +166,26 @@ impl<'a> BootNode<'a> {
             self.draw_count += 1;
         }
     }
+}
+
+pub fn leave_on_pressed(session: Arc<Session>, char: char) {
+    task::spawn(async move {
+        let mut buffer = [0; 1];
+        loop {
+            // Read a single byte from stdin
+            if let Ok(()) = io::stdin().read_exact(&mut buffer).await {
+                if buffer[0] == char as u8 {
+                    // Call the function when the user presses 'q'
+                    let message = json!(NewNodeRequest {
+                        sender_id: session.zid().to_string(),
+                    });
+                    session
+                        .put("node/boot/leave_request", message)
+                        .res()
+                        .unwrap();
+                    break;
+                }
+            }
+        }
+    });
 }
