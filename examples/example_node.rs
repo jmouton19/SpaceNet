@@ -1,7 +1,7 @@
 use async_std::io;
 use async_std::io::ReadExt;
 use async_std::task;
-use space_net::handlers::*;
+
 use space_net::message::*;
 use space_net::node::*;
 
@@ -33,12 +33,11 @@ fn main() {
         }
     });
 
-    loop{
-        if !node.running{
+    loop {
+        if !node.running {
             break;
         }
         node.run();
         // other tasks
     }
-
 }

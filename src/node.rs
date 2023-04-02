@@ -1,14 +1,13 @@
-use linked_hash_map::LinkedHashMap;
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::sync::Arc;
-use serde_json::json;
-pub use zenoh::prelude::sync::*;
-use zenoh::subscriber::Subscriber;
 use crate::handlers::{boot_callback, counter_callback, node_callback};
 use crate::message::NewNodeRequest;
 use crate::utils::{draw_voronoi_full, Voronoi};
-
+use linked_hash_map::LinkedHashMap;
+use serde::{Deserialize, Serialize};
+use serde_json::json;
+use std::collections::HashMap;
+use std::sync::Arc;
+pub use zenoh::prelude::sync::*;
+use zenoh::subscriber::Subscriber;
 
 pub type OrderedMapPairs = LinkedHashMap<String, (f64, f64)>;
 pub type OrderedMapPolygon = LinkedHashMap<String, Vec<(f64, f64)>>;
@@ -26,18 +25,18 @@ pub struct Node<'a> {
     pub zid: String,
     pub received_counter: i32,
     pub expected_counter: i32,
-    pub running:bool,
-    sub:Subscriber<'a,flume::Receiver<Sample>>,
+    pub running: bool,
+    sub: Subscriber<'a, flume::Receiver<Sample>>,
 }
 
 // #[derive(Clone)]
-pub struct BootNode<'a>{
+pub struct BootNode<'a> {
     pub node: Node<'a>,
-    pub received_counter:i32,
-    pub expected_counter:i32,
-    pub running:bool,
-    sub_boot:Subscriber<'a,flume::Receiver<Sample>>,
-    sub_counter:Subscriber<'a,flume::Receiver<Sample>>,
+    pub received_counter: i32,
+    pub expected_counter: i32,
+    pub running: bool,
+    sub_boot: Subscriber<'a, flume::Receiver<Sample>>,
+    sub_counter: Subscriber<'a, flume::Receiver<Sample>>,
     pub cluster: OrderedMapPairs,
     pub polygon_list: OrderedMapPolygon,
     pub correct_polygon_list: OrderedMapPolygon,
@@ -47,14 +46,15 @@ pub struct BootNode<'a>{
 impl Node<'_> {
     pub fn new(config: Config) -> Self {
         let session = zenoh::open(config).res().unwrap().into_arc();
-        let zid=session.zid().to_string();
-        let node_subscription = session.declare_subscriber(format!("node/{}/*", zid))
+        let zid = session.zid().to_string();
+        let node_subscription = session
+            .declare_subscriber(format!("node/{}/*", zid))
             .reliable()
             .res()
             .unwrap();
         let message = json!(NewNodeRequest {
-        sender_id: zid.clone(),
-    });
+            sender_id: zid.clone(),
+        });
         session.put("node/boot/new", message).res().unwrap();
         Self {
             zid,
@@ -63,14 +63,14 @@ impl Node<'_> {
             neighbours: SiteIdList::new(),
             received_counter: 0,
             expected_counter: -1,
-            running:true,
-            sub:node_subscription,
+            running: true,
+            sub: node_subscription,
         }
     }
 
-    pub fn run(&mut self){
+    pub fn run(&mut self) {
         while let Ok(sample) = self.sub.try_recv() {
-            if !self.running{
+            if !self.running {
                 break;
             }
             node_callback(sample, self);
@@ -79,7 +79,7 @@ impl Node<'_> {
     }
 }
 
-impl <'a> BootNode<'a>{
+impl<'a> BootNode<'a> {
     pub fn new_with_node(mut node: Node<'a>) -> Self {
         let counter_subscriber = node
             .session
@@ -94,7 +94,7 @@ impl <'a> BootNode<'a>{
             .res()
             .unwrap();
         node.site = (50., 50.);
-        let mut cluster=OrderedMapPairs::new();
+        let mut cluster = OrderedMapPairs::new();
         cluster.insert(node.zid.to_string(), node.site);
 
         let diagram = Voronoi::new(node.site, &node.neighbours);
@@ -107,21 +107,32 @@ impl <'a> BootNode<'a>{
         let mut polygon_list = OrderedMapPolygon::new();
         polygon_list.insert(node.zid.to_string(), polygon);
         draw_voronoi_full(&cluster, &polygon_list, "initial");
-        Self { node, received_counter: 0, expected_counter: -1, running: true, sub_boot: boot_subscriber, sub_counter: counter_subscriber, cluster, polygon_list, correct_polygon_list:OrderedMapPolygon::new(), draw_count: 1 }
+        Self {
+            node,
+            received_counter: 0,
+            expected_counter: -1,
+            running: true,
+            sub_boot: boot_subscriber,
+            sub_counter: counter_subscriber,
+            cluster,
+            polygon_list,
+            correct_polygon_list: OrderedMapPolygon::new(),
+            draw_count: 1,
+        }
     }
 
     // pub fn new_without_node() -> Self {
     //     Self { node: None, received_counter: 0, expected_counter: -1, running: true }
     // }
 
-    pub fn run(&mut self){
-        let mut boot_node=&mut self.node;
+    pub fn run(&mut self) {
+        let boot_node = &mut self.node;
 
         if let Ok(sample) = self.sub_boot.try_recv() {
             self.expected_counter = -1;
             self.received_counter = 0;
 
-            boot_callback(sample, &mut boot_node, &mut self.polygon_list, &mut self.cluster);
+            boot_callback(sample, boot_node, &mut self.polygon_list, &mut self.cluster);
             // Process the message here
 
             while self.expected_counter != self.received_counter {
@@ -151,7 +162,8 @@ impl <'a> BootNode<'a>{
             let diagram = Voronoi::new(*self.cluster.values().next().unwrap(), &temphash);
             for (i, cell) in diagram.diagram.cells().iter().enumerate() {
                 let polygon = cell.points().iter().map(|x| (x.x, x.y)).collect();
-                self.correct_polygon_list.insert(format!("{i}").to_string(), polygon);
+                self.correct_polygon_list
+                    .insert(format!("{i}").to_string(), polygon);
             }
             draw_voronoi_full(
                 &self.cluster,
@@ -160,15 +172,8 @@ impl <'a> BootNode<'a>{
             );
             self.draw_count += 1;
         }
-
     }
 }
-
-
-
-
-
-
 
 impl SiteIdList {
     pub fn new() -> SiteIdList {

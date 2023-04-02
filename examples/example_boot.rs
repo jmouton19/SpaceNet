@@ -1,11 +1,7 @@
-use space_net::handlers::*;
 use space_net::node::*;
-use space_net::utils::*;
-use std::collections::HashMap;
 
 fn main() {
-
-    let mut boot_server=BootNode::new_with_node(Node::new(Config::default()));
+    let mut boot_server = BootNode::new_with_node(Node::new(Config::default()));
     //let mut boot_node=&boot_server.node.unwrap();
     //let mut boot_node = Node::new(Config::default());
 
