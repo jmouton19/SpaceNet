@@ -1,12 +1,12 @@
 use crate::handlers::{boot_callback, counter_callback, node_callback};
-use crate::message::NewNodeRequest;
+use crate::message::DefaultMessage;
 use crate::types::{OrderedMapPairs, OrderedMapPolygon, SiteIdList};
 use crate::utils::{draw_voronoi_full, Voronoi};
 use async_std::io::ReadExt;
+pub use async_std::sync::Arc;
 use async_std::{io, task};
 use serde_json::json;
 use std::collections::HashMap;
-use std::sync::Arc;
 pub use zenoh::prelude::sync::*;
 use zenoh::subscriber::Subscriber;
 
@@ -19,7 +19,7 @@ pub struct Node<'a> {
     pub received_counter: i32,
     pub expected_counter: i32,
     pub running: bool,
-    sub: Subscriber<'a, flume::Receiver<Sample>>,
+    subscription: Subscriber<'a, flume::Receiver<Sample>>,
 }
 
 // #[derive(Clone)]
@@ -45,7 +45,7 @@ impl Node<'_> {
             .reliable()
             .res()
             .unwrap();
-        let message = json!(NewNodeRequest {
+        let message = json!(DefaultMessage {
             sender_id: zid.clone(),
         });
         session.put("node/boot/new", message).res().unwrap();
@@ -57,12 +57,12 @@ impl Node<'_> {
             received_counter: 0,
             expected_counter: -1,
             running: true,
-            sub: node_subscription,
+            subscription: node_subscription,
         }
     }
 
     pub fn run(&mut self) {
-        while let Ok(sample) = self.sub.try_recv() {
+        while let Ok(sample) = self.subscription.try_recv() {
             if !self.running {
                 break;
             }
@@ -176,7 +176,7 @@ pub fn leave_on_pressed(session: Arc<Session>, char: char) {
             if let Ok(()) = io::stdin().read_exact(&mut buffer).await {
                 if buffer[0] == char as u8 {
                     // Call the function when the user presses 'q'
-                    let message = json!(NewNodeRequest {
+                    let message = json!(DefaultMessage {
                         sender_id: session.zid().to_string(),
                     });
                     session

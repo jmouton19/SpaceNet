@@ -1,6 +1,6 @@
 use crate::message::*;
 use crate::node::*;
-use crate::types::{OrderedMapPairs, OrderedMapPolygon};
+use crate::types::{closest_point, OrderedMapPairs, OrderedMapPolygon};
 use crate::utils::Voronoi;
 use rand::Rng;
 use zenoh::prelude::Sample;
@@ -24,9 +24,9 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             //node.neighbours.push_pair(data.land_owner_site,data.land_owner.to_string());
 
             //request neighbour list from land owner
-            let message = json!(NeighboursRequest {
-                sender_id: node.session.zid().to_string(),
-                new_site: node.site
+            let message = json!(NewVoronoiRequest {
+                sender_id: node.zid.clone(),
+                site: node.site
             }); //not needed...? can get later -NB
             node.session
                 .put(format!("node/{}/new_neighbours", data.land_owner), message)
@@ -35,10 +35,10 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
         }
 
         "new_neighbours" => {
-            let data: NeighboursRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
+            let data: NewVoronoiRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
             println!(
                 "New point at site... {:?} from... {:?}",
-                data.new_site, data.sender_id
+                data.site, data.sender_id
             );
 
             let neigh_len = node.neighbours.sites.len() as i32;
@@ -57,7 +57,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 //calc my voronoi
                 node.neighbours
                     .sites
-                    .insert(data.sender_id.to_string(), data.new_site);
+                    .insert(data.sender_id.to_string(), data.site);
                 let diagram = Voronoi::new(node.site, &node.neighbours);
                 // draw_voronoi(&diagram.diagram, format!("new_{}", node.session.zid()).as_str());
                 //get my visible neighbours
@@ -75,7 +75,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 node.session.put("counter/complete", message).res().unwrap();
 
                 //tell new site to make voronoi
-                let message = json!(NoNeighbours {
+                let message = json!(NewVoronoiRequest {
                     sender_id: node.zid.clone(),
                     site: node.site
                 });
@@ -127,7 +127,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             }
         }
         "no_neighbours" => {
-            let data: NoNeighbours = serde_json::from_str(&sample.value.to_string()).unwrap();
+            let data: NewVoronoiRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
             node.neighbours
                 .sites
                 .insert(data.sender_id.to_string(), data.site);
@@ -170,7 +170,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 .unwrap();
         }
         "leave_neighbours_neighbours" => {
-            let data: NewNodeRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
+            let data: DefaultMessage = serde_json::from_str(&sample.value.to_string()).unwrap();
             //send list of neighbours back to leaver
             let message = json!(NeighboursResponse {
                 sender_id: node.zid.clone(),
@@ -210,7 +210,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
 
                 //tell all neighbours to calc new voronoi with my new site.
                 let message = json!(NewVoronoiRequest {
-                    new_site: node.site,
+                    site: node.site,
                     sender_id: node.zid.clone()
                 });
                 for neighbour_id in node.neighbours.sites.keys() {
@@ -284,7 +284,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
 
                 //drop node instance
                 println!("IM SHUTTING DOWN BOOT!");
-                // let message = json!(NewNodeRequest{
+                // let message = json!(DefaultMessage{
                 // sender_id:node.zid.clone()});
                 // node.session.put("counter/leaving", message.clone()).res().unwrap();
                 node.running = false;
@@ -293,12 +293,12 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
         }
         "new_voronoi" => {
             let data: NewVoronoiRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
-            println!("Recalculating my voronoi with site... {:?}", data.new_site);
+            println!("Recalculating my voronoi with site... {:?}", data.site);
 
             //recalculate own voronoi
             node.neighbours
                 .sites
-                .insert(data.sender_id.to_string(), data.new_site);
+                .insert(data.sender_id.to_string(), data.site);
             let diagram = Voronoi::new(node.site, &node.neighbours);
             // draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str());
             //my new visible neighbours
@@ -358,7 +358,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
 
             //get FULL neighbour list
             //request neighbours from neighbours and send it back to me
-            let message = json!(NewNodeRequest {
+            let message = json!(DefaultMessage {
                 sender_id: node.zid.clone()
             });
             for neighbour_id in node.neighbours.sites.keys() {
@@ -385,7 +385,7 @@ pub fn boot_callback(
     println!("Topic... {:?}", topic);
     match topic {
         "new" => {
-            let data: NewNodeRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
+            let data: DefaultMessage = serde_json::from_str(&sample.value.to_string()).unwrap();
 
             //get random point to give to new node
             let mut rng = rand::thread_rng();
@@ -416,7 +416,7 @@ pub fn boot_callback(
         }
         "leave_request" => {
             //ack leave request
-            let data: NewNodeRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
+            let data: DefaultMessage = serde_json::from_str(&sample.value.to_string()).unwrap();
             println!("Node... {} wants to leave....", data.sender_id);
             node.session
                 .put(format!("node/{}/leave_reply", data.sender_id), "")
@@ -450,7 +450,7 @@ pub fn counter_callback(
         }
         // "leaving"=>{
         //     *counter+=1;
-        //     let data: NewNodeRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
+        //     let data: DefaultMessage = serde_json::from_str(&sample.value.to_string()).unwrap();
         //     polygon_list.remove(data.sender_id.as_str());
         //     cluster.remove(data.sender_id.as_str());
         //     println!("He has left");
@@ -458,19 +458,4 @@ pub fn counter_callback(
         // },
         _ => println!("UNKNOWN COUNTER TOPIC"),
     }
-}
-
-fn closest_point(pairs: &OrderedMapPairs, site: (f64, f64)) -> String {
-    let mut closest_zid = "";
-    let mut min_distance = f64::INFINITY;
-
-    for (zid, map_point) in pairs.iter() {
-        let distance = ((map_point.0 - site.0).powi(2) + (map_point.1 - site.1).powi(2)).sqrt();
-        if distance < min_distance {
-            min_distance = distance;
-            closest_zid = zid;
-        }
-    }
-
-    closest_zid.to_string()
 }
