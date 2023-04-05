@@ -86,7 +86,6 @@ pub struct Voronoi {
     pub diagram: VoronoiDiagram<Point>,
     pub neighbours: SiteIdList,
     pub site: (f64, f64),
-    pub length: usize,
 }
 
 impl Voronoi {
@@ -105,7 +104,6 @@ impl Voronoi {
         )
         .unwrap();
         Self {
-            length: diagram.sites.len(),
             diagram,
             neighbours: neighbours.clone(),
             site,
@@ -114,7 +112,7 @@ impl Voronoi {
 
     pub fn get_neighbours(&self) -> SiteIdList {
         let mut friends = self.diagram.neighbors[0].clone();
-        friends.retain(|&x| x < self.length - 4);
+        friends.retain(|&x| x < self.diagram.sites.len() - 4);
         let mut site_id_list = SiteIdList::new();
         for i in friends {
             let site_id = self.neighbours.keys().nth(i - 1).unwrap();
