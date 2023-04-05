@@ -151,8 +151,7 @@ impl<'a> BootNode<'a> {
             let mut temp_cluster = self.cluster.clone();
             temp_cluster.remove(boot_node.zid.as_str());
             let hash_map: HashMap<String, (f64, f64)> = temp_cluster.into_iter().collect();
-            let temphash = SiteIdList { sites: hash_map };
-            let diagram = Voronoi::new(*self.cluster.values().next().unwrap(), &temphash);
+            let diagram = Voronoi::new(*self.cluster.values().next().unwrap(), &hash_map);
             for (i, cell) in diagram.diagram.cells().iter().enumerate() {
                 let polygon = cell.points().iter().map(|x| (x.x, x.y)).collect();
                 self.correct_polygon_list

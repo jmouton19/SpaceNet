@@ -92,7 +92,7 @@ pub struct Voronoi {
 impl Voronoi {
     pub fn new(site: (f64, f64), neighbours: &SiteIdList) -> Self {
         let mut points = vec![site];
-        let neigh = &neighbours.sites.values();
+        let neigh = &neighbours.values();
 
         points.extend(neigh.clone());
 
@@ -117,9 +117,9 @@ impl Voronoi {
         friends.retain(|&x| x < self.length - 4);
         let mut site_id_list = SiteIdList::new();
         for i in friends {
-            let site_id = self.neighbours.sites.keys().nth(i - 1).unwrap();
-            let site_coords = self.neighbours.sites.values().nth(i - 1).unwrap();
-            site_id_list.sites.insert(site_id.to_string(), *site_coords);
+            let site_id = self.neighbours.keys().nth(i - 1).unwrap();
+            let site_coords = self.neighbours.values().nth(i - 1).unwrap();
+            site_id_list.insert(site_id.to_string(), *site_coords);
         }
         site_id_list
     }
