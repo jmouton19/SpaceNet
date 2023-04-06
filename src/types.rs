@@ -1,8 +1,8 @@
-use linked_hash_map::LinkedHashMap;
 use std::collections::HashMap;
+use indexmap::IndexMap;
 
-pub type OrderedMapPairs = LinkedHashMap<String, (f64, f64)>;
-pub type OrderedMapPolygon = LinkedHashMap<String, Vec<(f64, f64)>>;
+pub type OrderedMapPairs = IndexMap<String, (f64, f64)>;
+pub type OrderedMapPolygon = IndexMap<String, Vec<(f64, f64)>>;
 pub type SiteIdList = HashMap<String, (f64, f64)>;
 
 pub fn closest_point(pairs: &OrderedMapPairs, site: (f64, f64)) -> String {
