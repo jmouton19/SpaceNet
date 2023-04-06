@@ -34,6 +34,12 @@ cd target/debug/examples
 cd target/debug/examples
 ./example_node
 ```
+
+### Running tests
+```console
+cargo test
+```
+
 * Output pngs saved in SpaceNet/images. Create this folder manually :)
 * To remove node from overlay enter q into its terminal session.
 
