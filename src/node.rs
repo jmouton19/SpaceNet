@@ -149,9 +149,12 @@ impl<'a> BootNode<'a> {
 
             //correct voronoi
             self.correct_polygon_list = OrderedMapPolygon::new();
-            let mut temp_cluster = self.cluster.clone();
-            temp_cluster.remove(boot_node.zid.as_str());
-            let hash_map: IndexMap<String, (f64, f64)> = temp_cluster.into_iter().collect();
+            let hash_map: IndexMap<String, (f64, f64)> = self
+                .cluster
+                .clone()
+                .into_iter()
+                .filter(|(k, _)| *k != boot_node.zid.as_str())
+                .collect();
             let diagram = Voronoi::new((boot_node.zid.clone(), boot_node.site), &hash_map);
             for (i, cell) in diagram.diagram.cells().iter().enumerate() {
                 let polygon = cell.points().iter().map(|x| (x.x, x.y)).collect();
