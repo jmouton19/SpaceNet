@@ -1,4 +1,4 @@
-use crate::types::SiteIdList;
+use crate::types::OrderedMapPairs;
 use serde::{Deserialize, Serialize};
 pub use serde_json::json;
 
@@ -28,7 +28,8 @@ pub struct NewVoronoiRequest {
 
 #[derive(Deserialize, Serialize)]
 pub struct NeighboursResponse {
-    pub neighbours: SiteIdList,
+    #[serde(with = "indexmap::serde_seq")]
+    pub neighbours: OrderedMapPairs,
     pub sender_id: String,
 }
 

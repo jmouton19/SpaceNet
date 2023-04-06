@@ -1,4 +1,4 @@
-use crate::types::{OrderedMapPairs, OrderedMapPolygon, SiteIdList};
+use crate::types::{OrderedMapPairs, OrderedMapPolygon};
 use plotters::element::ComposedElement;
 use plotters::prelude::*;
 pub use rand::prelude::*;
@@ -84,16 +84,16 @@ pub fn draw_voronoi(diagram: &VoronoiDiagram<Point>, name: &str) {
 
 pub struct Voronoi {
     pub diagram: VoronoiDiagram<Point>,
-    pub neighbours: SiteIdList,
-    pub site: (f64, f64),
+    pub input: OrderedMapPairs,
 }
 
 impl Voronoi {
-    pub fn new(site: (f64, f64), neighbours: &SiteIdList) -> Self {
-        let mut points = vec![site];
-        let neigh = &neighbours.values();
+    pub fn new(site: (String, (f64, f64)), neighbours: &OrderedMapPairs) -> Self {
+        let mut list = OrderedMapPairs::new();
+        list.insert(site.0, site.1);
+        list.extend(neighbours.clone());
 
-        points.extend(neigh.clone());
+        let points: Vec<(f64, f64)> = list.values().cloned().collect();
 
         let boundary_width = 100.;
         let boundary_height = 100.;
@@ -105,18 +105,17 @@ impl Voronoi {
         .unwrap();
         Self {
             diagram,
-            neighbours: neighbours.clone(),
-            site,
+            input: list,
         }
     }
 
-    pub fn get_neighbours(&self) -> SiteIdList {
+    pub fn get_neighbours(&self) -> OrderedMapPairs {
         let mut friends = self.diagram.neighbors[0].clone();
         friends.retain(|&x| x < self.diagram.sites.len() - 4);
-        let mut site_id_list = SiteIdList::new();
+        let mut site_id_list = OrderedMapPairs::new();
         for i in friends {
-            let site_id = self.neighbours.keys().nth(i - 1).unwrap();
-            let site_coords = self.neighbours.values().nth(i - 1).unwrap();
+            let site_id = self.input.keys().nth(i).unwrap();
+            let site_coords = self.input.values().nth(i).unwrap();
             site_id_list.insert(site_id.to_string(), *site_coords);
         }
         site_id_list

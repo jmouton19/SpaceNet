@@ -4,27 +4,23 @@ mod integration {
     use std::thread;
     use std::time::Instant;
 
-    //check if boot node polygon is correct
+    //check if nth node polygon is correct in an X node cluster
     #[test]
     fn test_x_node_cluster() {
+        let expected_len = 5;
+        let n = 1;
+
         let start_time = Instant::now();
         let mut boot_server = BootNode::new_with_node(Node::new(Config::default()));
-        let expected_len = 10;
-
         let handle1 = thread::spawn(move || loop {
             boot_server.run();
             if boot_server.draw_count == expected_len {
                 assert_eq!(boot_server.polygon_list.len() as i32, expected_len);
 
-                let actual = boot_server
-                    .polygon_list
-                    .get(&*boot_server.node.zid)
-                    .unwrap();
-                let expected = boot_server.correct_polygon_list.get("0").unwrap();
+                let n_zid = boot_server.cluster.keys().nth(n).unwrap();
 
-                println!("actual: {:?}", actual);
-                println!("+++++++++++++++++++++++++");
-                println!("expected: {:?}", expected);
+                let actual = boot_server.polygon_list.get(n_zid).unwrap();
+                let expected = boot_server.correct_polygon_list.get(n_zid).unwrap();
 
                 let tolerance = 0.01;
                 for (actual_point, expected_point) in actual.iter().zip(expected.iter()) {

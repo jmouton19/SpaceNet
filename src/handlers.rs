@@ -57,7 +57,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 //calc my voronoi
                 node.neighbours
                     .insert(data.sender_id.to_string(), data.site);
-                let diagram = Voronoi::new(node.site, &node.neighbours);
+                let diagram = Voronoi::new((node.zid.clone(), node.site), &node.neighbours);
                 // draw_voronoi(&diagram.diagram, format!("new_{}", node.session.zid()).as_str());
                 //get my visible neighbours
                 node.neighbours = diagram.get_neighbours();
@@ -129,7 +129,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             let data: NewVoronoiRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
             node.neighbours
                 .insert(data.sender_id.to_string(), data.site);
-            let diagram = Voronoi::new(node.site, &node.neighbours);
+            let diagram = Voronoi::new((node.zid.clone(), node.site), &node.neighbours);
             // draw_voronoi(&diagram.diagram, format!("new_{}", node.session.zid()).as_str());
             //get my visible neighbours
             node.neighbours = diagram.get_neighbours();
@@ -222,7 +222,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 }
 
                 //calc my own voronoi with all neighbours.
-                let diagram = Voronoi::new(node.site, &node.neighbours);
+                let diagram = Voronoi::new((node.zid.clone(), node.site), &node.neighbours);
                 //  draw_voronoi(&diagram.diagram, format!("new_{}", node.session.zid()).as_str());
                 //get my visible neighbours
                 node.neighbours = diagram.get_neighbours();
@@ -296,7 +296,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             //recalculate own voronoi
             node.neighbours
                 .insert(data.sender_id.to_string(), data.site);
-            let diagram = Voronoi::new(node.site, &node.neighbours);
+            let diagram = Voronoi::new((node.zid.clone(), node.site), &node.neighbours);
             // draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str());
             //my new visible neighbours
             node.neighbours = diagram.get_neighbours();
@@ -323,7 +323,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             //recalculate own voronoi
             node.neighbours.remove(data.sender_id.as_str());
             node.neighbours.extend(data.neighbours);
-            let diagram = Voronoi::new(node.site, &node.neighbours);
+            let diagram = Voronoi::new((node.zid.clone(), node.site), &node.neighbours);
             // draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str());
             //my new visible neighbours
             node.neighbours = diagram.get_neighbours();

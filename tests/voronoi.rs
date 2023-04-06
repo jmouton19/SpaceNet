@@ -1,17 +1,17 @@
 #[cfg(test)]
 mod unit {
-    use space_net::types::SiteIdList;
+    use space_net::types::OrderedMapPairs;
     use space_net::utils::Voronoi;
     use std::collections::HashSet;
 
     fn test_voronoi() -> Voronoi {
         let site = (50.0, 50.0);
-        let mut neighbours = SiteIdList::new();
+        let mut neighbours = OrderedMapPairs::new();
         neighbours.insert("A".to_string(), (75., 75.));
         neighbours.insert("B".to_string(), (25., 25.));
         neighbours.insert("C".to_string(), (66.6, 66.6));
         neighbours.insert("D".to_string(), (33.3, 33.3));
-        Voronoi::new(site, &neighbours)
+        Voronoi::new(("X".to_string(), site), &neighbours)
     }
 
     #[test]

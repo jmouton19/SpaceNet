@@ -1,12 +1,12 @@
 use crate::handlers::{boot_callback, counter_callback, node_callback};
 use crate::message::DefaultMessage;
-use crate::types::{OrderedMapPairs, OrderedMapPolygon, SiteIdList};
+use crate::types::{OrderedMapPairs, OrderedMapPolygon};
 use crate::utils::{draw_voronoi_full, Voronoi};
 use async_std::io::ReadExt;
 pub use async_std::sync::Arc;
 use async_std::{io, task};
+use indexmap::IndexMap;
 use serde_json::json;
-use std::collections::HashMap;
 pub use zenoh::prelude::sync::*;
 use zenoh::subscriber::Subscriber;
 
@@ -14,7 +14,7 @@ use zenoh::subscriber::Subscriber;
 pub struct Node<'a> {
     pub session: Arc<Session>,
     pub site: (f64, f64),
-    pub neighbours: SiteIdList,
+    pub neighbours: OrderedMapPairs,
     pub zid: String,
     pub received_counter: i32,
     pub expected_counter: i32,
@@ -53,7 +53,7 @@ impl Node<'_> {
             zid,
             session,
             site: (-1., -1.),
-            neighbours: SiteIdList::new(),
+            neighbours: OrderedMapPairs::new(),
             received_counter: 0,
             expected_counter: -1,
             running: true,
@@ -90,7 +90,7 @@ impl<'a> BootNode<'a> {
         let mut cluster = OrderedMapPairs::new();
         cluster.insert(node.zid.to_string(), node.site);
 
-        let diagram = Voronoi::new(node.site, &node.neighbours);
+        let diagram = Voronoi::new((node.zid.clone(), node.site), &node.neighbours);
         let polygon = diagram.diagram.cells()[0]
             .points()
             .iter()
@@ -148,15 +148,16 @@ impl<'a> BootNode<'a> {
             );
 
             //correct voronoi
-            self.correct_polygon_list= OrderedMapPolygon::new();
+            self.correct_polygon_list = OrderedMapPolygon::new();
             let mut temp_cluster = self.cluster.clone();
             temp_cluster.remove(boot_node.zid.as_str());
-            let hash_map: HashMap<String, (f64, f64)> = temp_cluster.into_iter().collect();
-            let diagram = Voronoi::new(*self.cluster.values().next().unwrap(), &hash_map);
+            let hash_map: IndexMap<String, (f64, f64)> = temp_cluster.into_iter().collect();
+            let diagram = Voronoi::new((boot_node.zid.clone(), boot_node.site), &hash_map);
             for (i, cell) in diagram.diagram.cells().iter().enumerate() {
                 let polygon = cell.points().iter().map(|x| (x.x, x.y)).collect();
+                let site_id = diagram.input.keys().nth(i).unwrap();
                 self.correct_polygon_list
-                    .insert(format!("{i}").to_string(), polygon);
+                    .insert(site_id.to_string(), polygon);
             }
             draw_voronoi_full(
                 &self.cluster,
