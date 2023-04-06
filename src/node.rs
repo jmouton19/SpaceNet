@@ -147,7 +147,7 @@ impl<'a> BootNode<'a> {
                 format!("voronoi{}", self.draw_count).as_str(),
             );
 
-            //draw correct voronoi
+            //correct voronoi
             let mut temp_cluster = self.cluster.clone();
             temp_cluster.remove(boot_node.zid.as_str());
             let hash_map: HashMap<String, (f64, f64)> = temp_cluster.into_iter().collect();
@@ -157,11 +157,11 @@ impl<'a> BootNode<'a> {
                 self.correct_polygon_list
                     .insert(format!("{i}").to_string(), polygon);
             }
-            draw_voronoi_full(
-                &self.cluster,
-                &self.correct_polygon_list,
-                format!("confirm{}", self.draw_count).as_str(),
-            );
+            // draw_voronoi_full(
+            //     &self.cluster,
+            //     &self.correct_polygon_list,
+            //     format!("confirm{}", self.draw_count).as_str(),
+            // );
             self.draw_count += 1;
         }
     }

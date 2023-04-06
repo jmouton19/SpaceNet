@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod tests {
+mod unit {
     use space_net::types::SiteIdList;
     use space_net::utils::Voronoi;
     use std::collections::HashSet;
@@ -16,7 +16,6 @@ mod tests {
 
     #[test]
     fn test_voronoi_polygon() {
-        //this might fail on other Pcs?
         let voronoi = test_voronoi();
         let expected = vec![
             [-0., 100.00000000000001],
@@ -27,9 +26,12 @@ mod tests {
             [16.60000000000001, 100.00000000000001],
         ];
         let actual = voronoi.diagram.cells()[0].points();
+        let tolerance = 0.01;
 
         for (actual_point, expected_point) in actual.iter().zip(expected.iter()) {
-            if actual_point.x != expected_point[0] || actual_point.y != expected_point[1] {
+            if (actual_point.x - expected_point[0]).abs() > tolerance
+                || (actual_point.y - expected_point[1]).abs() > tolerance
+            {
                 panic!("Polygon points do not match expected points");
             }
         }
