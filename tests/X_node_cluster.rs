@@ -6,7 +6,7 @@ mod integration {
 
     //check if boot node polygon is correct
     #[test]
-    fn test_3_node_cluster() {
+    fn test_X_node_cluster() {
         let start_time = Instant::now();
         let mut boot_server = BootNode::new_with_node(Node::new(Config::default()));
         let expected_len = 3;
