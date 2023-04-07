@@ -127,16 +127,14 @@ fn random_rgb() -> (u8, u8, u8) {
     (rng.gen(), rng.gen(), rng.gen())
 }
 
-fn dot_and_label(
-    x: i32,
-    y: i32,
-    i: usize,
-) -> ComposedElement<
+type DotAndLabelType = ComposedElement<
     (i32, i32),
     BitMapBackend<'static>,
     Circle<(i32, i32), i32>,
     Text<'static, (i32, i32), String>,
-> {
+>;
+
+fn dot_and_label(x: i32, y: i32, i: usize) -> DotAndLabelType {
     return EmptyElement::at((x, y))
         + Circle::new((0, 0), 3, ShapeStyle::from(&BLACK).filled())
         + Text::new(

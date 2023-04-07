@@ -1,14 +1,14 @@
 #[cfg(test)]
 mod integration {
+    use nalgebra::Point2;
     use space_net::node::*;
     use std::thread;
     use std::time::Instant;
 
-    //check if nth node polygon is correct in an X node cluster
+    //check if distributed polygons is correct in an X(expected_len) node cluster
     #[test]
     fn test_x_node_cluster() {
         let expected_len = 5;
-        let n = 1;
 
         let start_time = Instant::now();
         let mut boot_server = BootNode::new_with_node(Node::new(Config::default()));
@@ -16,18 +16,31 @@ mod integration {
             boot_server.run();
             if boot_server.draw_count == expected_len {
                 assert_eq!(boot_server.polygon_list.len() as i32, expected_len);
+                assert_eq!(
+                    boot_server.polygon_list.len() as i32,
+                    boot_server.correct_polygon_list.len() as i32
+                );
 
-                let n_zid = boot_server.cluster.keys().nth(n).unwrap();
-
-                let actual = boot_server.polygon_list.get(n_zid).unwrap();
-                let expected = boot_server.correct_polygon_list.get(n_zid).unwrap();
-
-                let tolerance = 0.01;
-                for (actual_point, expected_point) in actual.iter().zip(expected.iter()) {
-                    if (actual_point.0 - expected_point.0).abs() > tolerance
-                        || (actual_point.1 - expected_point.1).abs() > tolerance
-                    {
-                        panic!("Polygon points do not match expected points");
+                let tolerance = 0.001;
+                for i in 0..expected_len {
+                    let n_zid = boot_server.cluster.keys().nth(i as usize).unwrap();
+                    let actual = boot_server.polygon_list.get(n_zid).unwrap();
+                    let expected = boot_server.correct_polygon_list.get(n_zid).unwrap();
+                    if actual.len() != expected.len() {
+                        panic!("Polygon lengths do not match");
+                    }
+                    for actual_point in actual {
+                        let point = Point2::new(actual_point.0, actual_point.1);
+                        if !expected
+                            .iter()
+                            .map(|p| Point2::new(p.0, p.1))
+                            .any(|p| (p - point).norm() <= tolerance)
+                        {
+                            panic!(
+                                "Actual point {:?} is not within epsilon distance of any expected point.",
+                                actual_point
+                            );
+                        }
                     }
                 }
                 break;
