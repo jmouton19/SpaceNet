@@ -5,9 +5,10 @@ use crate::utils::Voronoi;
 use rand::Rng;
 use zenoh::prelude::Sample;
 
+
 pub fn node_callback(sample: Sample, node: &mut Node) {
-    let topic = sample.key_expr.split('/').nth(2).unwrap_or("");
-    println!("Topic... {:?}", topic);
+    let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
+    println!("Received message on topic... {:?}", topic);
 
     match topic {
         "new_reply" => {
@@ -20,16 +21,13 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             //set site to given site
             node.site = data.new_site;
 
-            //add land owner to neighbours rather do this later
-            //node.neighbours.push_pair(data.land_owner_site,data.land_owner.to_string());
-
             //request neighbour list from land owner
             let message = json!(NewVoronoiRequest {
                 sender_id: node.zid.clone(),
                 site: node.site
-            }); //not needed...? can get later -NB
+            });
             node.session
-                .put(format!("node/{}/new_neighbours", data.land_owner), message)
+                .put(format!("{}/node/{}/new_neighbours", node.cluster,data.land_owner), message)
                 .res()
                 .unwrap();
         }
@@ -43,6 +41,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
 
             let neigh_len = node.neighbours.len() as i32;
 
+            //redo
             //if have no neighbour just voronoi.
             if neigh_len == 0 {
                 let message = json!(ExpectedNodes {
@@ -50,7 +49,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                     sender_id: node.zid.clone()
                 });
                 node.session
-                    .put("counter/expected_wait", message)
+                    .put(format!("{}/counter/expected_wait",node.cluster), message)
                     .res()
                     .unwrap();
 
@@ -71,7 +70,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                     polygon,
                     sender_id: node.zid.clone()
                 });
-                node.session.put("counter/complete", message).res().unwrap();
+                node.session.put(format!("{}/counter/complete",node.cluster), message).res().unwrap();
 
                 //tell new site to make voronoi
                 let message = json!(NewVoronoiRequest {
@@ -79,7 +78,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                     site: node.site
                 });
                 node.session
-                    .put(format!("node/{}/no_neighbours", data.sender_id), message)
+                    .put(format!("{}/node/{}/no_neighbours", node.cluster,data.sender_id), message)
                     .res()
                     .unwrap();
             } else {
@@ -90,7 +89,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 });
                 node.session
                     .put(
-                        format!("node/{}/neighbours_expected", data.sender_id),
+                        format!("{}/node/{}/neighbours_expected", node.cluster,data.sender_id),
                         message,
                     )
                     .res()
@@ -103,7 +102,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 });
                 node.session
                     .put(
-                        format!("node/{}/neighbours_neighbours_reply", data.sender_id),
+                        format!("{}/node/{}/neighbours_neighbours_reply",node.cluster, data.sender_id),
                         message,
                     )
                     .res()
@@ -117,7 +116,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 for neighbour_id in node.neighbours.keys() {
                     node.session
                         .put(
-                            format!("node/{}/neighbours_neighbours", neighbour_id),
+                            format!("{}/node/{}/neighbours_neighbours",node.cluster ,neighbour_id),
                             message.clone(),
                         )
                         .res()
@@ -143,7 +142,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 polygon,
                 sender_id: node.zid.clone()
             });
-            node.session.put("counter/complete", message).res().unwrap();
+            node.session.put(format!("{}/counter/complete",node.cluster), message).res().unwrap();
         }
         "neighbours_expected" => {
             let data: ExpectedNodes = serde_json::from_str(&sample.value.to_string()).unwrap();
@@ -161,7 +160,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             });
             node.session
                 .put(
-                    format!("node/{}/neighbours_neighbours_reply", data.new_zid),
+                    format!("{}/node/{}/neighbours_neighbours_reply",node.cluster ,data.new_zid),
                     message,
                 )
                 .res()
@@ -176,7 +175,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             });
             node.session
                 .put(
-                    format!("node/{}/Leave_neighbours_neighbours_reply", data.sender_id),
+                    format!("{}/node/{}/Leave_neighbours_neighbours_reply",node.cluster, data.sender_id),
                     message,
                 )
                 .res()
@@ -202,7 +201,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                     sender_id: node.zid.clone()
                 });
                 node.session
-                    .put("counter/expected_wait", message)
+                    .put(format!("{}/counter/expected_wait",node.cluster), message)
                     .res()
                     .unwrap();
 
@@ -214,7 +213,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 for neighbour_id in node.neighbours.keys() {
                     node.session
                         .put(
-                            format!("node/{}/new_voronoi", neighbour_id),
+                            format!("{}/node/{}/new_voronoi",node.cluster, neighbour_id),
                             message.clone(),
                         )
                         .res()
@@ -237,7 +236,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                     polygon,
                     sender_id: node.zid.clone()
                 });
-                node.session.put("counter/complete", message).res().unwrap();
+                node.session.put(format!("{}/counter/complete",node.cluster), message).res().unwrap();
             } //else do nothing
         }
         "Leave_neighbours_neighbours_reply" => {
@@ -261,7 +260,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                     sender_id: node.zid.clone()
                 });
                 node.session
-                    .put("counter/expected_wait", message)
+                    .put(format!("{}/counter/expected_wait",node.cluster), message)
                     .res()
                     .unwrap();
 
@@ -273,7 +272,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 for neighbour_id in node.neighbours.keys() {
                     node.session
                         .put(
-                            format!("node/{}/leave_voronoi", neighbour_id),
+                            format!("{}/node/{}/leave_voronoi", node.cluster,neighbour_id),
                             message.clone(),
                         )
                         .res()
@@ -310,7 +309,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 polygon,
                 sender_id: node.zid.clone()
             });
-            node.session.put("counter/complete", message).res().unwrap();
+            node.session.put(format!("{}/counter/complete",node.cluster), message).res().unwrap();
         }
         "leave_voronoi" => {
             let data: NeighboursResponse = serde_json::from_str(&sample.value.to_string()).unwrap();
@@ -337,7 +336,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 polygon,
                 sender_id: node.zid.clone()
             });
-            node.session.put("counter/complete", message).res().unwrap();
+            node.session.put(format!("{}/counter/complete",node.cluster), message).res().unwrap();
         }
         "leave_reply" => {
             //tell me how many to wait for
@@ -347,12 +346,6 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 node.expected_counter
             );
 
-            //not needed
-            // let message = json!(ExpectedNodes{
-            //     number:node.neighbours.len(),
-            //     sender_id:node.zid.clone()});
-            // node.session.put(format!("node/{}/neighbours_expected",data.sender_id), message.clone()).res().unwrap();
-
             //get FULL neighbour list
             //request neighbours from neighbours and send it back to me
             let message = json!(DefaultMessage {
@@ -361,7 +354,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             for neighbour_id in node.neighbours.keys() {
                 node.session
                     .put(
-                        format!("node/{}/leave_neighbours_neighbours", neighbour_id),
+                        format!("{}/node/{}/leave_neighbours_neighbours", node.cluster,neighbour_id),
                         message.clone(),
                     )
                     .res()
@@ -378,7 +371,7 @@ pub fn boot_callback(
     polygon_list: &mut OrderedMapPolygon,
     cluster: &mut OrderedMapPairs,
 ) {
-    let topic = sample.key_expr.split('/').nth(2).unwrap_or("");
+    let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
     println!("Topic... {:?}", topic);
     match topic {
         "new" => {
@@ -408,7 +401,7 @@ pub fn boot_callback(
 
             let _ = node
                 .session
-                .put(format!("node/{}/new_reply", data.sender_id), json_message)
+                .put(format!("{}/node/{}/new_reply", node.cluster,data.sender_id), json_message)
                 .res();
         }
         "leave_request" => {
@@ -416,7 +409,7 @@ pub fn boot_callback(
             let data: DefaultMessage = serde_json::from_str(&sample.value.to_string()).unwrap();
             println!("Node... {} wants to leave....", data.sender_id);
             node.session
-                .put(format!("node/{}/leave_reply", data.sender_id), "")
+                .put(format!("{}/node/{}/leave_reply", node.cluster,data.sender_id), "")
                 .res()
                 .unwrap();
             polygon_list.remove(data.sender_id.as_str());
@@ -431,7 +424,7 @@ pub fn counter_callback(
     counter: &mut i32,
     polygon_list: &mut OrderedMapPolygon,
 ) {
-    let topic = sample.key_expr.split('/').nth(1).unwrap_or("");
+    let topic = sample.key_expr.split('/').nth(2).unwrap_or("");
     println!("Topic... {:?}", topic);
     match topic {
         "expected_wait" => {

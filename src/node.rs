@@ -12,22 +12,22 @@ use zenoh::subscriber::Subscriber;
 
 //#[derive(Clone)]
 pub struct Node<'a> {
-    pub session: Arc<Session>,
-    pub site: (f64, f64),
-    pub neighbours: OrderedMapPairs,
-    pub zid: String,
-    pub received_counter: i32,
-    pub expected_counter: i32,
-    pub running: bool,
+    pub(crate) cluster: String,
+    pub(crate) session: Arc<Session>,
+    pub(crate) site: (f64, f64),
+    pub(crate) neighbours: OrderedMapPairs,
+    pub(crate) zid: String,
+    pub(crate) received_counter: i32,
+    pub(crate) expected_counter: i32,
+    pub(crate) running: bool,
     subscription: Subscriber<'a, flume::Receiver<Sample>>,
 }
 
 // #[derive(Clone)]
 pub struct BootNode<'a> {
     pub node: Node<'a>,
-    pub received_counter: i32,
-    pub expected_counter: i32,
-    pub running: bool,
+    pub(crate) received_counter: i32,
+    pub(crate) expected_counter: i32,
     sub_boot: Subscriber<'a, flume::Receiver<Sample>>,
     sub_counter: Subscriber<'a, flume::Receiver<Sample>>,
     pub cluster: OrderedMapPairs,
@@ -37,19 +37,16 @@ pub struct BootNode<'a> {
 }
 
 impl Node<'_> {
-    pub fn new(config: Config) -> Self {
+    pub fn new(config: Config,cluster:&str) -> Self {
         let session = zenoh::open(config).res().unwrap().into_arc();
         let zid = session.zid().to_string();
         let node_subscription = session
-            .declare_subscriber(format!("node/{}/*", zid))
+            .declare_subscriber(format!("{}/node/{}/*", cluster,zid))
             .reliable()
             .res()
             .unwrap();
-        let message = json!(DefaultMessage {
-            sender_id: zid.clone(),
-        });
-        session.put("node/boot/new", message).res().unwrap();
         Self {
+            cluster:cluster.to_string(),
             zid,
             session,
             site: (-1., -1.),
@@ -59,6 +56,13 @@ impl Node<'_> {
             running: true,
             subscription: node_subscription,
         }
+    }
+
+    pub fn join(& self){
+        let message = json!(DefaultMessage {
+            sender_id: self.zid.clone(),
+        });
+        self.session.put(format!("{}/node/boot/new",self.cluster), message).res().unwrap();
     }
 
     pub fn run(&mut self) {
@@ -74,6 +78,7 @@ impl Node<'_> {
     pub fn leave_on_pressed(self, key: char) -> Self {
         let session = self.session.clone();
         let zid = self.zid.clone();
+        let cluster=self.cluster.clone();
         task::spawn(async move {
             let mut buffer = [0; 1];
             loop {
@@ -83,7 +88,7 @@ impl Node<'_> {
                         // Call the function when the user presses 'q'
                         let message = json!(DefaultMessage { sender_id: zid });
                         session
-                            .put("node/boot/leave_request", message)
+                            .put(format!("{}/node/boot/leave_request",cluster), message)
                             .res()
                             .unwrap();
                         break;
@@ -93,19 +98,27 @@ impl Node<'_> {
         });
         self
     }
+
+    pub fn get_zid(& self) -> &str {
+        self.zid.as_str()
+    }
+
+    pub fn is_running(& self) -> bool {
+        self.running
+    }
 }
 
 impl<'a> BootNode<'a> {
     pub fn new_with_node(mut node: Node<'a>) -> Self {
         let counter_subscriber = node
             .session
-            .declare_subscriber("counter/*")
+            .declare_subscriber(format!("{}/counter/*",node.cluster))
             .reliable()
             .res()
             .unwrap();
         let boot_subscriber = node
             .session
-            .declare_subscriber("node/boot/*")
+            .declare_subscriber(format!("{}/node/boot/*",node.cluster))
             .reliable()
             .res()
             .unwrap();
@@ -127,7 +140,6 @@ impl<'a> BootNode<'a> {
             node,
             received_counter: 0,
             expected_counter: -1,
-            running: true,
             sub_boot: boot_subscriber,
             sub_counter: counter_subscriber,
             cluster,

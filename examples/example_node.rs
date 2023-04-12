@@ -1,14 +1,15 @@
 use space_net::node::*;
 
 fn main() {
-    //join overlay network
-    let mut node = Node::new(Config::default()).leave_on_pressed('q');
-    println!("node online..... {:?}", node.zid);
+    //create node instance and join the cluster
+    let mut node = Node::new(Config::default(),"network_1").leave_on_pressed('q');
+    node.join();
 
-    //leave_on_pressed(node.session.clone(), 'q');
+    println!("node online..... {:?}", node.get_zid());
+
 
     loop {
-        if !node.running {
+        if !node.is_running() {
             break;
         }
         node.run();

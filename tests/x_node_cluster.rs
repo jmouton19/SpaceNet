@@ -11,7 +11,7 @@ mod integration {
         let expected_len = 5;
 
         let start_time = Instant::now();
-        let mut boot_server = BootNode::new_with_node(Node::new(Config::default()));
+        let mut boot_server = BootNode::new_with_node(Node::new(Config::default(),"test1"));
         let handle1 = thread::spawn(move || loop {
             boot_server.run();
             if boot_server.draw_count == expected_len {
@@ -52,7 +52,7 @@ mod integration {
         });
 
         for _i in 0..expected_len - 1 {
-            let mut node = Node::new(Config::default());
+            let mut node = Node::new(Config::default(),"test1");
             let _ = thread::spawn(move || loop {
                 node.run();
             });
