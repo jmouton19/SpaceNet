@@ -1,6 +1,5 @@
 use crate::types::OrderedMapPairs;
 use serde::{Deserialize, Serialize};
-pub use serde_json::json;
 
 #[derive(Deserialize, Serialize)]
 pub struct DefaultMessage {

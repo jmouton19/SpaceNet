@@ -12,7 +12,7 @@ indexmap = { version = "1.9.3", features = ["serde"] }
 nalgebra = "0.32.2"
 plotters = "0.3.4"
 rand = "0.8.5"
+rmp-serde = "1.1.1"
 serde = "1.0.157"
-serde_json = "1.0.94"
 voronator = "0.2.1"
 zenoh = "0.7.0-rc"

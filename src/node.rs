@@ -6,7 +6,7 @@ use async_std::io::ReadExt;
 pub use async_std::sync::Arc;
 use async_std::{io, task};
 use indexmap::IndexMap;
-use serde_json::json;
+use rmp_serde::to_vec;
 use voronator::delaunator::Point;
 use voronator::polygon::Polygon;
 pub use zenoh::prelude::sync::*;
@@ -48,9 +48,14 @@ impl Node<'_> {
             .reliable()
             .res()
             .unwrap();
-        let message = json!(DefaultMessage {
+
+        // let message = json!(DefaultMessage {
+        //     sender_id: zid.clone(),
+        // });
+        let message = to_vec(&DefaultMessage {
             sender_id: zid.clone(),
-        });
+        })
+        .unwrap();
         session
             .put(format!("{}/node/boot/new", cluster), message)
             .res()
@@ -97,7 +102,7 @@ impl Node<'_> {
                 if let Ok(()) = io::stdin().read_exact(&mut buffer).await {
                     if buffer[0] == key as u8 {
                         // Call the function when the user presses 'q'
-                        let message = json!(DefaultMessage { sender_id: zid });
+                        let message = to_vec(&DefaultMessage { sender_id: zid }).unwrap();
                         session
                             .put(format!("{}/node/boot/leave_request", cluster), message)
                             .res()
@@ -111,9 +116,10 @@ impl Node<'_> {
     }
 
     pub fn leave(self) {
-        let message = json!(DefaultMessage {
-            sender_id: self.zid.clone()
-        });
+        let message = to_vec(&DefaultMessage {
+            sender_id: self.zid.clone(),
+        })
+        .unwrap();
 
         self.session
             .put(format!("{}/node/boot/leave_request", self.cluster), message)

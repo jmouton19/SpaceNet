@@ -3,15 +3,17 @@ use crate::node::*;
 use crate::types::{closest_point, OrderedMapPairs, OrderedMapPolygon};
 use crate::utils::Voronoi;
 use rand::Rng;
+use rmp_serde::to_vec;
 use zenoh::prelude::Sample;
 
 pub fn node_callback(sample: Sample, node: &mut Node) {
     let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
     println!("Received message on topic... {:?}", topic);
+    let payload = sample.value.payload.get_zslice(0).unwrap();
 
     match topic {
         "new_reply" => {
-            let data: NewNodeResponse = serde_json::from_str(&sample.value.to_string()).unwrap();
+            let data: NewNodeResponse = rmp_serde::from_slice(payload.as_ref()).unwrap();
             println!(
                 "New point.... {:?} owner... {:?}",
                 data.new_site, data.land_owner
@@ -23,10 +25,11 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             node.neighbours
                 .insert(data.land_owner.clone(), data.land_owner_site);
             //request neighbour list from land owner
-            let message = json!(NewVoronoiRequest {
+            let message = to_vec(&NewVoronoiRequest {
                 sender_id: node.zid.clone(),
-                site: node.site
-            });
+                site: node.site,
+            })
+            .unwrap();
             node.session
                 .put(
                     format!("{}/node/{}/new_neighbours", node.cluster, data.land_owner),
@@ -37,7 +40,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
         }
 
         "new_neighbours" => {
-            let data: NewVoronoiRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
+            let data: NewVoronoiRequest = rmp_serde::from_slice(payload.as_ref()).unwrap();
             println!(
                 "New point at site... {:?} from... {:?}",
                 data.site, data.sender_id
@@ -46,10 +49,11 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             let neigh_len = node.neighbours.len() as i32;
 
             //tell new node how many to wait for
-            let message = json!(ExpectedNodes {
+            let message = to_vec(&ExpectedNodes {
                 number: neigh_len + 1,
-                sender_id: node.zid.clone()
-            });
+                sender_id: node.zid.clone(),
+            })
+            .unwrap();
             node.session
                 .put(
                     format!(
@@ -62,10 +66,11 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 .unwrap();
 
             //send my neighbors
-            let message = json!(NeighboursResponse {
+            let message = to_vec(&NeighboursResponse {
                 sender_id: node.zid.clone(),
-                neighbours: node.neighbours.clone()
-            });
+                neighbours: node.neighbours.clone(),
+            })
+            .unwrap();
             node.session
                 .put(
                     format!(
@@ -78,10 +83,11 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 .unwrap();
 
             //request neighbours from neighbours and send it to new node
-            let message = json!(NeighboursNeighboursRequest {
+            let message = to_vec(&NeighboursNeighboursRequest {
                 new_zid: data.sender_id,
-                sender_id: node.zid.clone()
-            });
+                sender_id: node.zid.clone(),
+            })
+            .unwrap();
             for neighbour_id in node.neighbours.keys() {
                 node.session
                     .put(
@@ -96,19 +102,20 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             }
         }
         "neighbours_expected" => {
-            let data: ExpectedNodes = serde_json::from_str(&sample.value.to_string()).unwrap();
+            let data: ExpectedNodes = rmp_serde::from_slice(payload.as_ref()).unwrap();
             node.expected_counter = data.number;
             println!("Im expecting {:?} neighbor responses...", data.number);
         }
 
         "neighbours_neighbours" => {
             let data: NeighboursNeighboursRequest =
-                serde_json::from_str(&sample.value.to_string()).unwrap();
+                rmp_serde::from_slice(payload.as_ref()).unwrap();
             //send list of neighbours back to new node
-            let message = json!(NeighboursResponse {
+            let message = to_vec(&NeighboursResponse {
                 sender_id: node.zid.clone(),
-                neighbours: node.neighbours.clone()
-            });
+                neighbours: node.neighbours.clone(),
+            })
+            .unwrap();
             node.session
                 .put(
                     format!(
@@ -121,12 +128,13 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 .unwrap();
         }
         "leave_neighbours_neighbours" => {
-            let data: DefaultMessage = serde_json::from_str(&sample.value.to_string()).unwrap();
+            let data: DefaultMessage = rmp_serde::from_slice(payload.as_ref()).unwrap();
             //send list of neighbours back to leaver
-            let message = json!(NeighboursResponse {
+            let message = to_vec(&NeighboursResponse {
                 sender_id: node.zid.clone(),
-                neighbours: node.neighbours.clone()
-            });
+                neighbours: node.neighbours.clone(),
+            })
+            .unwrap();
             node.session
                 .put(
                     format!(
@@ -140,7 +148,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
         }
 
         "neighbours_neighbours_reply" => {
-            let data: NeighboursResponse = serde_json::from_str(&sample.value.to_string()).unwrap();
+            let data: NeighboursResponse = rmp_serde::from_slice(payload.as_ref()).unwrap();
             node.neighbours.extend(data.neighbours);
             node.received_counter += 1;
             println!(
@@ -153,20 +161,22 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 node.expected_counter = -1;
 
                 //tell boot how many to wait for
-                let message = json!(ExpectedNodes {
+                let message = to_vec(&ExpectedNodes {
                     number: node.neighbours.len() as i32 + 1,
-                    sender_id: node.zid.clone()
-                });
+                    sender_id: node.zid.clone(),
+                })
+                .unwrap();
                 node.session
                     .put(format!("{}/counter/expected_wait", node.cluster), message)
                     .res()
                     .unwrap();
 
                 //tell all neighbours to calc new voronoi with my new site.
-                let message = json!(NewVoronoiRequest {
+                let message = to_vec(&NewVoronoiRequest {
                     site: node.site,
-                    sender_id: node.zid.clone()
-                });
+                    sender_id: node.zid.clone(),
+                })
+                .unwrap();
                 for neighbour_id in node.neighbours.keys() {
                     node.session
                         .put(
@@ -189,10 +199,11 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                     .iter()
                     .map(|x| (x.x, x.y))
                     .collect();
-                let message = json!(NewVoronoiResponse {
+                let message = to_vec(&NewVoronoiResponse {
                     polygon,
-                    sender_id: node.zid.clone()
-                });
+                    sender_id: node.zid.clone(),
+                })
+                .unwrap();
                 node.session
                     .put(format!("{}/counter/complete", node.cluster), message)
                     .res()
@@ -200,7 +211,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             } //else do nothing
         }
         "Leave_neighbours_neighbours_reply" => {
-            let data: NeighboursResponse = serde_json::from_str(&sample.value.to_string()).unwrap();
+            let data: NeighboursResponse = rmp_serde::from_slice(payload.as_ref()).unwrap();
             node.neighbours.extend(data.neighbours);
             node.received_counter += 1;
             println!(
@@ -215,20 +226,22 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
 
                 //tell boot how many to wait for
                 //+1 if wait for node to say its left
-                let message = json!(ExpectedNodes {
+                let message = to_vec(&ExpectedNodes {
                     number: node.neighbours.len() as i32,
-                    sender_id: node.zid.clone()
-                });
+                    sender_id: node.zid.clone(),
+                })
+                .unwrap();
                 node.session
                     .put(format!("{}/counter/expected_wait", node.cluster), message)
                     .res()
                     .unwrap();
 
                 //tell all neighbours to calc new voronoi without my site.
-                let message = json!(NeighboursResponse {
+                let message = to_vec(&NeighboursResponse {
                     neighbours: node.neighbours.clone(),
-                    sender_id: node.zid.clone()
-                });
+                    sender_id: node.zid.clone(),
+                })
+                .unwrap();
                 for neighbour_id in node.neighbours.keys() {
                     node.session
                         .put(
@@ -241,7 +254,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
 
                 //drop node instance
                 println!("IM SHUTTING DOWN BOOT!");
-                // let message = json!(DefaultMessage{
+                // let message = to_vec(&DefaultMessage{
                 // sender_id:node.zid.clone()});
                 // node.session.put("counter/leaving", message.clone()).res().unwrap();
                 node.running = false;
@@ -249,7 +262,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             } //else do nothing
         }
         "new_voronoi" => {
-            let data: NewVoronoiRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
+            let data: NewVoronoiRequest = rmp_serde::from_slice(payload.as_ref()).unwrap();
             println!("Recalculating my voronoi with site... {:?}", data.site);
 
             //recalculate own voronoi
@@ -265,17 +278,18 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 .iter()
                 .map(|x| (x.x, x.y))
                 .collect();
-            let message = json!(NewVoronoiResponse {
+            let message = to_vec(&NewVoronoiResponse {
                 polygon,
-                sender_id: node.zid.clone()
-            });
+                sender_id: node.zid.clone(),
+            })
+            .unwrap();
             node.session
                 .put(format!("{}/counter/complete", node.cluster), message)
                 .res()
                 .unwrap();
         }
         "leave_voronoi" => {
-            let data: NeighboursResponse = serde_json::from_str(&sample.value.to_string()).unwrap();
+            let data: NeighboursResponse = rmp_serde::from_slice(payload.as_ref()).unwrap();
             println!(
                 "Recalculating my voronoi without site... {:?}",
                 data.sender_id
@@ -295,10 +309,11 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 .iter()
                 .map(|x| (x.x, x.y))
                 .collect();
-            let message = json!(NewVoronoiResponse {
+            let message = to_vec(&NewVoronoiResponse {
                 polygon,
-                sender_id: node.zid.clone()
-            });
+                sender_id: node.zid.clone(),
+            })
+            .unwrap();
             node.session
                 .put(format!("{}/counter/complete", node.cluster), message)
                 .res()
@@ -314,9 +329,10 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
 
             //get FULL neighbour list
             //request neighbours from neighbours and send it back to me
-            let message = json!(DefaultMessage {
-                sender_id: node.zid.clone()
-            });
+            let message = to_vec(&DefaultMessage {
+                sender_id: node.zid.clone(),
+            })
+            .unwrap();
             for neighbour_id in node.neighbours.keys() {
                 node.session
                     .put(
@@ -342,9 +358,12 @@ pub fn boot_callback(
 ) {
     let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
     println!("Topic... {:?}", topic);
+    let payload = sample.value.payload.get_zslice(0).unwrap();
+    //let payload= sample.value.payload.contiguous();
     match topic {
         "new" => {
-            let data: DefaultMessage = serde_json::from_str(&sample.value.to_string()).unwrap();
+            //let data: DefaultMessage = rmp_serde::from_slice(payload.as_ref()).unwrap();
+            let data: DefaultMessage = rmp_serde::from_slice(payload.as_ref()).unwrap();
 
             //get random point to give to new node
             let mut rng = rand::thread_rng();
@@ -362,12 +381,13 @@ pub fn boot_callback(
             cluster.insert(data.sender_id.to_string(), point);
             polygon_list.insert(data.sender_id.to_string(), vec![]);
 
-            let json_message = json!(NewNodeResponse {
+            let json_message = to_vec(&NewNodeResponse {
                 new_site: point,
                 land_owner,
                 land_owner_site,
-                sender_id: node.zid.clone()
-            });
+                sender_id: node.zid.clone(),
+            })
+            .unwrap();
 
             let _ = node
                 .session
@@ -379,12 +399,12 @@ pub fn boot_callback(
         }
         "leave_request" => {
             //ack leave request
-            let data: DefaultMessage = serde_json::from_str(&sample.value.to_string()).unwrap();
+            let data: DefaultMessage = rmp_serde::from_slice(payload.as_ref()).unwrap();
             println!("Node... {} wants to leave....", data.sender_id);
             node.session
                 .put(
                     format!("{}/node/{}/leave_reply", node.cluster, data.sender_id),
-                    "",
+                    to_vec(&true).unwrap(),
                 )
                 .res()
                 .unwrap();
@@ -402,21 +422,22 @@ pub fn counter_callback(
 ) {
     let topic = sample.key_expr.split('/').nth(2).unwrap_or("");
     println!("Topic... {:?}", topic);
+    let payload = sample.value.payload.get_zslice(0).unwrap();
     match topic {
         "expected_wait" => {
-            let data: ExpectedNodes = serde_json::from_str(&sample.value.to_string()).unwrap();
+            let data: ExpectedNodes = rmp_serde::from_slice(payload.as_ref()).unwrap();
             println!("Im waiting for {} nodes to reply...", data.number);
             *expected_counter = data.number;
         }
         "complete" => {
             *counter += 1;
-            let data: NewVoronoiResponse = serde_json::from_str(&sample.value.to_string()).unwrap();
+            let data: NewVoronoiResponse = rmp_serde::from_slice(payload.as_ref()).unwrap();
             polygon_list.insert(data.sender_id, data.polygon);
             //polygon_list[index]=data.polygon;
         }
         // "leaving"=>{
         //     *counter+=1;
-        //     let data: DefaultMessage = serde_json::from_str(&sample.value.to_string()).unwrap();
+        //     let data: DefaultMessage = rmp_serde::from_slice(payload.as_ref()).unwrap();
         //     polygon_list.remove(data.sender_id.as_str());
         //     cluster.remove(data.sender_id.as_str());
         //     println!("He has left");
