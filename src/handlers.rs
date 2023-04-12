@@ -5,7 +5,6 @@ use crate::utils::Voronoi;
 use rand::Rng;
 use zenoh::prelude::Sample;
 
-
 pub fn node_callback(sample: Sample, node: &mut Node) {
     let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
     println!("Received message on topic... {:?}", topic);
@@ -21,13 +20,18 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             //set site to given site
             node.site = data.new_site;
 
+            node.neighbours
+                .insert(data.land_owner.clone(), data.land_owner_site);
             //request neighbour list from land owner
             let message = json!(NewVoronoiRequest {
                 sender_id: node.zid.clone(),
                 site: node.site
             });
             node.session
-                .put(format!("{}/node/{}/new_neighbours", node.cluster,data.land_owner), message)
+                .put(
+                    format!("{}/node/{}/new_neighbours", node.cluster, data.land_owner),
+                    message,
+                )
                 .res()
                 .unwrap();
         }
@@ -41,108 +45,55 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
 
             let neigh_len = node.neighbours.len() as i32;
 
-            //redo
-            //if have no neighbour just voronoi.
-            if neigh_len == 0 {
-                let message = json!(ExpectedNodes {
-                    number: 2,
-                    sender_id: node.zid.clone()
-                });
-                node.session
-                    .put(format!("{}/counter/expected_wait",node.cluster), message)
-                    .res()
-                    .unwrap();
-
-                //calc my voronoi
-                node.neighbours
-                    .insert(data.sender_id.to_string(), data.site);
-                let diagram = Voronoi::new((node.zid.clone(), node.site), &node.neighbours);
-                // draw_voronoi(&diagram.diagram, format!("new_{}", node.session.zid()).as_str());
-                //get my visible neighbours
-                node.neighbours = diagram.get_neighbours();
-                println!("IM DONE BOOT!");
-                let polygon = diagram.diagram.cells()[0]
-                    .points()
-                    .iter()
-                    .map(|x| (x.x, x.y))
-                    .collect();
-                let message = json!(NewVoronoiResponse {
-                    polygon,
-                    sender_id: node.zid.clone()
-                });
-                node.session.put(format!("{}/counter/complete",node.cluster), message).res().unwrap();
-
-                //tell new site to make voronoi
-                let message = json!(NewVoronoiRequest {
-                    sender_id: node.zid.clone(),
-                    site: node.site
-                });
-                node.session
-                    .put(format!("{}/node/{}/no_neighbours", node.cluster,data.sender_id), message)
-                    .res()
-                    .unwrap();
-            } else {
-                //tell new node how many to wait for
-                let message = json!(ExpectedNodes {
-                    number: neigh_len + 1,
-                    sender_id: node.zid.clone()
-                });
-                node.session
-                    .put(
-                        format!("{}/node/{}/neighbours_expected", node.cluster,data.sender_id),
-                        message,
-                    )
-                    .res()
-                    .unwrap();
-
-                //send my neighbors
-                let message = json!(NeighboursResponse {
-                    sender_id: node.zid.clone(),
-                    neighbours: node.neighbours.clone()
-                });
-                node.session
-                    .put(
-                        format!("{}/node/{}/neighbours_neighbours_reply",node.cluster, data.sender_id),
-                        message,
-                    )
-                    .res()
-                    .unwrap();
-
-                //request neighbours from neighbours and send it to new node
-                let message = json!(NeighboursNeighboursRequest {
-                    new_zid: data.sender_id,
-                    sender_id: node.zid.clone()
-                });
-                for neighbour_id in node.neighbours.keys() {
-                    node.session
-                        .put(
-                            format!("{}/node/{}/neighbours_neighbours",node.cluster ,neighbour_id),
-                            message.clone(),
-                        )
-                        .res()
-                        .unwrap();
-                }
-            }
-        }
-        "no_neighbours" => {
-            let data: NewVoronoiRequest = serde_json::from_str(&sample.value.to_string()).unwrap();
-            node.neighbours
-                .insert(data.sender_id.to_string(), data.site);
-            let diagram = Voronoi::new((node.zid.clone(), node.site), &node.neighbours);
-            // draw_voronoi(&diagram.diagram, format!("new_{}", node.session.zid()).as_str());
-            //get my visible neighbours
-            node.neighbours = diagram.get_neighbours();
-            println!("IM DONE BOOT!");
-            let polygon = diagram.diagram.cells()[0]
-                .points()
-                .iter()
-                .map(|x| (x.x, x.y))
-                .collect();
-            let message = json!(NewVoronoiResponse {
-                polygon,
+            //tell new node how many to wait for
+            let message = json!(ExpectedNodes {
+                number: neigh_len + 1,
                 sender_id: node.zid.clone()
             });
-            node.session.put(format!("{}/counter/complete",node.cluster), message).res().unwrap();
+            node.session
+                .put(
+                    format!(
+                        "{}/node/{}/neighbours_expected",
+                        node.cluster, data.sender_id
+                    ),
+                    message,
+                )
+                .res()
+                .unwrap();
+
+            //send my neighbors
+            let message = json!(NeighboursResponse {
+                sender_id: node.zid.clone(),
+                neighbours: node.neighbours.clone()
+            });
+            node.session
+                .put(
+                    format!(
+                        "{}/node/{}/neighbours_neighbours_reply",
+                        node.cluster, data.sender_id
+                    ),
+                    message,
+                )
+                .res()
+                .unwrap();
+
+            //request neighbours from neighbours and send it to new node
+            let message = json!(NeighboursNeighboursRequest {
+                new_zid: data.sender_id,
+                sender_id: node.zid.clone()
+            });
+            for neighbour_id in node.neighbours.keys() {
+                node.session
+                    .put(
+                        format!(
+                            "{}/node/{}/neighbours_neighbours",
+                            node.cluster, neighbour_id
+                        ),
+                        message.clone(),
+                    )
+                    .res()
+                    .unwrap();
+            }
         }
         "neighbours_expected" => {
             let data: ExpectedNodes = serde_json::from_str(&sample.value.to_string()).unwrap();
@@ -160,7 +111,10 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             });
             node.session
                 .put(
-                    format!("{}/node/{}/neighbours_neighbours_reply",node.cluster ,data.new_zid),
+                    format!(
+                        "{}/node/{}/neighbours_neighbours_reply",
+                        node.cluster, data.new_zid
+                    ),
                     message,
                 )
                 .res()
@@ -175,7 +129,10 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             });
             node.session
                 .put(
-                    format!("{}/node/{}/Leave_neighbours_neighbours_reply",node.cluster, data.sender_id),
+                    format!(
+                        "{}/node/{}/Leave_neighbours_neighbours_reply",
+                        node.cluster, data.sender_id
+                    ),
                     message,
                 )
                 .res()
@@ -201,7 +158,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                     sender_id: node.zid.clone()
                 });
                 node.session
-                    .put(format!("{}/counter/expected_wait",node.cluster), message)
+                    .put(format!("{}/counter/expected_wait", node.cluster), message)
                     .res()
                     .unwrap();
 
@@ -213,7 +170,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 for neighbour_id in node.neighbours.keys() {
                     node.session
                         .put(
-                            format!("{}/node/{}/new_voronoi",node.cluster, neighbour_id),
+                            format!("{}/node/{}/new_voronoi", node.cluster, neighbour_id),
                             message.clone(),
                         )
                         .res()
@@ -236,7 +193,10 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                     polygon,
                     sender_id: node.zid.clone()
                 });
-                node.session.put(format!("{}/counter/complete",node.cluster), message).res().unwrap();
+                node.session
+                    .put(format!("{}/counter/complete", node.cluster), message)
+                    .res()
+                    .unwrap();
             } //else do nothing
         }
         "Leave_neighbours_neighbours_reply" => {
@@ -260,7 +220,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                     sender_id: node.zid.clone()
                 });
                 node.session
-                    .put(format!("{}/counter/expected_wait",node.cluster), message)
+                    .put(format!("{}/counter/expected_wait", node.cluster), message)
                     .res()
                     .unwrap();
 
@@ -272,7 +232,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 for neighbour_id in node.neighbours.keys() {
                     node.session
                         .put(
-                            format!("{}/node/{}/leave_voronoi", node.cluster,neighbour_id),
+                            format!("{}/node/{}/leave_voronoi", node.cluster, neighbour_id),
                             message.clone(),
                         )
                         .res()
@@ -309,7 +269,10 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 polygon,
                 sender_id: node.zid.clone()
             });
-            node.session.put(format!("{}/counter/complete",node.cluster), message).res().unwrap();
+            node.session
+                .put(format!("{}/counter/complete", node.cluster), message)
+                .res()
+                .unwrap();
         }
         "leave_voronoi" => {
             let data: NeighboursResponse = serde_json::from_str(&sample.value.to_string()).unwrap();
@@ -336,7 +299,10 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
                 polygon,
                 sender_id: node.zid.clone()
             });
-            node.session.put(format!("{}/counter/complete",node.cluster), message).res().unwrap();
+            node.session
+                .put(format!("{}/counter/complete", node.cluster), message)
+                .res()
+                .unwrap();
         }
         "leave_reply" => {
             //tell me how many to wait for
@@ -354,7 +320,10 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             for neighbour_id in node.neighbours.keys() {
                 node.session
                     .put(
-                        format!("{}/node/{}/leave_neighbours_neighbours", node.cluster,neighbour_id),
+                        format!(
+                            "{}/node/{}/leave_neighbours_neighbours",
+                            node.cluster, neighbour_id
+                        ),
                         message.clone(),
                     )
                     .res()
@@ -386,7 +355,7 @@ pub fn boot_callback(
             println!("------------------------------------");
 
             //find closest node to new point
-            let land_owner = closest_point(cluster, point);
+            let (land_owner_site, land_owner) = closest_point(cluster, point);
             println!("{}", land_owner);
 
             //add node to cluster
@@ -396,12 +365,16 @@ pub fn boot_callback(
             let json_message = json!(NewNodeResponse {
                 new_site: point,
                 land_owner,
+                land_owner_site,
                 sender_id: node.zid.clone()
             });
 
             let _ = node
                 .session
-                .put(format!("{}/node/{}/new_reply", node.cluster,data.sender_id), json_message)
+                .put(
+                    format!("{}/node/{}/new_reply", node.cluster, data.sender_id),
+                    json_message,
+                )
                 .res();
         }
         "leave_request" => {
@@ -409,7 +382,10 @@ pub fn boot_callback(
             let data: DefaultMessage = serde_json::from_str(&sample.value.to_string()).unwrap();
             println!("Node... {} wants to leave....", data.sender_id);
             node.session
-                .put(format!("{}/node/{}/leave_reply", node.cluster,data.sender_id), "")
+                .put(
+                    format!("{}/node/{}/leave_reply", node.cluster, data.sender_id),
+                    "",
+                )
                 .res()
                 .unwrap();
             polygon_list.remove(data.sender_id.as_str());

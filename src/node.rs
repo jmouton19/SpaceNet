@@ -7,6 +7,8 @@ pub use async_std::sync::Arc;
 use async_std::{io, task};
 use indexmap::IndexMap;
 use serde_json::json;
+use voronator::delaunator::Point;
+use voronator::polygon::Polygon;
 pub use zenoh::prelude::sync::*;
 use zenoh::subscriber::Subscriber;
 
@@ -20,6 +22,7 @@ pub struct Node<'a> {
     pub(crate) received_counter: i32,
     pub(crate) expected_counter: i32,
     pub(crate) running: bool,
+    pub(crate) polygon: Polygon<Point>,
     subscription: Subscriber<'a, flume::Receiver<Sample>>,
 }
 
@@ -37,20 +40,28 @@ pub struct BootNode<'a> {
 }
 
 impl Node<'_> {
-    pub fn new(config: Config,cluster:&str) -> Self {
+    pub fn new(config: Config, cluster: &str) -> Self {
         let session = zenoh::open(config).res().unwrap().into_arc();
         let zid = session.zid().to_string();
         let node_subscription = session
-            .declare_subscriber(format!("{}/node/{}/*", cluster,zid))
+            .declare_subscriber(format!("{}/node/{}/*", cluster, zid))
             .reliable()
             .res()
             .unwrap();
+        let message = json!(DefaultMessage {
+            sender_id: zid.clone(),
+        });
+        session
+            .put(format!("{}/node/boot/new", cluster), message)
+            .res()
+            .unwrap();
         Self {
-            cluster:cluster.to_string(),
+            cluster: cluster.to_string(),
             zid,
             session,
             site: (-1., -1.),
             neighbours: OrderedMapPairs::new(),
+            polygon: Polygon::new(),
             received_counter: 0,
             expected_counter: -1,
             running: true,
@@ -58,12 +69,12 @@ impl Node<'_> {
         }
     }
 
-    pub fn join(& self){
-        let message = json!(DefaultMessage {
-            sender_id: self.zid.clone(),
-        });
-        self.session.put(format!("{}/node/boot/new",self.cluster), message).res().unwrap();
-    }
+    // pub fn join(& self){
+    //     let message = json!(DefaultMessage {
+    //         sender_id: self.zid.clone(),
+    //     });
+    //     self.session.put(format!("{}/node/boot/new",self.cluster), message).res().unwrap();
+    // }
 
     pub fn run(&mut self) {
         while let Ok(sample) = self.subscription.try_recv() {
@@ -78,7 +89,7 @@ impl Node<'_> {
     pub fn leave_on_pressed(self, key: char) -> Self {
         let session = self.session.clone();
         let zid = self.zid.clone();
-        let cluster=self.cluster.clone();
+        let cluster = self.cluster.clone();
         task::spawn(async move {
             let mut buffer = [0; 1];
             loop {
@@ -88,7 +99,7 @@ impl Node<'_> {
                         // Call the function when the user presses 'q'
                         let message = json!(DefaultMessage { sender_id: zid });
                         session
-                            .put(format!("{}/node/boot/leave_request",cluster), message)
+                            .put(format!("{}/node/boot/leave_request", cluster), message)
                             .res()
                             .unwrap();
                         break;
@@ -99,11 +110,30 @@ impl Node<'_> {
         self
     }
 
-    pub fn get_zid(& self) -> &str {
+    pub fn leave(self) {
+        let message = json!(DefaultMessage {
+            sender_id: self.zid.clone()
+        });
+
+        self.session
+            .put(format!("{}/node/boot/leave_request", self.cluster), message)
+            .res()
+            .unwrap();
+    }
+
+    pub fn get_zid(&self) -> &str {
         self.zid.as_str()
     }
 
-    pub fn is_running(& self) -> bool {
+    pub fn get_neighbours(&self) -> OrderedMapPairs {
+        self.neighbours.clone()
+    }
+
+    pub fn get_polygon(&self) -> Polygon<Point> {
+        self.polygon.clone()
+    }
+
+    pub fn is_running(&self) -> bool {
         self.running
     }
 }
@@ -112,13 +142,13 @@ impl<'a> BootNode<'a> {
     pub fn new_with_node(mut node: Node<'a>) -> Self {
         let counter_subscriber = node
             .session
-            .declare_subscriber(format!("{}/counter/*",node.cluster))
+            .declare_subscriber(format!("{}/counter/*", node.cluster))
             .reliable()
             .res()
             .unwrap();
         let boot_subscriber = node
             .session
-            .declare_subscriber(format!("{}/node/boot/*",node.cluster))
+            .declare_subscriber(format!("{}/node/boot/*", node.cluster))
             .reliable()
             .res()
             .unwrap();

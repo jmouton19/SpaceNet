@@ -11,6 +11,7 @@ pub struct DefaultMessage {
 pub struct NewNodeResponse {
     pub new_site: (f64, f64),
     pub land_owner: String,
+    pub land_owner_site: (f64, f64),
     pub sender_id: String,
 }
 
