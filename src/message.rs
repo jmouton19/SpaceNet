@@ -28,7 +28,6 @@ pub struct NewVoronoiRequest {
 
 #[derive(Deserialize, Serialize)]
 pub struct NeighboursResponse {
-    #[serde(with = "indexmap::serde_seq")]
     pub neighbours: OrderedMapPairs,
     pub sender_id: String,
 }
