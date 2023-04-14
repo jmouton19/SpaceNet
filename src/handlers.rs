@@ -6,6 +6,8 @@ use bincode::{deserialize, serialize};
 use rand::Rng;
 use zenoh::prelude::Sample;
 
+
+/// Callback function to handle messages on topics for a node
 pub fn node_callback(sample: Sample, node: &mut Node) {
     let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
     println!("Received message on topic... {:?}", topic);
@@ -349,6 +351,7 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
     }
 }
 
+/// Callback function to handle messages on topics for a boot node
 pub fn boot_callback(
     sample: Sample,
     node: &mut Node,
@@ -413,6 +416,10 @@ pub fn boot_callback(
         _ => println!("UNKNOWN BOOT TOPIC"),
     }
 }
+
+/// Callback function to handle messages on topics for a boot node.
+///
+/// Used to keep track of how many messages have been received
 pub fn counter_callback(
     sample: Sample,
     expected_counter: &mut i32,

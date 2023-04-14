@@ -4,10 +4,6 @@ fn main() {
     let mut boot_server = BootNode::new_with_node(Node::new(Config::default(), "network_1"));
     println!("boot node online..... {:?}", boot_server.node.get_zid());
     loop {
-        // Handle messages in the queue
         boot_server.run();
-        // Perform other tasks here
-        // Wait for some time before starting to handle messages again
-        //sleep(Duration::from_secs(1));
     }
 }

@@ -1,11 +1,12 @@
 use crate::types::{OrderedMapPairs, OrderedMapPolygon};
 use plotters::element::ComposedElement;
 use plotters::prelude::*;
-pub use rand::prelude::*;
+use rand::prelude::*;
 use std::path::Path;
 use voronator::delaunator::Point;
 use voronator::VoronoiDiagram;
 
+/// Draws a voronoi (containing all polygons) onto canvas and saves to png
 pub fn draw_voronoi_full(map_pairs: &OrderedMapPairs, map_polygon: &OrderedMapPolygon, name: &str) {
     let boundary_width = 100.;
     let boundary_height = 100.;
@@ -44,6 +45,7 @@ pub fn draw_voronoi_full(map_pairs: &OrderedMapPairs, map_polygon: &OrderedMapPo
     }
     let _ = root;
 }
+/// Draws a voronoi (containing one polygon) onto canvas and saves to png
 pub fn draw_voronoi(diagram: &VoronoiDiagram<Point>, name: &str) {
     let boundary_width = 100.;
     let boundary_height = 100.;
@@ -88,6 +90,7 @@ pub struct Voronoi {
 }
 
 impl Voronoi {
+    /// Creates a new Voronoi diagram from a site and its neighbours
     pub fn new(site: (String, (f64, f64)), neighbours: &OrderedMapPairs) -> Self {
         let mut list = OrderedMapPairs::new();
         list.insert(site.0, site.1);
@@ -109,6 +112,7 @@ impl Voronoi {
         }
     }
 
+    /// Returns the neighbours of the site
     pub fn get_neighbours(&self) -> OrderedMapPairs {
         let mut friends = self.diagram.neighbors[0].clone();
         friends.retain(|&x| x < self.diagram.sites.len() - 4);

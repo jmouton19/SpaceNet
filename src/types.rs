@@ -1,6 +1,8 @@
 use indexmap::IndexMap;
 
+/// HashMap with ordered keys (keeps original insertion order) for site id and site coordinates
 pub type OrderedMapPairs = IndexMap<String, (f64, f64)>;
+/// HashMap with ordered keys (keeps original insertion order) for site id and its polygon
 pub type OrderedMapPolygon = IndexMap<String, Vec<(f64, f64)>>;
 
 pub fn closest_point(pairs: &OrderedMapPairs, site: (f64, f64)) -> ((f64, f64), String) {

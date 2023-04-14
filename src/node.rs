@@ -1,9 +1,10 @@
+//! Module containing cluster node implementation
 use crate::handlers::{boot_callback, counter_callback, node_callback};
 use crate::message::DefaultMessage;
 use crate::types::{OrderedMapPairs, OrderedMapPolygon};
 use crate::utils::{draw_voronoi_full, Voronoi};
 use async_std::io::ReadExt;
-pub use async_std::sync::Arc;
+use async_std::sync::Arc;
 use async_std::{io, task};
 use bincode::serialize;
 use indexmap::IndexMap;
@@ -12,34 +13,42 @@ use voronator::polygon::Polygon;
 pub use zenoh::prelude::sync::*;
 use zenoh::subscriber::Subscriber;
 
-//#[derive(Clone)]
+/// Node struct
 pub struct Node<'a> {
     pub(crate) cluster: String,
     pub(crate) session: Arc<Session>,
     pub(crate) site: (f64, f64),
     pub(crate) neighbours: OrderedMapPairs,
     pub(crate) zid: String,
+    /// Counter for the number of received messages (resets once expected_counter is reached)
     pub(crate) received_counter: i32,
+    /// Counter for the number of expected messages
     pub(crate) expected_counter: i32,
     pub(crate) running: bool,
     pub(crate) polygon: Polygon<Point>,
     subscription: Subscriber<'a, flume::Receiver<Sample>>,
 }
 
-// #[derive(Clone)]
+/// BootNode struct
 pub struct BootNode<'a> {
     pub node: Node<'a>,
+    /// Counter for the number of received messages (resets once expected_counter is reached)
     pub(crate) received_counter: i32,
+    /// Counter for the number of expected messages
     pub(crate) expected_counter: i32,
     sub_boot: Subscriber<'a, flume::Receiver<Sample>>,
     sub_counter: Subscriber<'a, flume::Receiver<Sample>>,
     pub cluster: OrderedMapPairs,
+    /// List of polygons populated by each node individually
     pub polygon_list: OrderedMapPolygon,
+    /// List of polygons calculated from all sites at once
     pub correct_polygon_list: OrderedMapPolygon,
     pub draw_count: i32,
 }
 
+
 impl Node<'_> {
+    /// Create a new node instance
     pub fn new(config: Config, cluster: &str) -> Self {
         let session = zenoh::open(config).res().unwrap().into_arc();
         let zid = session.zid().to_string();
@@ -77,7 +86,7 @@ impl Node<'_> {
     //     });
     //     self.session.put(format!("{}/node/boot/new",self.cluster), message).res().unwrap();
     // }
-
+    ///Processes the messages in the queue for the node and calls the [`node_callback()`](crate::handlers::node_callback) function
     pub fn run(&mut self) {
         while let Ok(sample) = self.subscription.try_recv() {
             if !self.running {
@@ -87,7 +96,7 @@ impl Node<'_> {
             // Process the message here
         }
     }
-
+    /// End node when the user presses a key
     pub fn leave_on_pressed(self, key: char) -> Self {
         let session = self.session.clone();
         let zid = self.zid.clone();
@@ -111,7 +120,7 @@ impl Node<'_> {
         });
         self
     }
-
+    /// Leave the cluster
     pub fn leave(self) {
         let message = serialize(&DefaultMessage {
             sender_id: self.zid.clone(),
@@ -123,25 +132,26 @@ impl Node<'_> {
             .res()
             .unwrap();
     }
-
+    /// Get the zid of the node
     pub fn get_zid(&self) -> &str {
         self.zid.as_str()
     }
-
+    /// Get the neighbours of the node
     pub fn get_neighbours(&self) -> OrderedMapPairs {
         self.neighbours.clone()
     }
-
+    /// Get the polygon of the node
     pub fn get_polygon(&self) -> Polygon<Point> {
         self.polygon.clone()
     }
-
+    /// Check if the node is running
     pub fn is_running(&self) -> bool {
         self.running
     }
 }
 
 impl<'a> BootNode<'a> {
+    /// Create a new boot node instance with a node
     pub fn new_with_node(mut node: Node<'a>) -> Self {
         let counter_subscriber = node
             .session
@@ -186,6 +196,7 @@ impl<'a> BootNode<'a> {
     //     Self { node: None, received_counter: 0, expected_counter: -1, running: true }
     // }
 
+    ///Processes the messages in the queue for the boot node and calls the [`boot_callback()`](crate::handlers::boot_callback), [`counter_callback()`](crate::handlers::counter_callback) and [`node_callback()`](crate::handlers::node_callback) functions
     pub fn run(&mut self) {
         let boot_node = &mut self.node;
 
