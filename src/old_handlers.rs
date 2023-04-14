@@ -6,7 +6,6 @@ use bincode::{deserialize, serialize};
 use rand::Rng;
 use zenoh::prelude::Sample;
 
-
 /// Callback function to handle messages on topics for a node
 pub fn node_callback(sample: Sample, node: &mut Node) {
     let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
@@ -348,107 +347,5 @@ pub fn node_callback(sample: Sample, node: &mut Node) {
             }
         }
         _ => println!("UNKNOWN NODE TOPIC"),
-    }
-}
-
-/// Callback function to handle messages on topics for a boot node
-pub fn boot_callback(
-    sample: Sample,
-    node: &mut Node,
-    polygon_list: &mut OrderedMapPolygon,
-    cluster: &mut OrderedMapPairs,
-) {
-    let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
-    println!("Topic... {:?}", topic);
-    let payload = sample.value.payload.get_zslice(0).unwrap();
-    //let payload= sample.value.payload.contiguous();
-    match topic {
-        "new" => {
-            //let data: DefaultMessage = deserialize(payload.as_ref()).unwrap();
-            let data: DefaultMessage = deserialize(payload.as_ref()).unwrap();
-
-            //get random point to give to new node
-            let mut rng = rand::thread_rng();
-            let point = (rng.gen_range(10.0..=90.0), rng.gen_range(10.0..=90.0)); // generate random (f64, f64) tuple
-
-            println!("------------------------------------");
-            println!("Giving point {:?}.... to {:?}", point, data.sender_id);
-            println!("------------------------------------");
-
-            //find closest node to new point
-            let (land_owner_site, land_owner) = closest_point(cluster, point);
-            println!("{}", land_owner);
-
-            //add node to cluster
-            cluster.insert(data.sender_id.to_string(), point);
-            polygon_list.insert(data.sender_id.to_string(), vec![]);
-
-            let json_message = serialize(&NewNodeResponse {
-                new_site: point,
-                land_owner,
-                land_owner_site,
-                sender_id: node.zid.clone(),
-            })
-            .unwrap();
-
-            let _ = node
-                .session
-                .put(
-                    format!("{}/node/{}/new_reply", node.cluster, data.sender_id),
-                    json_message,
-                )
-                .res();
-        }
-        "leave_request" => {
-            //ack leave request
-            let data: DefaultMessage = deserialize(payload.as_ref()).unwrap();
-            println!("Node... {} wants to leave....", data.sender_id);
-            node.session
-                .put(
-                    format!("{}/node/{}/leave_reply", node.cluster, data.sender_id),
-                    serialize(&true).unwrap(),
-                )
-                .res()
-                .unwrap();
-            polygon_list.remove(data.sender_id.as_str());
-            cluster.remove(data.sender_id.as_str());
-        }
-        _ => println!("UNKNOWN BOOT TOPIC"),
-    }
-}
-
-/// Callback function to handle messages on topics for a boot node.
-///
-/// Used to keep track of how many messages have been received
-pub fn counter_callback(
-    sample: Sample,
-    expected_counter: &mut i32,
-    counter: &mut i32,
-    polygon_list: &mut OrderedMapPolygon,
-) {
-    let topic = sample.key_expr.split('/').nth(2).unwrap_or("");
-    println!("Topic... {:?}", topic);
-    let payload = sample.value.payload.get_zslice(0).unwrap();
-    match topic {
-        "expected_wait" => {
-            let data: ExpectedNodes = deserialize(payload.as_ref()).unwrap();
-            println!("Im waiting for {} nodes to reply...", data.number);
-            *expected_counter = data.number;
-        }
-        "complete" => {
-            *counter += 1;
-            let data: NewVoronoiResponse = deserialize(payload.as_ref()).unwrap();
-            polygon_list.insert(data.sender_id, data.polygon);
-            //polygon_list[index]=data.polygon;
-        }
-        // "leaving"=>{
-        //     *counter+=1;
-        //     let data: DefaultMessage = deserialize(payload.as_ref()).unwrap();
-        //     polygon_list.remove(data.sender_id.as_str());
-        //     cluster.remove(data.sender_id.as_str());
-        //     println!("He has left");
-        //
-        // },
-        _ => println!("UNKNOWN COUNTER TOPIC"),
     }
 }

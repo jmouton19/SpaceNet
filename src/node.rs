@@ -1,6 +1,9 @@
 //! Module containing cluster node implementation
-use crate::handlers::{boot_callback, counter_callback, node_callback};
+use crate::handlers::boot::join_request::join_request;
+use crate::handlers::boot::leave_request::leave_request;
+use crate::handlers::boot::set_expected_counter::set_expected_counter;
 use crate::message::DefaultMessage;
+use crate::old_handlers::{ node_callback};
 use crate::types::{OrderedMapPairs, OrderedMapPolygon};
 use crate::utils::{draw_voronoi_full, Voronoi};
 use async_std::io::ReadExt;
@@ -12,6 +15,7 @@ use voronator::delaunator::Point;
 use voronator::polygon::Polygon;
 pub use zenoh::prelude::sync::*;
 use zenoh::subscriber::Subscriber;
+use crate::handlers::boot::task_completed::task_completed;
 
 /// Node struct
 pub struct Node<'a> {
@@ -45,7 +49,6 @@ pub struct BootNode<'a> {
     pub correct_polygon_list: OrderedMapPolygon,
     pub draw_count: i32,
 }
-
 
 impl Node<'_> {
     /// Create a new node instance
@@ -86,7 +89,7 @@ impl Node<'_> {
     //     });
     //     self.session.put(format!("{}/node/boot/new",self.cluster), message).res().unwrap();
     // }
-    ///Processes the messages in the queue for the node and calls the [`node_callback()`](crate::handlers::node_callback) function
+    ///Processes the messages in the queue for the node and calls the [`node_callback()`](crate::old_handlers::node_callback) function
     pub fn run(&mut self) {
         while let Ok(sample) = self.subscription.try_recv() {
             if !self.running {
@@ -196,7 +199,6 @@ impl<'a> BootNode<'a> {
     //     Self { node: None, received_counter: 0, expected_counter: -1, running: true }
     // }
 
-    ///Processes the messages in the queue for the boot node and calls the [`boot_callback()`](crate::handlers::boot_callback), [`counter_callback()`](crate::handlers::counter_callback) and [`node_callback()`](crate::handlers::node_callback) functions
     pub fn run(&mut self) {
         let boot_node = &mut self.node;
 
@@ -204,18 +206,52 @@ impl<'a> BootNode<'a> {
             self.expected_counter = -1;
             self.received_counter = 0;
 
-            boot_callback(sample, boot_node, &mut self.polygon_list, &mut self.cluster);
-            // Process the message here
+            let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
+            println!("Message received on topic... {:?}", topic);
+            let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
+            //let payload= sample.value.payload.contiguous();
+            match topic {
+                "new" => {
+                    join_request(
+                        payload,
+                        boot_node,
+                        &mut self.polygon_list,
+                        &mut self.cluster,
+                    );
+                }
+                "leave_request" => {
+                    leave_request(
+                        payload,
+                        boot_node,
+                        &mut self.polygon_list,
+                        &mut self.cluster,
+                    );
+                }
+                _ => println!("UNKNOWN BOOT TOPIC"),
+            }
 
             while self.expected_counter != self.received_counter {
                 while let Ok(sample) = self.sub_counter.try_recv() {
-                    counter_callback(
-                        sample,
-                        &mut self.expected_counter,
-                        &mut self.received_counter,
-                        &mut self.polygon_list,
-                    );
-                    // Process the message here
+                    let topic = sample.key_expr.split('/').nth(2).unwrap_or("");
+                    println!("Message received on topic... {:?}", topic);
+                    let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
+                    match topic {
+                        "expected_wait" => {
+                            set_expected_counter(payload,&mut self.expected_counter);
+                        }
+                        "complete" => {
+                            task_completed(payload,&mut self.received_counter,&mut self.polygon_list);
+                        }
+                        // "leaving"=>{
+                        //     *counter+=1;
+                        //     let data: DefaultMessage = deserialize(payload.as_ref()).unwrap();
+                        //     polygon_list.remove(data.sender_id.as_str());
+                        //     cluster.remove(data.sender_id.as_str());
+                        //     println!("He has left");
+                        //
+                        // },
+                        _ => println!("UNKNOWN COUNTER TOPIC"),
+                    }
                 }
                 boot_node.run();
             }
