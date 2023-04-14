@@ -3,7 +3,7 @@ use crate::node::{Node, SyncResolve};
 use crate::types::{OrderedMapPairs, OrderedMapPolygon};
 use bincode::{deserialize, serialize};
 
-pub fn leave_request(
+pub fn handle_leave_request(
     payload: &[u8],
     node: &mut Node,
     polygon_list: &mut OrderedMapPolygon,

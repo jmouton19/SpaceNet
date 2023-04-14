@@ -4,7 +4,7 @@ use crate::types::{closest_point, OrderedMapPairs, OrderedMapPolygon};
 use bincode::{deserialize, serialize};
 use rand::Rng;
 
-pub fn join_request(
+pub fn handle_join_request(
     payload: &[u8],
     node: &mut Node,
     polygon_list: &mut OrderedMapPolygon,

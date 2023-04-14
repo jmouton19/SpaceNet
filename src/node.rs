@@ -1,21 +1,35 @@
 //! Module containing cluster node implementation
-use crate::handlers::boot::join_request::join_request;
-use crate::handlers::boot::leave_request::leave_request;
-use crate::handlers::boot::set_expected_counter::set_expected_counter;
+use crate::handlers::node::handle_join_response::handle_join_response;
+use crate::handlers::node::handle_leave_neighbours_neighbours_request::handle_leave_neighbours_neighbours_request;
+use crate::handlers::node::handle_leave_neighbours_neighbours_response::handle_leave_neighbours_neighbours_response;
+use crate::handlers::node::handle_leave_response::handle_leave_response;
+use crate::handlers::node::handle_leave_voronoi_request::handle_leave_voronoi_request;
+use crate::handlers::node::handle_neighbours_neighbours_request::handle_neighbours_neighbours_request;
+use crate::handlers::node::handle_neighbours_neighbours_response::handle_neighbours_neighbours_response;
+use crate::handlers::node::handle_neighbours_request::handle_neighbours_request;
+use crate::handlers::node::handle_new_voronoi_request::handle_new_voronoi_request;
+use crate::handlers::node::set_expected_neighbours::set_expected_neighbours;
 use crate::message::DefaultMessage;
-use crate::old_handlers::{ node_callback};
-use crate::types::{OrderedMapPairs, OrderedMapPolygon};
-use crate::utils::{draw_voronoi_full, Voronoi};
+use crate::types::OrderedMapPairs;
 use async_std::io::ReadExt;
 use async_std::sync::Arc;
 use async_std::{io, task};
 use bincode::serialize;
-use indexmap::IndexMap;
 use voronator::delaunator::Point;
 use voronator::polygon::Polygon;
 pub use zenoh::prelude::sync::*;
 use zenoh::subscriber::Subscriber;
-use crate::handlers::boot::task_completed::task_completed;
+
+
+use crate::handlers::boot::handle_join_request::handle_join_request;
+use crate::handlers::boot::handle_leave_request::handle_leave_request;
+use crate::handlers::boot::handle_task_completed::handle_task_completed;
+use crate::handlers::boot::set_expected_counter::set_expected_counter;
+use crate::types::{ OrderedMapPolygon};
+use crate::utils::{draw_voronoi_full, Voronoi};
+use indexmap::IndexMap;
+use zenoh::prelude::Sample;
+
 
 /// Node struct
 pub struct Node<'a> {
@@ -31,23 +45,6 @@ pub struct Node<'a> {
     pub(crate) running: bool,
     pub(crate) polygon: Polygon<Point>,
     subscription: Subscriber<'a, flume::Receiver<Sample>>,
-}
-
-/// BootNode struct
-pub struct BootNode<'a> {
-    pub node: Node<'a>,
-    /// Counter for the number of received messages (resets once expected_counter is reached)
-    pub(crate) received_counter: i32,
-    /// Counter for the number of expected messages
-    pub(crate) expected_counter: i32,
-    sub_boot: Subscriber<'a, flume::Receiver<Sample>>,
-    sub_counter: Subscriber<'a, flume::Receiver<Sample>>,
-    pub cluster: OrderedMapPairs,
-    /// List of polygons populated by each node individually
-    pub polygon_list: OrderedMapPolygon,
-    /// List of polygons calculated from all sites at once
-    pub correct_polygon_list: OrderedMapPolygon,
-    pub draw_count: i32,
 }
 
 impl Node<'_> {
@@ -89,16 +86,52 @@ impl Node<'_> {
     //     });
     //     self.session.put(format!("{}/node/boot/new",self.cluster), message).res().unwrap();
     // }
-    ///Processes the messages in the queue for the node and calls the [`node_callback()`](crate::old_handlers::node_callback) function
+
     pub fn run(&mut self) {
         while let Ok(sample) = self.subscription.try_recv() {
             if !self.running {
                 break;
             }
-            node_callback(sample, self);
-            // Process the message here
+            let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
+            println!("Received message on topic... {:?}", topic);
+            let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
+
+            match topic {
+                "new_reply" => {
+                    handle_join_response(payload, self);
+                }
+                "new_neighbours" => {
+                    handle_neighbours_request(payload, self);
+                }
+                "neighbours_expected" => {
+                    set_expected_neighbours(payload, self);
+                }
+                "neighbours_neighbours" => {
+                    handle_neighbours_neighbours_request(payload, self);
+                }
+                "leave_neighbours_neighbours" => {
+                    handle_leave_neighbours_neighbours_request(payload, self);
+                }
+                "neighbours_neighbours_reply" => {
+                    handle_neighbours_neighbours_response(payload, self);
+                }
+                "Leave_neighbours_neighbours_reply" => {
+                    handle_leave_neighbours_neighbours_response(payload, self);
+                }
+                "new_voronoi" => {
+                    handle_new_voronoi_request(payload, self);
+                }
+                "leave_voronoi" => {
+                    handle_leave_voronoi_request(payload, self);
+                }
+                "leave_reply" => {
+                    handle_leave_response(payload, self);
+                }
+                _ => println!("UNKNOWN NODE TOPIC"),
+            }
         }
     }
+
     /// End node when the user presses a key
     pub fn leave_on_pressed(self, key: char) -> Self {
         let session = self.session.clone();
@@ -151,6 +184,24 @@ impl Node<'_> {
     pub fn is_running(&self) -> bool {
         self.running
     }
+}
+
+
+/// BootNode struct
+pub struct BootNode<'a> {
+    pub node: Node<'a>,
+    /// Counter for the number of received messages (resets once expected_counter is reached)
+    pub(crate) received_counter: i32,
+    /// Counter for the number of expected messages
+    pub(crate) expected_counter: i32,
+    sub_boot: Subscriber<'a, flume::Receiver<Sample>>,
+    sub_counter: Subscriber<'a, flume::Receiver<Sample>>,
+    pub cluster: OrderedMapPairs,
+    /// List of polygons populated by each node individually
+    pub polygon_list: OrderedMapPolygon,
+    /// List of polygons calculated from all sites at once
+    pub correct_polygon_list: OrderedMapPolygon,
+    pub draw_count: i32,
 }
 
 impl<'a> BootNode<'a> {
@@ -212,7 +263,7 @@ impl<'a> BootNode<'a> {
             //let payload= sample.value.payload.contiguous();
             match topic {
                 "new" => {
-                    join_request(
+                    handle_join_request(
                         payload,
                         boot_node,
                         &mut self.polygon_list,
@@ -220,7 +271,7 @@ impl<'a> BootNode<'a> {
                     );
                 }
                 "leave_request" => {
-                    leave_request(
+                    handle_leave_request(
                         payload,
                         boot_node,
                         &mut self.polygon_list,
@@ -237,10 +288,14 @@ impl<'a> BootNode<'a> {
                     let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
                     match topic {
                         "expected_wait" => {
-                            set_expected_counter(payload,&mut self.expected_counter);
+                            set_expected_counter(payload, &mut self.expected_counter);
                         }
                         "complete" => {
-                            task_completed(payload,&mut self.received_counter,&mut self.polygon_list);
+                            handle_task_completed(
+                                payload,
+                                &mut self.received_counter,
+                                &mut self.polygon_list,
+                            );
                         }
                         // "leaving"=>{
                         //     *counter+=1;

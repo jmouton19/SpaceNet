@@ -40,6 +40,5 @@
 pub(crate) mod handlers;
 pub(crate) mod message;
 pub mod node;
-pub(crate) mod old_handlers;
-pub(crate) mod types;
-pub(crate) mod utils;
+pub mod types;
+pub mod utils;
