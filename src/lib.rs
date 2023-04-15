@@ -7,12 +7,12 @@
 //!
 //!### Boot Node
 //! Starts a [boot node](node/struct.BootNode.html) (with a node site) listening on cluster `network_1`
-//! ```rust
-//! use space_net::node::*;
+//! ```rust,no_run
+//! use space_net::boot_node::*;
 //!
 //! fn main() {
-//!     let mut boot_server = BootNode::new_with_node(Node::new(Config::default(), "network_1"));
-//!    println!("boot node online..... {:?}", boot_server.node.get_zid());
+//!     let mut boot_server = BootNode::new_with_node(Config::default(), "network_1");
+//!    println!("boot node online..... {:?}", boot_server.zid);
 //!     loop {
 //!         boot_server.run();
 //!     }
@@ -20,7 +20,7 @@
 //!```
 //!### Node
 //! Starts a [node](node/struct.Node.html) listening on cluster `network_1` which leaves the cluster on pressing `q`.
-//! ```rust
+//! ```rust,no_run
 //! use space_net::node::*;
 //!
 //! fn main() {
@@ -37,6 +37,7 @@
 //!
 //!
 
+pub mod boot_node;
 pub(crate) mod handlers;
 pub(crate) mod message;
 pub mod node;

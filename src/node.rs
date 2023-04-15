@@ -15,35 +15,20 @@ use async_std::io::ReadExt;
 use async_std::sync::Arc;
 use async_std::{io, task};
 use bincode::serialize;
-use voronator::delaunator::Point;
-use voronator::polygon::Polygon;
 pub use zenoh::prelude::sync::*;
 use zenoh::subscriber::Subscriber;
 
-
-use crate::handlers::boot::handle_join_request::handle_join_request;
-use crate::handlers::boot::handle_leave_request::handle_leave_request;
-use crate::handlers::boot::handle_task_completed::handle_task_completed;
-use crate::handlers::boot::set_expected_counter::set_expected_counter;
-use crate::types::{ OrderedMapPolygon};
-use crate::utils::{draw_voronoi_full, Voronoi};
-use indexmap::IndexMap;
-use zenoh::prelude::Sample;
-
-
 /// Node struct
 pub struct Node<'a> {
-    pub(crate) cluster: String,
+    pub(crate) cluster_name: String,
     pub(crate) session: Arc<Session>,
     pub(crate) site: (f64, f64),
     pub(crate) neighbours: OrderedMapPairs,
     pub(crate) zid: String,
-    /// Counter for the number of received messages (resets once expected_counter is reached)
     pub(crate) received_counter: i32,
-    /// Counter for the number of expected messages
     pub(crate) expected_counter: i32,
     pub(crate) running: bool,
-    pub(crate) polygon: Polygon<Point>,
+    pub(crate) polygon: Vec<(f64, f64)>,
     subscription: Subscriber<'a, flume::Receiver<Sample>>,
 }
 
@@ -67,12 +52,12 @@ impl Node<'_> {
             .res()
             .unwrap();
         Self {
-            cluster: cluster.to_string(),
+            cluster_name: cluster.to_string(),
             zid,
             session,
             site: (-1., -1.),
             neighbours: OrderedMapPairs::new(),
-            polygon: Polygon::new(),
+            polygon: vec![],
             received_counter: 0,
             expected_counter: -1,
             running: true,
@@ -136,7 +121,7 @@ impl Node<'_> {
     pub fn leave_on_pressed(self, key: char) -> Self {
         let session = self.session.clone();
         let zid = self.zid.clone();
-        let cluster = self.cluster.clone();
+        let cluster = self.cluster_name.clone();
         task::spawn(async move {
             let mut buffer = [0; 1];
             loop {
@@ -164,7 +149,10 @@ impl Node<'_> {
         .unwrap();
 
         self.session
-            .put(format!("{}/node/boot/leave_request", self.cluster), message)
+            .put(
+                format!("{}/node/boot/leave_request", self.cluster_name),
+                message,
+            )
             .res()
             .unwrap();
     }
@@ -177,167 +165,11 @@ impl Node<'_> {
         self.neighbours.clone()
     }
     /// Get the polygon of the node
-    pub fn get_polygon(&self) -> Polygon<Point> {
+    pub fn get_polygon(&self) -> Vec<(f64, f64)> {
         self.polygon.clone()
     }
     /// Check if the node is running
     pub fn is_running(&self) -> bool {
         self.running
-    }
-}
-
-
-/// BootNode struct
-pub struct BootNode<'a> {
-    pub node: Node<'a>,
-    /// Counter for the number of received messages (resets once expected_counter is reached)
-    pub(crate) received_counter: i32,
-    /// Counter for the number of expected messages
-    pub(crate) expected_counter: i32,
-    sub_boot: Subscriber<'a, flume::Receiver<Sample>>,
-    sub_counter: Subscriber<'a, flume::Receiver<Sample>>,
-    pub cluster: OrderedMapPairs,
-    /// List of polygons populated by each node individually
-    pub polygon_list: OrderedMapPolygon,
-    /// List of polygons calculated from all sites at once
-    pub correct_polygon_list: OrderedMapPolygon,
-    pub draw_count: i32,
-}
-
-impl<'a> BootNode<'a> {
-    /// Create a new boot node instance with a node
-    pub fn new_with_node(mut node: Node<'a>) -> Self {
-        let counter_subscriber = node
-            .session
-            .declare_subscriber(format!("{}/counter/*", node.cluster))
-            .reliable()
-            .res()
-            .unwrap();
-        let boot_subscriber = node
-            .session
-            .declare_subscriber(format!("{}/node/boot/*", node.cluster))
-            .reliable()
-            .res()
-            .unwrap();
-        node.site = (50., 50.);
-        let mut cluster = OrderedMapPairs::new();
-        cluster.insert(node.zid.to_string(), node.site);
-
-        let diagram = Voronoi::new((node.zid.clone(), node.site), &node.neighbours);
-        let polygon = diagram.diagram.cells()[0]
-            .points()
-            .iter()
-            .map(|x| (x.x, x.y))
-            .collect();
-
-        let mut polygon_list = OrderedMapPolygon::new();
-        polygon_list.insert(node.zid.to_string(), polygon);
-        draw_voronoi_full(&cluster, &polygon_list, "initial");
-        Self {
-            node,
-            received_counter: 0,
-            expected_counter: -1,
-            sub_boot: boot_subscriber,
-            sub_counter: counter_subscriber,
-            cluster,
-            polygon_list,
-            correct_polygon_list: OrderedMapPolygon::new(),
-            draw_count: 1,
-        }
-    }
-
-    // pub fn new_without_node() -> Self {
-    //     Self { node: None, received_counter: 0, expected_counter: -1, running: true }
-    // }
-
-    pub fn run(&mut self) {
-        let boot_node = &mut self.node;
-
-        if let Ok(sample) = self.sub_boot.try_recv() {
-            self.expected_counter = -1;
-            self.received_counter = 0;
-
-            let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
-            println!("Message received on topic... {:?}", topic);
-            let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
-            //let payload= sample.value.payload.contiguous();
-            match topic {
-                "new" => {
-                    handle_join_request(
-                        payload,
-                        boot_node,
-                        &mut self.polygon_list,
-                        &mut self.cluster,
-                    );
-                }
-                "leave_request" => {
-                    handle_leave_request(
-                        payload,
-                        boot_node,
-                        &mut self.polygon_list,
-                        &mut self.cluster,
-                    );
-                }
-                _ => println!("UNKNOWN BOOT TOPIC"),
-            }
-
-            while self.expected_counter != self.received_counter {
-                while let Ok(sample) = self.sub_counter.try_recv() {
-                    let topic = sample.key_expr.split('/').nth(2).unwrap_or("");
-                    println!("Message received on topic... {:?}", topic);
-                    let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
-                    match topic {
-                        "expected_wait" => {
-                            set_expected_counter(payload, &mut self.expected_counter);
-                        }
-                        "complete" => {
-                            handle_task_completed(
-                                payload,
-                                &mut self.received_counter,
-                                &mut self.polygon_list,
-                            );
-                        }
-                        // "leaving"=>{
-                        //     *counter+=1;
-                        //     let data: DefaultMessage = deserialize(payload.as_ref()).unwrap();
-                        //     polygon_list.remove(data.sender_id.as_str());
-                        //     cluster.remove(data.sender_id.as_str());
-                        //     println!("He has left");
-                        //
-                        // },
-                        _ => println!("UNKNOWN COUNTER TOPIC"),
-                    }
-                }
-                boot_node.run();
-            }
-            //redraw distributed voronoi
-            draw_voronoi_full(
-                &self.cluster,
-                &self.polygon_list,
-                format!("voronoi{}", self.draw_count).as_str(),
-            );
-
-            //correct voronoi
-            self.correct_polygon_list = OrderedMapPolygon::new();
-            let hash_map: IndexMap<String, (f64, f64)> = self
-                .cluster
-                .clone()
-                .into_iter()
-                .filter(|(k, _)| *k != boot_node.zid.as_str())
-                .collect();
-            let diagram = Voronoi::new((boot_node.zid.clone(), boot_node.site), &hash_map);
-            for (i, cell) in diagram.diagram.cells().iter().enumerate() {
-                let polygon = cell.points().iter().map(|x| (x.x, x.y)).collect();
-                let site_id = diagram.input.keys().nth(i).unwrap();
-                self.correct_polygon_list
-                    .insert(site_id.to_string(), polygon);
-            }
-            draw_voronoi_full(
-                &self.cluster,
-                &self.correct_polygon_list,
-                format!("confirm{}", self.draw_count).as_str(),
-            );
-            self.draw_count += 1;
-        }
     }
 }

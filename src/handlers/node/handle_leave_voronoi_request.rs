@@ -4,7 +4,7 @@ use crate::utils::Voronoi;
 use bincode::{deserialize, serialize};
 
 pub fn handle_leave_voronoi_request(payload: &[u8], node: &mut Node) {
-    let data: NeighboursResponse = deserialize(payload.as_ref()).unwrap();
+    let data: NeighboursResponse = deserialize(payload).unwrap();
     println!(
         "Recalculating my voronoi without site... {:?}",
         data.sender_id
@@ -19,18 +19,19 @@ pub fn handle_leave_voronoi_request(payload: &[u8], node: &mut Node) {
     //my new visible neighbours
     node.neighbours = diagram.get_neighbours();
     println!("IM DONE BOOT!");
-    let polygon = diagram.diagram.cells()[0]
+    let polygon: Vec<(f64, f64)> = diagram.diagram.cells()[0]
         .points()
         .iter()
         .map(|x| (x.x, x.y))
         .collect();
+    node.polygon = polygon.clone();
     let message = serialize(&NewVoronoiResponse {
         polygon,
         sender_id: node.zid.clone(),
     })
     .unwrap();
     node.session
-        .put(format!("{}/counter/complete", node.cluster), message)
+        .put(format!("{}/counter/complete", node.cluster_name), message)
         .res()
         .unwrap();
 }

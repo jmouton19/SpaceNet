@@ -3,7 +3,7 @@ use crate::node::{Node, SyncResolve};
 use bincode::{deserialize, serialize};
 
 pub fn handle_join_response(payload: &[u8], node: &mut Node) {
-    let data: NewNodeResponse = deserialize(payload.as_ref()).unwrap();
+    let data: NewNodeResponse = deserialize(payload).unwrap();
     println!(
         "New point.... {:?} owner... {:?}",
         data.new_site, data.land_owner
@@ -21,7 +21,10 @@ pub fn handle_join_response(payload: &[u8], node: &mut Node) {
     .unwrap();
     node.session
         .put(
-            format!("{}/node/{}/new_neighbours", node.cluster, data.land_owner),
+            format!(
+                "{}/node/{}/new_neighbours",
+                node.cluster_name, data.land_owner
+            ),
             message,
         )
         .res()

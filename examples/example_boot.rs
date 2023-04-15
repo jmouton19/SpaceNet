@@ -1,8 +1,8 @@
-use space_net::node::*;
+use space_net::boot_node::*;
 
 fn main() {
-    let mut boot_server = BootNode::new_with_node(Node::new(Config::default(), "network_1"));
-    println!("boot node online..... {:?}", boot_server.node.get_zid());
+    let mut boot_server = BootNode::new(Config::default(), "network_1");
+    println!("boot node online..... {:?}", boot_server.zid);
     loop {
         boot_server.run();
     }

@@ -3,7 +3,7 @@ use crate::node::{Node, SyncResolve};
 use bincode::{deserialize, serialize};
 
 pub fn handle_leave_neighbours_neighbours_response(payload: &[u8], node: &mut Node) {
-    let data: NeighboursResponse = deserialize(payload.as_ref()).unwrap();
+    let data: NeighboursResponse = deserialize(payload).unwrap();
     node.neighbours.extend(data.neighbours);
     node.received_counter += 1;
     println!(
@@ -24,7 +24,10 @@ pub fn handle_leave_neighbours_neighbours_response(payload: &[u8], node: &mut No
         })
         .unwrap();
         node.session
-            .put(format!("{}/counter/expected_wait", node.cluster), message)
+            .put(
+                format!("{}/counter/expected_wait", node.cluster_name),
+                message,
+            )
             .res()
             .unwrap();
 
@@ -37,7 +40,7 @@ pub fn handle_leave_neighbours_neighbours_response(payload: &[u8], node: &mut No
         for neighbour_id in node.neighbours.keys() {
             node.session
                 .put(
-                    format!("{}/node/{}/leave_voronoi", node.cluster, neighbour_id),
+                    format!("{}/node/{}/leave_voronoi", node.cluster_name, neighbour_id),
                     message.clone(),
                 )
                 .res()

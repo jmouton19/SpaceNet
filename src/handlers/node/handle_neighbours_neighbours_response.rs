@@ -4,7 +4,7 @@ use crate::utils::Voronoi;
 use bincode::{deserialize, serialize};
 
 pub fn handle_neighbours_neighbours_response(payload: &[u8], node: &mut Node) {
-    let data: NeighboursResponse = deserialize(payload.as_ref()).unwrap();
+    let data: NeighboursResponse = deserialize(payload).unwrap();
     node.neighbours.extend(data.neighbours);
     node.received_counter += 1;
     println!(
@@ -23,7 +23,10 @@ pub fn handle_neighbours_neighbours_response(payload: &[u8], node: &mut Node) {
         })
         .unwrap();
         node.session
-            .put(format!("{}/counter/expected_wait", node.cluster), message)
+            .put(
+                format!("{}/counter/expected_wait", node.cluster_name),
+                message,
+            )
             .res()
             .unwrap();
 
@@ -36,7 +39,7 @@ pub fn handle_neighbours_neighbours_response(payload: &[u8], node: &mut Node) {
         for neighbour_id in node.neighbours.keys() {
             node.session
                 .put(
-                    format!("{}/node/{}/new_voronoi", node.cluster, neighbour_id),
+                    format!("{}/node/{}/new_voronoi", node.cluster_name, neighbour_id),
                     message.clone(),
                 )
                 .res()
@@ -50,18 +53,19 @@ pub fn handle_neighbours_neighbours_response(payload: &[u8], node: &mut Node) {
         node.neighbours = diagram.get_neighbours();
 
         println!("IM DONE BOOT!");
-        let polygon = diagram.diagram.cells()[0]
+        let polygon: Vec<(f64, f64)> = diagram.diagram.cells()[0]
             .points()
             .iter()
             .map(|x| (x.x, x.y))
             .collect();
+        node.polygon = polygon.clone();
         let message = serialize(&NewVoronoiResponse {
             polygon,
             sender_id: node.zid.clone(),
         })
         .unwrap();
         node.session
-            .put(format!("{}/counter/complete", node.cluster), message)
+            .put(format!("{}/counter/complete", node.cluster_name), message)
             .res()
             .unwrap();
     } //else do nothing

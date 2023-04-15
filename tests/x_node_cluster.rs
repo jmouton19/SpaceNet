@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod integration {
     use nalgebra::Point2;
+    use space_net::boot_node::BootNode;
     use space_net::node::*;
     use std::thread;
     use std::time::Instant;
@@ -11,21 +12,26 @@ mod integration {
         let expected_len = 5;
 
         let start_time = Instant::now();
-        let mut boot_server = BootNode::new_with_node(Node::new(Config::default(), "test1"));
+        let mut boot_server = BootNode::new(Config::default(), "test1");
         let handle1 = thread::spawn(move || loop {
             boot_server.run();
-            if boot_server.draw_count == expected_len {
-                assert_eq!(boot_server.polygon_list.len() as i32, expected_len);
+            if boot_server.draw_count == expected_len - 1 {
+                println!("BOOT ID {}...", boot_server.zid);
+                assert_eq!(boot_server.polygon_list.len() as i32, expected_len - 1);
                 assert_eq!(
                     boot_server.polygon_list.len() as i32,
                     boot_server.correct_polygon_list.len() as i32
                 );
 
                 let tolerance = 0.001;
-                for i in 0..expected_len {
+                for i in 0..(expected_len - 1) {
+                    println!("AWE im in");
                     let n_zid = boot_server.cluster.keys().nth(i as usize).unwrap();
                     let actual = boot_server.polygon_list.get(n_zid).unwrap();
+                    println!("{:?}", boot_server.polygon_list);
+                    println!("{:?}", boot_server.correct_polygon_list);
                     let expected = boot_server.correct_polygon_list.get(n_zid).unwrap();
+                    println!("{:?}", expected);
                     if actual.len() != expected.len() {
                         panic!("Polygon lengths do not match");
                     }
@@ -51,7 +57,7 @@ mod integration {
             }
         });
 
-        for _i in 0..expected_len - 1 {
+        for _i in 0..(expected_len - 1) {
             let mut node = Node::new(Config::default(), "test1");
             let _ = thread::spawn(move || loop {
                 node.run();

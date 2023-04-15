@@ -8,6 +8,6 @@ pub fn handle_task_completed(
     polygon_list: &mut OrderedMapPolygon,
 ) {
     *counter += 1;
-    let data: NewVoronoiResponse = deserialize(payload.as_ref()).unwrap();
+    let data: NewVoronoiResponse = deserialize(payload).unwrap();
     polygon_list.insert(data.sender_id, data.polygon);
 }

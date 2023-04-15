@@ -5,7 +5,7 @@ use crate::node::{Node, SyncResolve};
 use bincode::{deserialize, serialize};
 
 pub fn handle_neighbours_request(payload: &[u8], node: &mut Node) {
-    let data: NewVoronoiRequest = deserialize(payload.as_ref()).unwrap();
+    let data: NewVoronoiRequest = deserialize(payload).unwrap();
     println!(
         "New point at site... {:?} from... {:?}",
         data.site, data.sender_id
@@ -23,7 +23,7 @@ pub fn handle_neighbours_request(payload: &[u8], node: &mut Node) {
         .put(
             format!(
                 "{}/node/{}/neighbours_expected",
-                node.cluster, data.sender_id
+                node.cluster_name, data.sender_id
             ),
             message,
         )
@@ -40,7 +40,7 @@ pub fn handle_neighbours_request(payload: &[u8], node: &mut Node) {
         .put(
             format!(
                 "{}/node/{}/neighbours_neighbours_reply",
-                node.cluster, data.sender_id
+                node.cluster_name, data.sender_id
             ),
             message,
         )
@@ -58,7 +58,7 @@ pub fn handle_neighbours_request(payload: &[u8], node: &mut Node) {
             .put(
                 format!(
                     "{}/node/{}/neighbours_neighbours",
-                    node.cluster, neighbour_id
+                    node.cluster_name, neighbour_id
                 ),
                 message.clone(),
             )

@@ -1,23 +1,22 @@
+use crate::boot_node::BootNode;
 use crate::message::DefaultMessage;
-use crate::node::{Node, SyncResolve};
-use crate::types::{OrderedMapPairs, OrderedMapPolygon};
+use crate::node::SyncResolve;
 use bincode::{deserialize, serialize};
 
-pub fn handle_leave_request(
-    payload: &[u8],
-    node: &mut Node,
-    polygon_list: &mut OrderedMapPolygon,
-    cluster: &mut OrderedMapPairs,
-) {
-    let data: DefaultMessage = deserialize(payload.as_ref()).unwrap();
+pub fn handle_leave_request(payload: &[u8], boot_node: &mut BootNode) {
+    let data: DefaultMessage = deserialize(payload).unwrap();
     println!("Node... {} wants to leave....", data.sender_id);
-    node.session
+    boot_node
+        .session
         .put(
-            format!("{}/node/{}/leave_reply", node.cluster, data.sender_id),
+            format!(
+                "{}/node/{}/leave_reply",
+                boot_node.cluster_name, data.sender_id
+            ),
             serialize(&true).unwrap(),
         )
         .res()
         .unwrap();
-    polygon_list.remove(data.sender_id.as_str());
-    cluster.remove(data.sender_id.as_str());
+    boot_node.polygon_list.remove(data.sender_id.as_str());
+    boot_node.cluster.remove(data.sender_id.as_str());
 }
