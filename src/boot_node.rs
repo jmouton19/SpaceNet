@@ -10,7 +10,7 @@ pub use zenoh::prelude::sync::*;
 use zenoh::prelude::Sample;
 use zenoh::subscriber::Subscriber;
 
-/// BootNode struct
+/// A boot node in a network acts as the entry point for new nodes to join the cluster. It also acts as a central point for nodes to leave the cluster. Stores the site and polygon information of all nodes in the network. Constructs the distributed voronoi diagram from received polygons as well as a centralized voronoi diagram.
 pub struct BootNode<'a> {
     pub(crate) session: Arc<Session>,
     pub(crate) zid: String,
@@ -26,7 +26,8 @@ pub struct BootNode<'a> {
 }
 
 impl BootNode<'_> {
-    /// Create a new boot node instance with a node
+    /// Creates a new boot node instance with a [session](https://docs.rs/zenoh/0.7.0-rc/zenoh/struct.Session.html).
+    /// Opens a subscription on topic `{cluster}/boot/*` to receive incoming messages from nodes and a subscription on`{cluster}/counter/*` to count the number of messages its received since processing the current message on the `{cluster}/boot/*` topic.
     pub fn new(config: Config, cluster_name: &str) -> Self {
         let session = zenoh::open(config).res().unwrap().into_arc();
         let zid = session.zid().to_string();
@@ -56,7 +57,7 @@ impl BootNode<'_> {
             cluster_name: cluster_name.to_string(),
         }
     }
-
+    /// Process the current messages that are in the subscription channel queue one at a time. Handles each topic with a different [handler](crate::handlers::boot).
     pub fn run(&mut self) {
         if let Ok(sample) = self.sub_boot.try_recv() {
             self.expected_counter = -1;
@@ -107,7 +108,7 @@ impl BootNode<'_> {
                 draw_voronoi_full(
                     &self.cluster,
                     &self.polygon_list,
-                    format!("voronoi{}", self.draw_count).as_str(),
+                    format!("{}voronoi", self.draw_count).as_str(),
                 );
                 //correct voronoi
                 let mut hash_map = self.cluster.clone();
@@ -130,13 +131,13 @@ impl BootNode<'_> {
                 draw_voronoi_full(
                     &self.cluster,
                     &self.correct_polygon_list,
-                    format!("confirm{}", self.draw_count).as_str(),
+                    format!("{}confirm", self.draw_count).as_str(),
                 );
                 self.draw_count += 1;
             };
         }
     }
-
+    /// Get the zid of the node
     pub fn get_zid(&self) -> String {
         self.zid.clone()
     }

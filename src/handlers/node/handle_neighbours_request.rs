@@ -4,6 +4,7 @@ use crate::message::{
 use crate::node::{Node, SyncResolve};
 use bincode::{deserialize, serialize};
 
+/// Send new node its neighbours and tells neighbours to send their neighbours to new node. Tells new node how many neighbours to wait for.
 pub fn handle_neighbours_request(payload: &[u8], node: &mut Node) {
     let data: NewVoronoiRequest = deserialize(payload).unwrap();
     println!(

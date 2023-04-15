@@ -2,6 +2,8 @@ use crate::message::{ExpectedNodes, NeighboursResponse};
 use crate::node::{Node, SyncResolve};
 use bincode::{deserialize, serialize};
 
+/// Combine all neighbour lists received. If number of messages received is equal to the expected number tell all neighbours to calculate new voronoi without leavers site.
+/// Drop leaver node instance.
 pub fn handle_leave_neighbours_neighbours_response(payload: &[u8], node: &mut Node) {
     let data: NeighboursResponse = deserialize(payload).unwrap();
     node.neighbours.extend(data.neighbours);

@@ -3,6 +3,7 @@ use crate::node::{Node, SyncResolve};
 use crate::utils::Voronoi;
 use bincode::{deserialize, serialize};
 
+/// Recalculates voronoi with new site and sends new polygon to boot node
 pub fn handle_new_voronoi_request(payload: &[u8], node: &mut Node) {
     let data: NewVoronoiRequest = deserialize(payload).unwrap();
     println!("Recalculating my voronoi with site... {:?}", data.site);

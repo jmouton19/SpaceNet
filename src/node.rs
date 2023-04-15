@@ -1,4 +1,3 @@
-//! Module containing cluster node implementation
 use crate::handlers::node::handle_join_response::handle_join_response;
 use crate::handlers::node::handle_leave_neighbours_neighbours_request::handle_leave_neighbours_neighbours_request;
 use crate::handlers::node::handle_leave_neighbours_neighbours_response::handle_leave_neighbours_neighbours_response;
@@ -18,7 +17,7 @@ use bincode::serialize;
 pub use zenoh::prelude::sync::*;
 use zenoh::subscriber::Subscriber;
 
-/// Node struct
+/// A node in a network that has a point site which is used in the calculation of the voronoi diagram of a cluster. Computes its own voronoi polygon from its list of neighbours. Does not store information on entire cluster.
 pub struct Node<'a> {
     pub(crate) cluster_name: String,
     pub(crate) session: Arc<Session>,
@@ -33,7 +32,8 @@ pub struct Node<'a> {
 }
 
 impl Node<'_> {
-    /// Create a new node instance
+    /// Creates a new node instance with a [session](https://docs.rs/zenoh/0.7.0-rc/zenoh/struct.Session.html). Joins the cluster by messaging a boot node on that cluster.
+    /// Opens a subscription on topic `{cluster}/node/{zid}/*` to receive incoming messages.
     pub fn new(config: Config, cluster: &str) -> Self {
         let session = zenoh::open(config).res().unwrap().into_arc();
         let zid = session.zid().to_string();
@@ -72,6 +72,7 @@ impl Node<'_> {
     //     self.session.put(format!("{}/node/boot/new",self.cluster), message).res().unwrap();
     // }
 
+    /// Process the current messages that are in the subscription channel queue one at a time. Handles each topic with a different [handler](crate::handlers::node).
     pub fn run(&mut self) {
         while let Ok(sample) = self.subscription.try_recv() {
             if !self.running {
@@ -117,7 +118,7 @@ impl Node<'_> {
         }
     }
 
-    /// End node when the user presses a key
+    /// End node when the user presses a key. Node is dropped and leaves the cluster.
     pub fn leave_on_pressed(self, key: char) -> Self {
         let session = self.session.clone();
         let zid = self.zid.clone();
@@ -141,7 +142,7 @@ impl Node<'_> {
         });
         self
     }
-    /// Leave the cluster
+    ///  Node is dropped and leaves the cluster.
     pub fn leave(self) {
         let message = serialize(&DefaultMessage {
             sender_id: self.zid.clone(),

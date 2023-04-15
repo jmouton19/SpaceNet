@@ -1,12 +1,14 @@
-//! # space_net
+#![doc(html_logo_url = "../../../LOGO.png", html_favicon_url = "../../../LOGO.png")]
+//![SpaceNet](./space_net/index.html) is a native rust library for distributed virtual environments using spatial partitioning.
 //!
-//! A native rust library for distributed virtual environments using spatial partitioning.
-//!
+//!## Dependencies
+//! ## Ubuntu Linux
+//! ```bash
+//! sudo apt install pkg-config libfreetype6-dev libfontconfig1-dev
+//! ```
 //! ## Examples
-//!
-//!
 //!### Boot Node
-//! Starts a [boot node](node/struct.BootNode.html) (with a node site) listening on cluster `network_1`
+//! Starts a [boot node](boot_node/struct.BootNode.html) listening on cluster `network_1` for nodes to join.
 //! ```rust,no_run
 //! use space_net::boot_node::*;
 //!

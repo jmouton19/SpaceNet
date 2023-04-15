@@ -5,6 +5,7 @@ pub type OrderedMapPairs = IndexMap<String, (f64, f64)>;
 /// HashMap with ordered keys (keeps original insertion order) for site id and its polygon
 pub type OrderedMapPolygon = IndexMap<String, Vec<(f64, f64)>>;
 
+/// Calculate the closest site to a given site
 pub fn closest_point(pairs: &OrderedMapPairs, site: (f64, f64)) -> ((f64, f64), String) {
     let mut closest_zid = "";
     let mut closest_site = (-1.0, -1.0);

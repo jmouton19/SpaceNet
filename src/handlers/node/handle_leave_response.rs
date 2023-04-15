@@ -2,6 +2,7 @@ use crate::message::{DefaultMessage, ExpectedNodes};
 use crate::node::{Node, SyncResolve};
 use bincode::serialize;
 
+/// Handles leave response, if no neighbours, shut down, else request neighbour list from neighbours
 pub fn handle_leave_response(_payload: &[u8], node: &mut Node) {
     //tell me how many to wait for
     node.expected_counter = node.neighbours.len() as i32;

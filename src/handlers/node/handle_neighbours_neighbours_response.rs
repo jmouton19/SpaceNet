@@ -3,6 +3,7 @@ use crate::node::{Node, SyncResolve};
 use crate::utils::Voronoi;
 use bincode::{deserialize, serialize};
 
+/// Combine all neighbour lists received. If number of messages received is equal to the expected number calculate my voronoi and tell all neighbours to calculate new voronoi with my new site.
 pub fn handle_neighbours_neighbours_response(payload: &[u8], node: &mut Node) {
     let data: NeighboursResponse = deserialize(payload).unwrap();
     node.neighbours.extend(data.neighbours);
