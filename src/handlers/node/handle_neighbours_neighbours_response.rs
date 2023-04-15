@@ -6,6 +6,7 @@ use bincode::{deserialize, serialize};
 pub fn handle_neighbours_neighbours_response(payload: &[u8], node: &mut Node) {
     let data: NeighboursResponse = deserialize(payload).unwrap();
     node.neighbours.extend(data.neighbours);
+    node.neighbours.remove(node.zid.as_str());
     node.received_counter += 1;
     println!(
         "Message received from {}....  expecting {} more.",
@@ -62,6 +63,7 @@ pub fn handle_neighbours_neighbours_response(payload: &[u8], node: &mut Node) {
         let message = serialize(&NewVoronoiResponse {
             polygon,
             sender_id: node.zid.clone(),
+            site: node.site,
         })
         .unwrap();
         node.session

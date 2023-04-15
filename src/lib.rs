@@ -11,8 +11,8 @@
 //! use space_net::boot_node::*;
 //!
 //! fn main() {
-//!     let mut boot_server = BootNode::new_with_node(Config::default(), "network_1");
-//!    println!("boot node online..... {:?}", boot_server.zid);
+//!     let mut boot_server = BootNode::new(Config::default(), "network_1");
+//!     println!("boot node online..... {:?}", boot_server.get_zid());
 //!     loop {
 //!         boot_server.run();
 //!     }
@@ -25,7 +25,7 @@
 //!
 //! fn main() {
 //!     let mut node = Node::new(Config::default(), "network_1").leave_on_pressed('q');
-//!     println!("node online..... {:?}", node.get_zid());
+//!     println!("node online..... {:?}", boot_server.get_zid());
 //!     loop {
 //!         if !node.is_running() {
 //!            break;

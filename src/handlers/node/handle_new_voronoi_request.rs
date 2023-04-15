@@ -24,6 +24,7 @@ pub fn handle_new_voronoi_request(payload: &[u8], node: &mut Node) {
     let message = serialize(&NewVoronoiResponse {
         polygon,
         sender_id: node.zid.clone(),
+        site: node.site,
     })
     .unwrap();
     node.session

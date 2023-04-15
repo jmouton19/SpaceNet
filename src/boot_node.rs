@@ -13,7 +13,7 @@ use zenoh::subscriber::Subscriber;
 /// BootNode struct
 pub struct BootNode<'a> {
     pub(crate) session: Arc<Session>,
-    pub zid: String,
+    pub(crate) zid: String,
     pub(crate) cluster_name: String,
     pub(crate) received_counter: i32,
     pub(crate) expected_counter: i32,
@@ -94,6 +94,7 @@ impl BootNode<'_> {
                                 payload,
                                 &mut self.received_counter,
                                 &mut self.polygon_list,
+                                &mut self.cluster,
                             );
                         }
                         _ => println!("UNKNOWN COUNTER TOPIC"),
@@ -134,5 +135,9 @@ impl BootNode<'_> {
                 self.draw_count += 1;
             };
         }
+    }
+
+    pub fn get_zid(&self) -> String {
+        self.zid.clone()
     }
 }

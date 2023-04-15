@@ -9,7 +9,7 @@ pub fn handle_join_request(payload: &[u8], boot_node: &mut BootNode) {
     let data: DefaultMessage = deserialize(payload).unwrap();
     //get random point to give to new node
     let mut rng = rand::thread_rng();
-    let point = (rng.gen_range(10.0..=90.0), rng.gen_range(10.0..=90.0)); // generate random (f64, f64) tuple
+    let mut point = (rng.gen_range(10.0..=90.0), rng.gen_range(10.0..=90.0)); // generate random (f64, f64) tuple
 
     println!("------------------------------------");
     println!("Giving point {:?}.... to {:?}", point, data.sender_id);
@@ -17,6 +17,7 @@ pub fn handle_join_request(payload: &[u8], boot_node: &mut BootNode) {
 
     //find closest node to new point
     if boot_node.cluster.is_empty() {
+        point = (50.0, 50.0);
         boot_node.cluster.insert(data.sender_id.to_string(), point);
         boot_node
             .polygon_list

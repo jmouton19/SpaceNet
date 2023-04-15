@@ -14,6 +14,11 @@ pub fn handle_leave_voronoi_request(payload: &[u8], node: &mut Node) {
     //recalculate own voronoi
     node.neighbours.remove(data.sender_id.as_str());
     node.neighbours.extend(data.neighbours);
+    node.neighbours.remove(node.zid.as_str());
+    if node.neighbours.is_empty() {
+        node.site = (50.0, 50.0);
+    }
+
     let diagram = Voronoi::new((node.zid.clone(), node.site), &node.neighbours);
     // draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str());
     //my new visible neighbours
@@ -28,6 +33,7 @@ pub fn handle_leave_voronoi_request(payload: &[u8], node: &mut Node) {
     let message = serialize(&NewVoronoiResponse {
         polygon,
         sender_id: node.zid.clone(),
+        site: node.site,
     })
     .unwrap();
     node.session

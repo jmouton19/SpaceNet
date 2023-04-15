@@ -16,7 +16,6 @@ mod integration {
         let handle1 = thread::spawn(move || loop {
             boot_server.run();
             if boot_server.draw_count == expected_len - 1 {
-                println!("BOOT ID {}...", boot_server.zid);
                 assert_eq!(boot_server.polygon_list.len() as i32, expected_len - 1);
                 assert_eq!(
                     boot_server.polygon_list.len() as i32,
@@ -25,13 +24,9 @@ mod integration {
 
                 let tolerance = 0.001;
                 for i in 0..(expected_len - 1) {
-                    println!("AWE im in");
                     let n_zid = boot_server.cluster.keys().nth(i as usize).unwrap();
                     let actual = boot_server.polygon_list.get(n_zid).unwrap();
-                    println!("{:?}", boot_server.polygon_list);
-                    println!("{:?}", boot_server.correct_polygon_list);
                     let expected = boot_server.correct_polygon_list.get(n_zid).unwrap();
-                    println!("{:?}", expected);
                     if actual.len() != expected.len() {
                         panic!("Polygon lengths do not match");
                     }
