@@ -1,5 +1,5 @@
 use crate::message::{DefaultMessage, ExpectedNodes};
-use crate::node::{Node, SyncResolve};
+use crate::node::{Node, NodeStatus, SyncResolve};
 use bincode::serialize;
 
 /// Handles leave response, if no neighbours, shut down, else request neighbour list from neighbours
@@ -25,8 +25,9 @@ pub fn handle_leave_response(_payload: &[u8], node: &mut Node) {
             .res()
             .unwrap();
         println!("IM SHUTTING DOWN BOOT! - i have no friends ;/");
-        node.running = false;
-        let _ = node;
+
+        node.status = NodeStatus::Offline;
+        //let _ = node;
     } else {
         //get FULL neighbour list
         //request neighbours from neighbours and send it back to me

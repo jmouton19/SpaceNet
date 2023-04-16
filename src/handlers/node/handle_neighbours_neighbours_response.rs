@@ -1,5 +1,5 @@
 use crate::message::{ExpectedNodes, NeighboursResponse, NewVoronoiRequest, NewVoronoiResponse};
-use crate::node::{Node, SyncResolve};
+use crate::node::{Node, NodeStatus, SyncResolve};
 use crate::utils::Voronoi;
 use bincode::{deserialize, serialize};
 
@@ -71,5 +71,6 @@ pub fn handle_neighbours_neighbours_response(payload: &[u8], node: &mut Node) {
             .put(format!("{}/counter/complete", node.cluster_name), message)
             .res()
             .unwrap();
+        node.status = NodeStatus::Online;
     } //else do nothing
 }

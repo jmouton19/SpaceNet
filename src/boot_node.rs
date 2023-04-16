@@ -28,8 +28,8 @@ pub struct BootNode<'a> {
 impl BootNode<'_> {
     /// Creates a new boot node instance with a [session](https://docs.rs/zenoh/0.7.0-rc/zenoh/struct.Session.html).
     /// Opens a subscription on topic `{cluster}/boot/*` to receive incoming messages from nodes and a subscription on`{cluster}/counter/*` to count the number of messages its received since processing the current message on the `{cluster}/boot/*` topic.
-    pub fn new(config: Config, cluster_name: &str) -> Self {
-        let session = zenoh::open(config).res().unwrap().into_arc();
+    pub fn new(cluster_name: &str) -> Self {
+        let session = zenoh::open(Config::default()).res().unwrap().into_arc();
         let zid = session.zid().to_string();
 
         let counter_subscriber = session

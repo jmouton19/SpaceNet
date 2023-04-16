@@ -1,5 +1,5 @@
 use crate::message::{ExpectedNodes, NeighboursResponse};
-use crate::node::{Node, SyncResolve};
+use crate::node::{Node, NodeStatus, SyncResolve};
 use bincode::{deserialize, serialize};
 
 /// Combine all neighbour lists received. If number of messages received is equal to the expected number tell all neighbours to calculate new voronoi without leavers site.
@@ -54,7 +54,7 @@ pub fn handle_leave_neighbours_neighbours_response(payload: &[u8], node: &mut No
         // let message = serialize(&DefaultMessage{
         // sender_id:node.zid.clone()});
         // node.session.put("counter/leaving", message.clone()).res().unwrap();
-        node.running = false;
-        let _ = node;
+        node.status = NodeStatus::Offline;
+        //let _ = node;
     } //else do nothing
 }

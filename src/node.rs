@@ -26,16 +26,24 @@ pub struct Node<'a> {
     pub(crate) zid: String,
     pub(crate) received_counter: i32,
     pub(crate) expected_counter: i32,
-    pub(crate) running: bool,
+    pub(crate) status: NodeStatus,
     pub(crate) polygon: Vec<(f64, f64)>,
     subscription: Subscriber<'a, flume::Receiver<Sample>>,
+}
+
+#[derive(PartialEq, Clone)]
+pub enum NodeStatus {
+    Online,
+    Leaving,
+    Joining,
+    Offline,
 }
 
 impl Node<'_> {
     /// Creates a new node instance with a [session](https://docs.rs/zenoh/0.7.0-rc/zenoh/struct.Session.html). Joins the cluster by messaging a boot node on that cluster.
     /// Opens a subscription on topic `{cluster}/node/{zid}/*` to receive incoming messages.
-    pub fn new(config: Config, cluster: &str) -> Self {
-        let session = zenoh::open(config).res().unwrap().into_arc();
+    pub fn new(cluster: &str) -> Self {
+        let session = zenoh::open(Config::default()).res().unwrap().into_arc();
         let zid = session.zid().to_string();
         let node_subscription = session
             .declare_subscriber(format!("{}/node/{}/*", cluster, zid))
@@ -60,7 +68,7 @@ impl Node<'_> {
             polygon: vec![],
             received_counter: 0,
             expected_counter: -1,
-            running: true,
+            status: NodeStatus::Joining,
             subscription: node_subscription,
         }
     }
@@ -75,7 +83,7 @@ impl Node<'_> {
     /// Process the current messages that are in the subscription channel queue one at a time. Handles each topic with a different [handler](crate::handlers::node).
     pub fn run(&mut self) {
         while let Ok(sample) = self.subscription.try_recv() {
-            if !self.running {
+            if self.status == NodeStatus::Offline {
                 break;
             }
             let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
@@ -142,35 +150,68 @@ impl Node<'_> {
         });
         self
     }
-    ///  Node is dropped and leaves the cluster.
-    pub fn leave(self) {
-        let message = serialize(&DefaultMessage {
-            sender_id: self.zid.clone(),
-        })
-        .unwrap();
 
-        self.session
-            .put(
-                format!("{}/node/boot/leave_request", self.cluster_name),
-                message,
-            )
-            .res()
+    ///  Node is dropped and leaves the cluster when not busy with task.
+    pub fn leave(&mut self) {
+        if !matches!(self.status, NodeStatus::Leaving | NodeStatus::Offline) {
+            self.status = NodeStatus::Leaving;
+            let message = serialize(&DefaultMessage {
+                sender_id: self.zid.clone(),
+            })
             .unwrap();
+            self.session
+                .put(
+                    format!("{}/node/boot/leave_request", self.cluster_name),
+                    message,
+                )
+                .res()
+                .unwrap();
+        }
     }
+
     /// Get the zid of the node
     pub fn get_zid(&self) -> &str {
         self.zid.as_str()
     }
+    ///Get node status
+    pub fn get_status(&self) -> NodeStatus {
+        self.status.clone()
+    }
+
     /// Get the neighbours of the node
-    pub fn get_neighbours(&self) -> OrderedMapPairs {
-        self.neighbours.clone()
+    pub fn get_neighbours(&self) -> Vec<(String, (f64, f64))> {
+        self.neighbours.clone().into_iter().collect()
+    }
+    /// Check if the node is a neighbour
+    pub fn is_neighbour(&self, zid: &str) -> bool {
+        self.neighbours.contains_key(zid)
     }
     /// Get the polygon of the node
     pub fn get_polygon(&self) -> Vec<(f64, f64)> {
         self.polygon.clone()
     }
-    /// Check if the node is running
-    pub fn is_running(&self) -> bool {
-        self.running
+
+    /// Check if the point site is in the polygon. Ray casting algorithm.
+    pub fn is_in_polygon(&self, point: (f64, f64)) -> bool {
+        if self.polygon.len() == 0 {
+            return false;
+        } else {
+            let mut i = 0;
+            let mut j = self.polygon.len() - 1;
+            let mut c = false;
+            while i < self.polygon.len() {
+                if ((self.polygon[i].1 > point.1) != (self.polygon[j].1 > point.1))
+                    && (point.0
+                        < (self.polygon[j].0 - self.polygon[i].0) * (point.1 - self.polygon[i].1)
+                            / (self.polygon[j].1 - self.polygon[i].1)
+                            + self.polygon[i].0)
+                {
+                    c = !c;
+                }
+                j = i;
+                i += 1;
+            }
+            c
+        }
     }
 }

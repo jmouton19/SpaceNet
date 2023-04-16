@@ -2,7 +2,6 @@ use crate::message::{NewNodeResponse, NewVoronoiRequest};
 use crate::node::{Node, SyncResolve};
 use bincode::{deserialize, serialize};
 
-
 /// Sets site given from boot node and messages land owner to request neighbour list
 pub fn handle_join_response(payload: &[u8], node: &mut Node) {
     let data: NewNodeResponse = deserialize(payload).unwrap();
