@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["closest_point","Calculate the closest site to a given site"]],"type":[["OrderedMapPairs","HashMap with ordered keys (keeps original insertion order) for site id and site coordinates"],["OrderedMapPolygon","HashMap with ordered keys (keeps original insertion order) for site id and its polygon"]]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":[["WhatAmI",""]],"struct":[["WhatAmIMatcher",""],["WhatAmIMatcherVisitor",""],["WhatAmIVisitor",""]]};

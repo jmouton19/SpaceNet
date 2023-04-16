@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["handle_join_response","Sets site given from boot node and messages land owner to request neighbour list"]]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["handle_neighbours_request","Send new node its neighbours and tells neighbours to send their neighbours to new node. Tells new node how many neighbours to wait for."]]};

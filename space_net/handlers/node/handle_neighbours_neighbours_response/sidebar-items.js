@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["handle_neighbours_neighbours_response","Combine all neighbour lists received. If number of messages received is equal to the expected number calculate my voronoi and tell all neighbours to calculate new voronoi with my new site."]]};

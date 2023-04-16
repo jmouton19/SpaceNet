@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["dot_and_label",""],["draw_voronoi","Draws a voronoi (containing one polygon) onto canvas and saves to png"],["draw_voronoi_full","Draws a voronoi (containing all polygons) onto canvas and saves to png"],["random_rgb",""]],"struct":[["Voronoi",""]],"type":[["DotAndLabelType",""]]};

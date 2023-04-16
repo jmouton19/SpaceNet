@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["handle_leave_response","Handles leave response, if no neighbours, shut down, else request neighbour list from neighbours"]]};

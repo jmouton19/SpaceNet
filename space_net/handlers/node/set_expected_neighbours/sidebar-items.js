@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":[["set_expected_neighbours","Sets the number of expected neighbours, ie how many messages to wait for before calculating voronoi."]]};
