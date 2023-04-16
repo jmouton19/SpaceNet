@@ -46,6 +46,7 @@
 <a href="#45" id="45">45</a>
 <a href="#46" id="46">46</a>
 <a href="#47" id="47">47</a>
+<a href="#48" id="48">48</a>
 </pre><pre class="rust"><code><span class="attr">#![doc(html_logo_url = <span class="string">&quot;../LOGO.png&quot;</span>, html_favicon_url = <span class="string">&quot;../LOGO.png&quot;</span>)]
 </span><span class="doccomment">//![SpaceNet](./space_net/index.html) is a native rust library for distributed virtual environments using spatial partitioning.
 //! Start a single boot node to handle new nodes joining the cluster. Nodes can be started after the boot node is online.
@@ -77,7 +78,7 @@
 //!     let mut node = Node::new(&quot;network_1&quot;).leave_on_pressed(&#39;q&#39;);
 //!     println!(&quot;node online..... {:?}&quot;, node.get_zid());
 //!     loop {
-//!         if !node.is_running() {
+//!         if node.get_status() == NodeStatus::Offline {
 //!            break;
 //!         }
 //!         node.run();
@@ -93,5 +94,6 @@
 <span class="kw">pub mod </span>node;
 <span class="kw">pub mod </span>types;
 <span class="kw">pub mod </span>utils;
+<span class="kw">pub mod </span>node_ffi;
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="space_net" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>

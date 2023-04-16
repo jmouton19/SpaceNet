@@ -216,6 +216,26 @@
 <a href="#215" id="215">215</a>
 <a href="#216" id="216">216</a>
 <a href="#217" id="217">217</a>
+<a href="#218" id="218">218</a>
+<a href="#219" id="219">219</a>
+<a href="#220" id="220">220</a>
+<a href="#221" id="221">221</a>
+<a href="#222" id="222">222</a>
+<a href="#223" id="223">223</a>
+<a href="#224" id="224">224</a>
+<a href="#225" id="225">225</a>
+<a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
+<a href="#228" id="228">228</a>
+<a href="#229" id="229">229</a>
+<a href="#230" id="230">230</a>
+<a href="#231" id="231">231</a>
+<a href="#232" id="232">232</a>
+<a href="#233" id="233">233</a>
+<a href="#234" id="234">234</a>
+<a href="#235" id="235">235</a>
+<a href="#236" id="236">236</a>
+<a href="#237" id="237">237</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_join_response::handle_join_response;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_leave_neighbours_neighbours_request::handle_leave_neighbours_neighbours_request;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_leave_neighbours_neighbours_response::handle_leave_neighbours_neighbours_response;
@@ -235,7 +255,9 @@
 <span class="kw">pub use </span>zenoh::prelude::sync::<span class="kw-2">*</span>;
 <span class="kw">use </span>zenoh::subscriber::Subscriber;
 
+
 <span class="doccomment">/// A node in a network that has a point site which is used in the calculation of the voronoi diagram of a cluster. Computes its own voronoi polygon from its list of neighbours. Does not store information on entire cluster.
+</span><span class="attr">#[repr(C)]
 </span><span class="kw">pub struct </span>Node&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">pub</span>(<span class="kw">crate</span>) cluster_name: String,
     <span class="kw">pub</span>(<span class="kw">crate</span>) session: Arc&lt;Session&gt;,
@@ -249,7 +271,7 @@
     subscription: Subscriber&lt;<span class="lifetime">&#39;a</span>, flume::Receiver&lt;Sample&gt;&gt;,
 }
 
-<span class="attr">#[derive(PartialEq, Clone)]
+<span class="attr">#[derive(PartialEq,Clone,Debug)]
 </span><span class="kw">pub enum </span>NodeStatus {
     Online,
     Leaving,
@@ -344,7 +366,13 @@
         }
     }
 
-    <span class="doccomment">/// End node when the user presses a key. Node is dropped and leaves the cluster.
+    <span class="comment">// pub async fn run_async(&amp;mut self) {
+    //         while self.status != NodeStatus::Offline {
+    //             self.run();
+    //         }
+    // }
+
+    </span><span class="doccomment">/// End node when the user presses a key. Node is dropped and leaves the cluster.
     </span><span class="kw">pub fn </span>leave_on_pressed(<span class="self">self</span>, key: char) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>session = <span class="self">self</span>.session.clone();
         <span class="kw">let </span>zid = <span class="self">self</span>.zid.clone();
@@ -433,5 +461,17 @@
         }
     }
 }
-</code></pre></div>
+
+
+<span class="comment">// pub async fn runner_async(node: Arc&lt;Mutex&lt;Node&lt;&#39;_&gt;&gt;&gt;) {
+//     loop {
+//         let mut node_guard = node.lock().await;
+//         if node_guard.status == NodeStatus::Offline {
+//             break;
+//         }
+//         node_guard.run();
+//         drop(node_guard);
+//     }
+// }
+</span></code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="space_net" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
