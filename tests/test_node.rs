@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod node {
-    use space_net::node::Node;
+    use space_net::node::{Node, NodeStatus};
 
     //test get_zid
     #[test]
@@ -29,5 +29,12 @@ mod node {
     fn test_is_in_polygon() {
         let node = Node::new("node_test4");
         assert_eq!(node.is_in_polygon((0.0, 0.0)), false);
+    }
+
+    //test get_status
+    #[test]
+    fn test_get_status() {
+        let node = Node::new("node_test5");
+        assert_eq!(node.get_status(), NodeStatus::Joining);
     }
 }

@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod unit {
+mod voronoi {
     use space_net::types::OrderedMapPairs;
     use space_net::utils::Voronoi;
     use std::collections::HashSet;

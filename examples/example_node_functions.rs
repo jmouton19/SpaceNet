@@ -5,10 +5,6 @@ fn main() {
     println!("node online..... {:?}", node.get_zid());
     loop {
         if node.get_status() == NodeStatus::Offline {
-            break;
-        }
-        node.run();
-        if node.get_neighbours().len() == 2 {
             println!("neighbours..... {:?}", node.get_neighbours());
             let my_polygon = node.get_polygon();
             let point = (90.0, 90.0);
@@ -18,6 +14,10 @@ fn main() {
                 my_polygon,
                 node.is_in_polygon(point)
             );
+            break;
+        }
+        node.run();
+        if node.get_neighbours().len() == 2 {
             node.leave();
         }
     }

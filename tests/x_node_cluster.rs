@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod integration {
+mod test {
     use nalgebra::Point2;
     use space_net::boot_node::BootNode;
     use space_net::node::*;

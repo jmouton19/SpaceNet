@@ -5,7 +5,7 @@ mod boot_node {
     //test get_zid
     #[test]
     fn test_get_zid() {
-        let node = BootNode::new("node_test1");
+        let node = BootNode::new("boot_test1");
         assert_ne!(node.get_zid(), "default-zid");
         assert_eq!(node.get_zid().len(), 32);
     }

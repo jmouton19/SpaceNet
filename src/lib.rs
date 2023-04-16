@@ -29,7 +29,7 @@
 //!     let mut node = Node::new("network_1").leave_on_pressed('q');
 //!     println!("node online..... {:?}", node.get_zid());
 //!     loop {
-//!         if !node.is_running() {
+//!         if node.get_status() == NodeStatus::Offline {
 //!            break;
 //!         }
 //!         node.run();
@@ -45,3 +45,4 @@ pub(crate) mod message;
 pub mod node;
 pub mod types;
 pub mod utils;
+pub mod node_ffi;

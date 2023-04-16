@@ -17,7 +17,9 @@ use bincode::serialize;
 pub use zenoh::prelude::sync::*;
 use zenoh::subscriber::Subscriber;
 
+
 /// A node in a network that has a point site which is used in the calculation of the voronoi diagram of a cluster. Computes its own voronoi polygon from its list of neighbours. Does not store information on entire cluster.
+#[repr(C)]
 pub struct Node<'a> {
     pub(crate) cluster_name: String,
     pub(crate) session: Arc<Session>,
@@ -31,7 +33,7 @@ pub struct Node<'a> {
     subscription: Subscriber<'a, flume::Receiver<Sample>>,
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq,Clone,Debug)]
 pub enum NodeStatus {
     Online,
     Leaving,
@@ -126,6 +128,12 @@ impl Node<'_> {
         }
     }
 
+    // pub async fn run_async(&mut self) {
+    //         while self.status != NodeStatus::Offline {
+    //             self.run();
+    //         }
+    // }
+
     /// End node when the user presses a key. Node is dropped and leaves the cluster.
     pub fn leave_on_pressed(self, key: char) -> Self {
         let session = self.session.clone();
@@ -215,3 +223,15 @@ impl Node<'_> {
         }
     }
 }
+
+
+// pub async fn runner_async(node: Arc<Mutex<Node<'_>>>) {
+//     loop {
+//         let mut node_guard = node.lock().await;
+//         if node_guard.status == NodeStatus::Offline {
+//             break;
+//         }
+//         node_guard.run();
+//         drop(node_guard);
+//     }
+// }
