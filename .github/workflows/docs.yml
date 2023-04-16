@@ -13,9 +13,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Generate Docs
-        run: cargo doc --no-deps
+        run: cargo doc --no-deps --document-private-items
       - name: Deploy Docs
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.MY_GH_TOKEN }}
           publish_dir: ./target/doc/
