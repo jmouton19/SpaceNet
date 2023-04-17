@@ -235,7 +235,6 @@
 <a href="#234" id="234">234</a>
 <a href="#235" id="235">235</a>
 <a href="#236" id="236">236</a>
-<a href="#237" id="237">237</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_join_response::handle_join_response;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_leave_neighbours_neighbours_request::handle_leave_neighbours_neighbours_request;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_leave_neighbours_neighbours_response::handle_leave_neighbours_neighbours_response;
@@ -255,9 +254,7 @@
 <span class="kw">pub use </span>zenoh::prelude::sync::<span class="kw-2">*</span>;
 <span class="kw">use </span>zenoh::subscriber::Subscriber;
 
-
 <span class="doccomment">/// A node in a network that has a point site which is used in the calculation of the voronoi diagram of a cluster. Computes its own voronoi polygon from its list of neighbours. Does not store information on entire cluster.
-</span><span class="attr">#[repr(C)]
 </span><span class="kw">pub struct </span>Node&lt;<span class="lifetime">&#39;a</span>&gt; {
     <span class="kw">pub</span>(<span class="kw">crate</span>) cluster_name: String,
     <span class="kw">pub</span>(<span class="kw">crate</span>) session: Arc&lt;Session&gt;,
@@ -271,7 +268,8 @@
     subscription: Subscriber&lt;<span class="lifetime">&#39;a</span>, flume::Receiver&lt;Sample&gt;&gt;,
 }
 
-<span class="attr">#[derive(PartialEq,Clone,Debug)]
+<span class="attr">#[derive(PartialEq, Clone, Debug)]
+#[repr(C)]
 </span><span class="kw">pub enum </span>NodeStatus {
     Online,
     Leaving,
@@ -373,7 +371,8 @@
     // }
 
     </span><span class="doccomment">/// End node when the user presses a key. Node is dropped and leaves the cluster.
-    </span><span class="kw">pub fn </span>leave_on_pressed(<span class="self">self</span>, key: char) -&gt; <span class="self">Self </span>{
+    </span><span class="comment">// use to return Self but cant use builder pattern in C
+    </span><span class="kw">pub fn </span>leave_on_pressed(<span class="kw-2">&amp;</span><span class="self">self</span>, key: char) {
         <span class="kw">let </span>session = <span class="self">self</span>.session.clone();
         <span class="kw">let </span>zid = <span class="self">self</span>.zid.clone();
         <span class="kw">let </span>cluster = <span class="self">self</span>.cluster_name.clone();
@@ -394,7 +393,7 @@
                 }
             }
         });
-        <span class="self">self
+        <span class="comment">//self
     </span>}
 
     <span class="doccomment">///  Node is dropped and leaves the cluster when not busy with task.
@@ -439,9 +438,9 @@
 
     <span class="doccomment">/// Check if the point site is in the polygon. Ray casting algorithm.
     </span><span class="kw">pub fn </span>is_in_polygon(<span class="kw-2">&amp;</span><span class="self">self</span>, point: (f64, f64)) -&gt; bool {
-        <span class="kw">if </span><span class="self">self</span>.polygon.len() == <span class="number">0 </span>{
-            <span class="kw">return </span><span class="bool-val">false</span>;
-        } <span class="kw">else </span>{
+        <span class="kw">if </span><span class="self">self</span>.polygon.is_empty() {
+            <span class="bool-val">false
+        </span>} <span class="kw">else </span>{
             <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
             <span class="kw">let </span><span class="kw-2">mut </span>j = <span class="self">self</span>.polygon.len() - <span class="number">1</span>;
             <span class="kw">let </span><span class="kw-2">mut </span>c = <span class="bool-val">false</span>;
@@ -461,7 +460,6 @@
         }
     }
 }
-
 
 <span class="comment">// pub async fn runner_async(node: Arc&lt;Mutex&lt;Node&lt;&#39;_&gt;&gt;&gt;) {
 //     loop {

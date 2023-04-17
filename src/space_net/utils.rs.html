@@ -148,11 +148,23 @@
 <a href="#147" id="147">147</a>
 <a href="#148" id="148">148</a>
 <a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::types::{OrderedMapPairs, OrderedMapPolygon};
 <span class="kw">use </span>plotters::element::ComposedElement;
 <span class="kw">use </span>plotters::prelude::<span class="kw-2">*</span>;
 <span class="kw">use </span>rand::prelude::<span class="kw-2">*</span>;
-<span class="kw">use </span>std::path::Path;
+<span class="kw">use </span>std::fs;
 <span class="kw">use </span>voronator::delaunator::Point;
 <span class="kw">use </span>voronator::VoronoiDiagram;
 
@@ -162,10 +174,16 @@
     <span class="kw">let </span>boundary_height = <span class="number">100.</span>;
     <span class="kw">let </span>scale = <span class="number">10.</span>;
 
-    <span class="kw">let </span>path_str = <span class="macro">format!</span>(<span class="string">&quot;../../../images/{}.png&quot;</span>, name);
-    <span class="kw">let </span>path = Path::new(path_str.as_str());
+    <span class="kw">let </span>exe_path = std::env::current_exe().unwrap();
+    <span class="kw">let </span>images_path = exe_path.parent().unwrap().join(<span class="string">&quot;images&quot;</span>);
+    <span class="kw">if </span>!images_path.exists() {
+        fs::create_dir(<span class="kw-2">&amp;</span>images_path).unwrap();
+    }
+
+    <span class="kw">let </span>path = images_path.join(<span class="macro">format!</span>(<span class="string">&quot;{}.png&quot;</span>, name));
+    <span class="macro">println!</span>(<span class="string">&quot;path full: {:?}&quot;</span>, path);
     <span class="kw">let </span>root = BitMapBackend::new(
-        path,
+        <span class="kw-2">&amp;</span>path,
         (
             (boundary_width * scale) <span class="kw">as </span>u32,
             (boundary_height * scale) <span class="kw">as </span>u32,
@@ -201,10 +219,16 @@
     <span class="kw">let </span>boundary_height = <span class="number">100.</span>;
     <span class="kw">let </span>scale = <span class="number">10.</span>;
 
-    <span class="kw">let </span>path_str = <span class="macro">format!</span>(<span class="string">&quot;../../../images/{}.png&quot;</span>, name);
-    <span class="kw">let </span>path = Path::new(path_str.as_str());
+    <span class="kw">let </span>exe_path = std::env::current_exe().unwrap();
+    <span class="kw">let </span>images_path = exe_path.parent().unwrap().join(<span class="string">&quot;images&quot;</span>);
+    <span class="kw">if </span>!images_path.exists() {
+        fs::create_dir(<span class="kw-2">&amp;</span>images_path).unwrap();
+    }
+
+    <span class="kw">let </span>path = images_path.join(<span class="macro">format!</span>(<span class="string">&quot;{}.png&quot;</span>, name));
+    <span class="macro">println!</span>(<span class="string">&quot;path: {:?}&quot;</span>, path);
     <span class="kw">let </span>root = BitMapBackend::new(
-        path,
+        <span class="kw-2">&amp;</span>path,
         (
             (boundary_width * scale) <span class="kw">as </span>u32,
             (boundary_height * scale) <span class="kw">as </span>u32,
