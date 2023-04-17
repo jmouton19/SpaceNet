@@ -45,4 +45,4 @@ pub(crate) mod message;
 pub mod node;
 pub mod types;
 pub mod utils;
-pub mod node_ffi;
+pub mod c_ffi;
