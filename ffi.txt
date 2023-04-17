@@ -1,0 +1,11 @@
+
+- Make bin file for testing
+mkdir bin
+
+- Build C example with rust functions
+gcc examples/main.c -o bin/main -Ltarget/release -lmy_rust_lib -Isrc/c_ffi
+
+- The linker needs to know where to find the library.
+export LD_LIBRARY_PATH=target/release
+
+todo: make functions to free memory...

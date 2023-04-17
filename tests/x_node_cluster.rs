@@ -1,10 +1,10 @@
 #[cfg(test)]
 mod test {
     use nalgebra::Point2;
-    use space_net::boot_node::BootNode;
-    use space_net::node::*;
     use std::thread;
     use std::time::Instant;
+    use space_net::boot_node::BootNode;
+    use space_net::node::Node;
 
     //check if distributed polygons is correct in an X(expected_len) node cluster
     #[test]

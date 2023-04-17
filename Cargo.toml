@@ -5,8 +5,8 @@ edition = "2021"
 license = "Apache-2.0/EPL-2.0"
 
 [lib]
-name = "my_rust_lib"
-crate-type = ["cdylib"]
+name = "space_net"
+crate-type = ["rlib","cdylib"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
