@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"mod":[["boot_node",""],["handlers",""],["message",""],["node",""],["node_ffi",""],["types",""],["utils",""]]};

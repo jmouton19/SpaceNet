@@ -1,3 +1,3 @@
 (function() {var implementors = {
-"space_net":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.68.2/core/clone/trait.Clone.html\" title=\"trait core::clone::Clone\">Clone</a> for <a class=\"enum\" href=\"space_net/node/enum.NodeStatus.html\" title=\"enum space_net::node::NodeStatus\">NodeStatus</a>"]]
+"my_rust_lib":[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.68.2/core/clone/trait.Clone.html\" title=\"trait core::clone::Clone\">Clone</a> for <a class=\"enum\" href=\"my_rust_lib/node/enum.NodeStatus.html\" title=\"enum my_rust_lib::node::NodeStatus\">NodeStatus</a>"]]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
