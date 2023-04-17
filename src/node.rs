@@ -17,9 +17,7 @@ use bincode::serialize;
 pub use zenoh::prelude::sync::*;
 use zenoh::subscriber::Subscriber;
 
-
 /// A node in a network that has a point site which is used in the calculation of the voronoi diagram of a cluster. Computes its own voronoi polygon from its list of neighbours. Does not store information on entire cluster.
-#[repr(C)]
 pub struct Node<'a> {
     pub(crate) cluster_name: String,
     pub(crate) session: Arc<Session>,
@@ -33,7 +31,8 @@ pub struct Node<'a> {
     subscription: Subscriber<'a, flume::Receiver<Sample>>,
 }
 
-#[derive(PartialEq,Clone,Debug)]
+#[derive(PartialEq, Clone, Debug)]
+#[repr(C)]
 pub enum NodeStatus {
     Online,
     Leaving,
@@ -135,7 +134,8 @@ impl Node<'_> {
     // }
 
     /// End node when the user presses a key. Node is dropped and leaves the cluster.
-    pub fn leave_on_pressed(self, key: char) -> Self {
+    // use to return Self but cant use builder pattern in C
+    pub fn leave_on_pressed(&self, key: char) {
         let session = self.session.clone();
         let zid = self.zid.clone();
         let cluster = self.cluster_name.clone();
@@ -156,7 +156,7 @@ impl Node<'_> {
                 }
             }
         });
-        self
+        //self
     }
 
     ///  Node is dropped and leaves the cluster when not busy with task.
@@ -201,8 +201,8 @@ impl Node<'_> {
 
     /// Check if the point site is in the polygon. Ray casting algorithm.
     pub fn is_in_polygon(&self, point: (f64, f64)) -> bool {
-        if self.polygon.len() == 0 {
-            return false;
+        if self.polygon.is_empty() {
+            false
         } else {
             let mut i = 0;
             let mut j = self.polygon.len() - 1;
@@ -223,7 +223,6 @@ impl Node<'_> {
         }
     }
 }
-
 
 // pub async fn runner_async(node: Arc<Mutex<Node<'_>>>) {
 //     loop {

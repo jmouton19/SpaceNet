@@ -2,7 +2,7 @@ use crate::types::{OrderedMapPairs, OrderedMapPolygon};
 use plotters::element::ComposedElement;
 use plotters::prelude::*;
 use rand::prelude::*;
-use std::path::Path;
+use std::fs;
 use voronator::delaunator::Point;
 use voronator::VoronoiDiagram;
 
@@ -12,10 +12,16 @@ pub fn draw_voronoi_full(map_pairs: &OrderedMapPairs, map_polygon: &OrderedMapPo
     let boundary_height = 100.;
     let scale = 10.;
 
-    let path_str = format!("../../../images/{}.png", name);
-    let path = Path::new(path_str.as_str());
+    let exe_path = std::env::current_exe().unwrap();
+    let images_path = exe_path.parent().unwrap().join("images");
+    if !images_path.exists() {
+        fs::create_dir(&images_path).unwrap();
+    }
+
+    let path = images_path.join(format!("{}.png", name));
+    println!("path full: {:?}", path);
     let root = BitMapBackend::new(
-        path,
+        &path,
         (
             (boundary_width * scale) as u32,
             (boundary_height * scale) as u32,
@@ -51,10 +57,16 @@ pub fn draw_voronoi(diagram: &VoronoiDiagram<Point>, name: &str) {
     let boundary_height = 100.;
     let scale = 10.;
 
-    let path_str = format!("../../../images/{}.png", name);
-    let path = Path::new(path_str.as_str());
+    let exe_path = std::env::current_exe().unwrap();
+    let images_path = exe_path.parent().unwrap().join("images");
+    if !images_path.exists() {
+        fs::create_dir(&images_path).unwrap();
+    }
+
+    let path = images_path.join(format!("{}.png", name));
+    println!("path: {:?}", path);
     let root = BitMapBackend::new(
-        path,
+        &path,
         (
             (boundary_width * scale) as u32,
             (boundary_height * scale) as u32,

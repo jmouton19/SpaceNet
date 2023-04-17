@@ -40,8 +40,7 @@ cd target/debug/examples
 cargo test
 ```
 
-* Output pngs saved in SpaceNet/images. Create this folder manually :)
-* To remove node from overlay enter q into its terminal session.
+* Output PNG files are saved in the 'images' folder located in the same directory as the executable file.
 
 To test multiple nodes simultaneously use grouped terminal sessions. 
 This can be done in Terminator.  
