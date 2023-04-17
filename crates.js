@@ -1,1 +1,1 @@
-window.ALL_CRATES = ["my_rust_lib"];
+window.ALL_CRATES = ["space_net"];

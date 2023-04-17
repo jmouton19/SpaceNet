@@ -1,3 +1,3 @@
 (function() {var implementors = {
-"my_rust_lib":[]
+"space_net":[]
 };if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()
