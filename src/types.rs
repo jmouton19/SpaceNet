@@ -19,6 +19,21 @@ pub fn closest_point(pairs: &OrderedMapPairs, site: (f64, f64)) -> ((f64, f64), 
             closest_site = *map_point;
         }
     }
-
     (closest_site, closest_zid.to_string())
+}
+
+pub fn point_within_distance(cluster: &OrderedMapPairs, point: (f64, f64), dist: f64) -> bool {
+    // Loop through each point in the cluster
+    for p in cluster.values() {
+        // Calculate the Euclidean distance between the two points
+        let dx = p.0 - point.0;
+        let dy = p.1 - point.1;
+        let distance = (dx * dx + dy * dy).sqrt();
+        // If the distance is less than `dist`, the point is within tolerance
+        if distance < dist {
+            return true;
+        }
+    }
+    // If no points were within `dist`, the point is not within tolerance
+    false
 }

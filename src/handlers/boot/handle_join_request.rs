@@ -1,7 +1,7 @@
 use crate::boot_node::BootNode;
 use crate::message::{DefaultMessage, NewNodeResponse};
 use crate::node::SyncResolve;
-use crate::types::closest_point;
+use crate::types::{closest_point, point_within_distance};
 use bincode::{deserialize, serialize};
 use rand::Rng;
 
@@ -24,7 +24,15 @@ pub fn handle_join_request(payload: &[u8], boot_node: &mut BootNode) {
         boot_node
             .polygon_list
             .insert(data.sender_id.to_string(), vec![]);
+    } else {
+        //check if a point exist in boot_node.cluster.values that is within X distance of the new point if so precalculate the new point
+        let mut point = (rng.gen_range(1.0..=99.0), rng.gen_range(1.0..=99.0));
+        let tolerance = 0.01;
+        while point_within_distance(&boot_node.cluster, point, tolerance) {
+            point = (rng.gen_range(1.0..=99.0), rng.gen_range(1.0..=99.0));
+        }
     }
+
     let (land_owner_site, land_owner) = closest_point(&boot_node.cluster, point);
     println!("{}", land_owner);
 
