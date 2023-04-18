@@ -54,10 +54,18 @@
 <a href="#53" id="53">53</a>
 <a href="#54" id="54">54</a>
 <a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::boot_node::BootNode;
 <span class="kw">use </span><span class="kw">crate</span>::message::{DefaultMessage, NewNodeResponse};
 <span class="kw">use </span><span class="kw">crate</span>::node::SyncResolve;
-<span class="kw">use </span><span class="kw">crate</span>::types::closest_point;
+<span class="kw">use </span><span class="kw">crate</span>::types::{closest_point, point_within_distance};
 <span class="kw">use </span>bincode::{deserialize, serialize};
 <span class="kw">use </span>rand::Rng;
 
@@ -80,7 +88,15 @@
         boot_node
             .polygon_list
             .insert(data.sender_id.to_string(), <span class="macro">vec!</span>[]);
+    } <span class="kw">else </span>{
+        <span class="comment">//check if a point exist in boot_node.cluster.values that is within X distance of the new point if so precalculate the new point
+        </span><span class="kw">let </span><span class="kw-2">mut </span>point = (rng.gen_range(<span class="number">1.0</span>..=<span class="number">99.0</span>), rng.gen_range(<span class="number">1.0</span>..=<span class="number">99.0</span>));
+        <span class="kw">let </span>tolerance = <span class="number">0.01</span>;
+        <span class="kw">while </span>point_within_distance(<span class="kw-2">&amp;</span>boot_node.cluster, point, tolerance) {
+            point = (rng.gen_range(<span class="number">1.0</span>..=<span class="number">99.0</span>), rng.gen_range(<span class="number">1.0</span>..=<span class="number">99.0</span>));
+        }
     }
+
     <span class="kw">let </span>(land_owner_site, land_owner) = closest_point(<span class="kw-2">&amp;</span>boot_node.cluster, point);
     <span class="macro">println!</span>(<span class="string">&quot;{}&quot;</span>, land_owner);
 
