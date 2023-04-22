@@ -1,11 +1,13 @@
 export JAVA_HOME=/lib/jvm/jre-17-openjdk-17.0.6.0.10-1.fc37.x86_64
+export LD_LIBRARY_PATH=target/release
 
+javac -h src/c_ffi src/c_ffi/*.java
+javac -cp src/c_ffi examples/*.java
 
-javac -h src/c_ffi/ src/c_ffi/Node.java
 
 gcc -shared -fPIC -I${JAVA_HOME}/include -I${JAVA_HOME}/include/linux -Ltarget/release -lspace_net -o libjava_wrapper.so src/c_ffi/java_wrapper.c
 
-javac -cp src/c_ffi -h src/c_ffi src/c_ffi/*.java
 
+java -cp examples:src/c_ffi  -Djava.library.path=. ExampleNode
+java -cp examples:src/c_ffi  -Djava.library.path=. ExampleBoot
 
-java -classpath ./src/c_ffi -Djava.library.path=. ExampleNode
