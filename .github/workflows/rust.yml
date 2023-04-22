@@ -19,4 +19,11 @@ jobs:
     - name: Build
       run: cargo build --verbose
     - name: Run tests
-      run: cargo test --verbose
+      run: |
+        cargo test --test voronoi --verbose
+        cargo test --test test_boot --verbose
+        cargo test --test test_node --verbose
+        cargo test --test cluster --verbose
+    - name: Run stress tests
+      run: |
+        cargo test --test stress_test --verbose
