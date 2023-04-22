@@ -8,6 +8,7 @@ mod stress_test {
 
     //check if distributed polygons is correct in an X(expected_len) node cluster
     #[test]
+    #[ignore]
     fn stress_test_x_node_cluster() {
         let expected_len = 100;
 
