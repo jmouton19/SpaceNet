@@ -1,4 +1,5 @@
 use crate::types::{OrderedMapPairs, OrderedMapPolygon};
+use dirs;
 use plotters::element::ComposedElement;
 use plotters::prelude::*;
 use rand::prelude::*;
@@ -12,10 +13,20 @@ pub fn draw_voronoi_full(map_pairs: &OrderedMapPairs, map_polygon: &OrderedMapPo
     let boundary_height = 100.;
     let scale = 10.;
 
-    let exe_path = std::env::current_exe().unwrap();
-    let images_path = exe_path.parent().unwrap().join("images");
+    // let exe_path = std::env::current_exe().unwrap();
+    // println!("exe_path: {:?}", exe_path);
+    // let images_path = exe_path.parent().unwrap().join("images");
+    // println!("images_path: {:?}", images_path);
+    // if !images_path.exists() {
+    //     fs::create_dir(&images_path).unwrap();
+    // }
+
+    let images_path = dirs::document_dir()
+        .unwrap()
+        .join("SpaceNet")
+        .join("images");
     if !images_path.exists() {
-        fs::create_dir(&images_path).unwrap();
+        fs::create_dir_all(&images_path).unwrap();
     }
 
     let path = images_path.join(format!("{}.png", name));
@@ -57,10 +68,18 @@ pub fn draw_voronoi(diagram: &VoronoiDiagram<Point>, name: &str) {
     let boundary_height = 100.;
     let scale = 10.;
 
-    let exe_path = std::env::current_exe().unwrap();
-    let images_path = exe_path.parent().unwrap().join("images");
+    // let exe_path = std::env::current_exe().unwrap();
+    // let images_path = exe_path.parent().unwrap().join("images");
+    // if !images_path.exists() {
+    //     fs::create_dir(&images_path).unwrap();
+    // }
+
+    let images_path = dirs::document_dir()
+        .unwrap()
+        .join("SpaceNet")
+        .join("images");
     if !images_path.exists() {
-        fs::create_dir(&images_path).unwrap();
+        fs::create_dir_all(&images_path).unwrap();
     }
 
     let path = images_path.join(format!("{}.png", name));

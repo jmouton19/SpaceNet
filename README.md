@@ -40,7 +40,7 @@ cd target/debug/examples
 cargo test
 ```
 
-* Output PNG files are saved in the 'images' folder located in the same directory as the executable file.
+* Output PNG files are saved user Documents directory.
 
 To test multiple nodes simultaneously use grouped terminal sessions. 
 This can be done in Terminator.  

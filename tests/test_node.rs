@@ -28,7 +28,7 @@ mod node {
     #[test]
     fn test_is_in_polygon() {
         let node = Node::new("node_test4");
-        assert_eq!(node.is_in_polygon((0.0, 0.0)), false);
+        assert!(!node.is_in_polygon((0.0, 0.0)));
     }
 
     //test get_status
