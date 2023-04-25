@@ -13,18 +13,18 @@ mod stress_test {
         let expected_len = 100;
 
         let start_time = Instant::now();
-        let mut boot_server = BootNode::new("test1");
+        let mut boot_server = BootNode::new("stress_test1");
         let handle1 = thread::spawn(move || loop {
             boot_server.run();
-            if boot_server.draw_count == expected_len - 1 {
-                assert_eq!(boot_server.polygon_list.len() as i32, expected_len - 1);
+            if boot_server.draw_count == expected_len {
+                assert_eq!(boot_server.polygon_list.len() as i32, expected_len);
                 assert_eq!(
                     boot_server.polygon_list.len() as i32,
                     boot_server.correct_polygon_list.len() as i32
                 );
 
                 let tolerance = 0.001;
-                for i in 0..(expected_len - 1) {
+                for i in 0..(expected_len) {
                     let n_zid = boot_server.cluster.keys().nth(i as usize).unwrap();
                     let actual = boot_server.polygon_list.get(n_zid).unwrap();
                     let expected = boot_server.correct_polygon_list.get(n_zid).unwrap();
@@ -53,8 +53,8 @@ mod stress_test {
             }
         });
 
-        for _i in 0..(expected_len - 1) {
-            let mut node = Node::new("test1");
+        for _i in 0..(expected_len) {
+            let mut node = Node::new("stress_test1");
             let _ = thread::spawn(move || loop {
                 node.run();
             });

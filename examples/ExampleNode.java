@@ -4,8 +4,9 @@ public class ExampleNode {
         Node node = new Node("test_cluster");
          String zid = node.getZid();
          System.out.println("Node zid: " + zid);
+         node.leaveOnKey('q');
 
-         while (true) {
+         while (node.getStatus()!=Node.NodeStatus.Offline) {
          node.run();
          }
     }

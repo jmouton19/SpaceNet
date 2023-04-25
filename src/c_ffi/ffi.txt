@@ -19,4 +19,4 @@ gcc examples/cexample_node.c -o bin/cexample_node -Ltarget/release -lspace_net -
 - The linker needs to know where to find the library.
 export LD_LIBRARY_PATH=target/release
 
-todo: make functions to free memory...
+todo: make functions to free memory...no just use free()?

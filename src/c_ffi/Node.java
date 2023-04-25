@@ -2,6 +2,13 @@ public class Node {
     static {
         System.loadLibrary("java_wrapper");
     }
+
+    public enum NodeStatus {
+        Online,
+        Leaving,
+        Joining,
+        Offline
+    }
     private final long nativePtr;
 
     public Node(String clusterName) {
@@ -16,11 +23,42 @@ public class Node {
                  run(nativePtr);
             }
 
-    public native String getZid(long nodePtr);
+     public void leave() {
+          leave(nativePtr);
+     }
+
+     public void leaveOnKey(char key) {
+         leaveOnKey(nativePtr, key);
+     }
+
+     public NodeStatus getStatus() {
+           int status =  getStatus(nativePtr);
+           return NodeStatus.values()[status];
+     }
+
+     public int isNeighbour(String zid) {
+            return isNeighbour(nativePtr,zid);
+     }
+
+     public int isInPolygon(double x, double y) {
+            return isInPolygon(nativePtr,x,y);
+     }
+
+    private native String getZid(long nodePtr);
 
     private native void run(long nodePtr);
 
+    private native void leave(long nodePtr);
+
+    private native void leaveOnKey(long nodePtr, char key);
+
     private static native long newNode(String clusterName);
+
+    private native int getStatus(long nodePtr);
+
+    private native int isNeighbour(long nodePtr, String zid);
+
+    private native int isInPolygon(long nodePtr,double x, double y);
 
 
 }

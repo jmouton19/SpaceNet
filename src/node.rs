@@ -34,9 +34,9 @@ pub struct Node<'a> {
 #[derive(PartialEq, Clone, Debug)]
 #[repr(C)]
 pub enum NodeStatus {
+    Joining,
     Online,
     Leaving,
-    Joining,
     Offline,
 }
 

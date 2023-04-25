@@ -20,6 +20,31 @@ JNIEXPORT void JNICALL Java_Node_run(JNIEnv *env, jobject obj, jlong nodePtr) {
     run((void*) nodePtr);
 }
 
+JNIEXPORT void JNICALL Java_Node_leaveOnKey(JNIEnv *env, jobject obj, jlong node_ptr, jchar key) {
+leave_on_key((void*) node_ptr, (char) key);
+}
+
+JNIEXPORT void JNICALL Java_Node_leave(JNIEnv *env, jobject obj, jlong node_ptr) {
+leave((void*) node_ptr);
+}
+
+JNIEXPORT jint JNICALL Java_Node_getStatus(JNIEnv *env, jobject obj, jlong nodePtr) {
+    NodeStatus status = get_status((void*) nodePtr);
+    return (jint) status;
+}
+
+JNIEXPORT jint JNICALL Java_Node_isNeighbour(JNIEnv *env, jobject obj, jlong nodePtr, jstring zid) {
+    const char *native_zid = (*env)->GetStringUTFChars(env, zid, 0);
+    jint result = (jint) is_neighbour((void*) nodePtr, native_zid);
+    (*env)->ReleaseStringUTFChars(env, zid, native_zid);
+    return result;
+}
+
+JNIEXPORT jint JNICALL Java_Node_isInPolygon(JNIEnv *env, jobject obj, jlong nodePtr, jdouble x, jdouble y) {
+    jint result = (jint) is_in_polygon((void*) nodePtr, x, y);
+    return result;
+}
+
 
 //Boot Node
 JNIEXPORT jlong JNICALL Java_BootNode_newBoot(JNIEnv *env, jobject obj, jstring cluster_name) {
