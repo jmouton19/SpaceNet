@@ -62,26 +62,49 @@
 <a href="#61" id="61">61</a>
 <a href="#62" id="62">62</a>
 <a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
+<a href="#79" id="79">79</a>
+<a href="#80" id="80">80</a>
+<a href="#81" id="81">81</a>
+<a href="#82" id="82">82</a>
+<a href="#83" id="83">83</a>
+<a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::boot_node::BootNode;
 <span class="kw">use </span><span class="kw">crate</span>::message::{DefaultMessage, NewNodeResponse};
 <span class="kw">use </span><span class="kw">crate</span>::node::SyncResolve;
 <span class="kw">use </span><span class="kw">crate</span>::types::{closest_point, point_within_distance};
 <span class="kw">use </span>bincode::{deserialize, serialize};
 <span class="kw">use </span>rand::Rng;
+<span class="kw">use </span>std::fs::File;
+<span class="kw">use </span>std::io::BufRead;
+<span class="kw">use </span>std::io::BufReader;
 
 <span class="doccomment">/// Handles a join request from a new node. Boot node assigns a point to the new node and states the closest node (`land_owner`) to the new point. Sends the new node the zid of the &#39;land_owner&#39; node.
 /// Adds new node to cluster and polygon list of boot node.
 </span><span class="kw">pub fn </span>handle_join_request(payload: <span class="kw-2">&amp;</span>[u8], boot_node: <span class="kw-2">&amp;mut </span>BootNode) {
     <span class="kw">let </span>data: DefaultMessage = deserialize(payload).unwrap();
     <span class="comment">//get random point to give to new node
+
     </span><span class="kw">let </span><span class="kw-2">mut </span>rng = rand::thread_rng();
     <span class="kw">let </span><span class="kw-2">mut </span>point = (rng.gen_range(<span class="number">10.0</span>..=<span class="number">90.0</span>), rng.gen_range(<span class="number">10.0</span>..=<span class="number">90.0</span>)); <span class="comment">// generate random (f64, f64) tuple
 
-    </span><span class="macro">println!</span>(<span class="string">&quot;------------------------------------&quot;</span>);
-    <span class="macro">println!</span>(<span class="string">&quot;Giving point {:?}.... to {:?}&quot;</span>, point, data.sender_id);
-    <span class="macro">println!</span>(<span class="string">&quot;------------------------------------&quot;</span>);
-
-    <span class="comment">//find closest node to new point
+    //find closest node to new point
     </span><span class="kw">if </span>boot_node.cluster.is_empty() {
         point = (<span class="number">50.0</span>, <span class="number">50.0</span>);
         boot_node.cluster.insert(data.sender_id.to_string(), point);
@@ -91,11 +114,34 @@
     } <span class="kw">else </span>{
         <span class="comment">//check if a point exist in boot_node.cluster.values that is within X distance of the new point if so precalculate the new point
         </span><span class="kw">let </span><span class="kw-2">mut </span>point = (rng.gen_range(<span class="number">1.0</span>..=<span class="number">99.0</span>), rng.gen_range(<span class="number">1.0</span>..=<span class="number">99.0</span>));
-        <span class="kw">let </span>tolerance = <span class="number">0.01</span>;
+        <span class="kw">let </span>tolerance = <span class="number">0.1</span>;
         <span class="kw">while </span>point_within_distance(<span class="kw-2">&amp;</span>boot_node.cluster, point, tolerance) {
             point = (rng.gen_range(<span class="number">1.0</span>..=<span class="number">99.0</span>), rng.gen_range(<span class="number">1.0</span>..=<span class="number">99.0</span>));
         }
     }
+
+    <span class="comment">//get site from text file - testing only
+    </span><span class="kw">let </span>sites_path = dirs::document_dir()
+        .unwrap()
+        .join(<span class="string">&quot;SpaceNet&quot;</span>)
+        .join(<span class="string">&quot;logs&quot;</span>)
+        .join(<span class="macro">format!</span>(<span class="string">&quot;{}.log&quot;</span>, <span class="string">&quot;stress_test1&quot;</span>));
+    <span class="kw">let </span>file = File::open(sites_path).unwrap();
+    <span class="kw">let </span>reader = BufReader::new(file);
+    <span class="kw">for </span>(i, line_result) <span class="kw">in </span>reader.lines().enumerate() {
+        <span class="kw">let </span>line = line_result.unwrap();
+        <span class="kw">if </span>i == boot_node.draw_count <span class="kw">as </span>usize {
+            <span class="kw">let </span><span class="kw-2">mut </span>parts = line[<span class="number">1</span>..line.len() - <span class="number">1</span>].split(<span class="string">&quot;, &quot;</span>);
+            <span class="kw">let </span>x = parts.next().unwrap().parse::&lt;f64&gt;().unwrap();
+            <span class="kw">let </span>y = parts.next().unwrap().parse::&lt;f64&gt;().unwrap();
+            point = (x, y);
+            <span class="kw">break</span>;
+        }
+    }
+
+    <span class="macro">println!</span>(<span class="string">&quot;------------------------------------&quot;</span>);
+    <span class="macro">println!</span>(<span class="string">&quot;Giving point {:?}.... to {:?}&quot;</span>, point, data.sender_id);
+    <span class="macro">println!</span>(<span class="string">&quot;------------------------------------&quot;</span>);
 
     <span class="kw">let </span>(land_owner_site, land_owner) = closest_point(<span class="kw-2">&amp;</span>boot_node.cluster, point);
     <span class="macro">println!</span>(<span class="string">&quot;{}&quot;</span>, land_owner);
