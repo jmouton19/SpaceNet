@@ -27,4 +27,3 @@ jobs:
     - name: Run stress tests
       run: |
         cargo test --release --test stress_test -- --ignored
-        
