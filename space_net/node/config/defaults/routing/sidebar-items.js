@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["peer",""],["router",""]]};
+window.SIDEBAR_ITEMS = {"mod":["peer","router"]};

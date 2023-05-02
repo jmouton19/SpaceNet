@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["handle_join_request","Handles a join request from a new node. Boot node assigns a point to the new node and states the closest node (`land_owner`) to the new point. Sends the new node the zid of the ‘land_owner’ node. Adds new node to cluster and polygon list of boot node."]]};
+window.SIDEBAR_ITEMS = {"fn":["handle_join_request"]};

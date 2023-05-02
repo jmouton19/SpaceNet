@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["peers_failover_brokering",""]]};
+window.SIDEBAR_ITEMS = {"constant":["peers_failover_brokering"]};

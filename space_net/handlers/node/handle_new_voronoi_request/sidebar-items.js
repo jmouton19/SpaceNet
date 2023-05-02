@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["handle_new_voronoi_request","Recalculates voronoi with new site and sends new polygon to boot node"]]};
+window.SIDEBAR_ITEMS = {"fn":["handle_new_voronoi_request"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["client",""],["peer",""],["router",""]],"fn":[["get",""]]};
+window.SIDEBAR_ITEMS = {"constant":["client","peer","router"],"fn":["get"]};

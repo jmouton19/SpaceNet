@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":[["DefaultMessage",""],["ExpectedNodes",""],["NeighboursNeighboursRequest",""],["NeighboursResponse",""],["NewNodeResponse",""],["NewVoronoiRequest",""],["NewVoronoiResponse",""]]};
+window.SIDEBAR_ITEMS = {"struct":["DefaultMessage","ExpectedNodes","NeighboursNeighboursRequest","NeighboursResponse","NewNodeResponse","NewVoronoiRequest","NewVoronoiResponse"]};

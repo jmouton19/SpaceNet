@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["enabled",""],["multihop",""]],"mod":[["autoconnect",""]]};
+window.SIDEBAR_ITEMS = {"constant":["enabled","multihop"],"mod":["autoconnect"]};

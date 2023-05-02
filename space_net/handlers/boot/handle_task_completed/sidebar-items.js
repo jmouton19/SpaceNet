@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["handle_task_completed","Handles a task completed message from a node. Increments the amount of received messages. Boot node updates the polygon list and cluster of boot node."]]};
+window.SIDEBAR_ITEMS = {"fn":["handle_task_completed"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["handle_leave_voronoi_request","Calculates new voronoi without leavers site and sends new polygon to boot node."]]};
+window.SIDEBAR_ITEMS = {"fn":["handle_leave_voronoi_request"]};

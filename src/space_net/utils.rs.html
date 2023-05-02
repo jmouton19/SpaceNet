@@ -1,5 +1,5 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/utils.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>utils.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-1f7d512b176f0f72.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-124a1ca42af929b6.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-93196c7a1c3542a8.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-4743e13df3dfe8c4.css"><link rel="stylesheet" disabled href="../../static.files/dark-0e1b889528bd466b.css"><link rel="stylesheet" disabled href="../../static.files/ayu-65289d5d067c7c66.css"><script id="default-settings" ></script><script src="../../static.files/storage-d43fa987303ecbbb.js"></script><script defer src="../../static.files/source-script-ea63cb6500f71309.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-3367e395607fafc1.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="icon" href="../LOGO.png"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../space_net/index.html">
-                        <img src="../LOGO.png" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-5ec35bf9ca753509.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/utils.rs`."><title>utils.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Regular-46f98efaafac5295.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Regular-018c141bf0843ffd.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/FiraSans-Medium-8f9a781e4970d388.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Regular-562dcc5011b6de7d.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceSerif4-Bold-a2c9cd1067f8b328.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../static.files/SourceCodePro-Semibold-d899c5a5c4aeb14a.ttf.woff2"><link rel="stylesheet" href="../../static.files/normalize-76eba96aa4d2e634.css"><link rel="stylesheet" href="../../static.files/rustdoc-c4dbdcde0fbd8430.css" id="mainThemeStyle"><link rel="stylesheet" id="themeStyle" href="../../static.files/light-db279b6232be9c13.css"><link rel="stylesheet" disabled href="../../static.files/dark-cf923f49f397b216.css"><link rel="stylesheet" disabled href="../../static.files/ayu-be46fdc453a55015.css"><script src="../../static.files/storage-3891ce972e3a2bf8.js"></script><script defer src="../../static.files/source-script-1b95b7cca98b26e5.js"></script><script defer src="../../source-files.js"></script><script defer src="../../static.files/main-98a684e84ae5b08b.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-13285aec31fa243e.css"></noscript><link rel="icon" href="../LOGO.png"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><nav class="sub"><a class="sub-logo-container" href="../../space_net/index.html">
+                        <img src="../LOGO.png" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" aria-label="Run search in the documentation" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../static.files/wheel-7b819b6101059cd0.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><a href="#1" id="1">1</a>
 <a href="#2" id="2">2</a>
 <a href="#3" id="3">3</a>
 <a href="#4" id="4">4</a>
@@ -168,27 +168,6 @@
 <a href="#167" id="167">167</a>
 <a href="#168" id="168">168</a>
 <a href="#169" id="169">169</a>
-<a href="#170" id="170">170</a>
-<a href="#171" id="171">171</a>
-<a href="#172" id="172">172</a>
-<a href="#173" id="173">173</a>
-<a href="#174" id="174">174</a>
-<a href="#175" id="175">175</a>
-<a href="#176" id="176">176</a>
-<a href="#177" id="177">177</a>
-<a href="#178" id="178">178</a>
-<a href="#179" id="179">179</a>
-<a href="#180" id="180">180</a>
-<a href="#181" id="181">181</a>
-<a href="#182" id="182">182</a>
-<a href="#183" id="183">183</a>
-<a href="#184" id="184">184</a>
-<a href="#185" id="185">185</a>
-<a href="#186" id="186">186</a>
-<a href="#187" id="187">187</a>
-<a href="#188" id="188">188</a>
-<a href="#189" id="189">189</a>
-<a href="#190" id="190">190</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::types::{OrderedMapPairs, OrderedMapPolygon};
 <span class="kw">use </span>dirs;
 <span class="kw">use </span>plotters::element::ComposedElement;
@@ -198,21 +177,15 @@
 <span class="kw">use </span>voronator::delaunator::Point;
 <span class="kw">use </span>voronator::VoronoiDiagram;
 
+
+<span class="kw">static </span>BOUNDARY_WIDTH: f64 = <span class="number">100.</span>;
+<span class="kw">static </span>BOUNDARY_HEIGHT: f64 = <span class="number">100.</span>;
+<span class="kw">static </span>IMAGE_SCALE: f64 = <span class="number">20.</span>;
+
+
 <span class="doccomment">/// Draws a voronoi (containing all polygons) onto canvas and saves to png
 </span><span class="kw">pub fn </span>draw_voronoi_full(map_pairs: <span class="kw-2">&amp;</span>OrderedMapPairs, map_polygon: <span class="kw-2">&amp;</span>OrderedMapPolygon, name: <span class="kw-2">&amp;</span>str) {
-    <span class="kw">let </span>boundary_width = <span class="number">100.</span>;
-    <span class="kw">let </span>boundary_height = <span class="number">100.</span>;
-    <span class="kw">let </span>scale = <span class="number">10.</span>;
-
-    <span class="comment">// let exe_path = std::env::current_exe().unwrap();
-    // println!(&quot;exe_path: {:?}&quot;, exe_path);
-    // let images_path = exe_path.parent().unwrap().join(&quot;images&quot;);
-    // println!(&quot;images_path: {:?}&quot;, images_path);
-    // if !images_path.exists() {
-    //     fs::create_dir(&amp;images_path).unwrap();
-    // }
-
-    </span><span class="kw">let </span>images_path = dirs::document_dir()
+    <span class="kw">let </span>images_path = dirs::document_dir()
         .unwrap_or_else(|| {
             <span class="comment">// Handle the case where the document directory is not available
             // For example, you could use a fallback directory.
@@ -230,8 +203,8 @@
     <span class="kw">let </span>root = BitMapBackend::new(
         <span class="kw-2">&amp;</span>path,
         (
-            (boundary_width * scale) <span class="kw">as </span>u32,
-            (boundary_height * scale) <span class="kw">as </span>u32,
+            (BOUNDARY_WIDTH * IMAGE_SCALE) <span class="kw">as </span>u32,
+            (BOUNDARY_HEIGHT * IMAGE_SCALE) <span class="kw">as </span>u32,
         ),
     )
     .into_drawing_area();
@@ -240,7 +213,7 @@
     <span class="kw">for </span>cell <span class="kw">in </span>map_polygon.values() {
         <span class="kw">let </span>p: Vec&lt;(i32, i32)&gt; = cell
             .iter()
-            .map(|x| ((x.<span class="number">0 </span>* scale) <span class="kw">as </span>i32, (x.<span class="number">1 </span>* scale) <span class="kw">as </span>i32))
+            .map(|x| ((x.<span class="number">0 </span>* IMAGE_SCALE) <span class="kw">as </span>i32, (x.<span class="number">1 </span>* IMAGE_SCALE) <span class="kw">as </span>i32))
             .collect();
 
         <span class="kw">let </span>(r, g, b) = random_rgb();
@@ -253,24 +226,14 @@
 
     <span class="kw">for </span>(i, site) <span class="kw">in </span>map_pairs.values().enumerate() {
         <span class="comment">// println!(&quot;{:?}&quot;, site);
-        </span><span class="kw">let </span>p = ((site.<span class="number">0 </span>* scale) <span class="kw">as </span>i32, (site.<span class="number">1 </span>* scale) <span class="kw">as </span>i32);
-        root.draw(<span class="kw-2">&amp;</span>dot_and_label(p.<span class="number">0</span>, p.<span class="number">1</span>, i)).unwrap();
+        </span>root.draw(<span class="kw-2">&amp;</span>dot_and_label(site.<span class="number">0</span>, site.<span class="number">1</span>, i)).unwrap();
     }
     <span class="kw">let _ </span>= root;
 }
 <span class="doccomment">/// Draws a voronoi (containing one polygon) onto canvas and saves to png
 </span><span class="kw">pub fn </span>draw_voronoi(diagram: <span class="kw-2">&amp;</span>VoronoiDiagram&lt;Point&gt;, name: <span class="kw-2">&amp;</span>str) {
-    <span class="kw">let </span>boundary_width = <span class="number">100.</span>;
-    <span class="kw">let </span>boundary_height = <span class="number">100.</span>;
-    <span class="kw">let </span>scale = <span class="number">10.</span>;
 
-    <span class="comment">// let exe_path = std::env::current_exe().unwrap();
-    // let images_path = exe_path.parent().unwrap().join(&quot;images&quot;);
-    // if !images_path.exists() {
-    //     fs::create_dir(&amp;images_path).unwrap();
-    // }
-
-    </span><span class="kw">let </span>images_path = dirs::document_dir()
+    <span class="kw">let </span>images_path = dirs::document_dir()
         .unwrap_or_else(|| {
             <span class="comment">// Handle the case where the document directory is not available
             // For example, you could use a fallback directory.
@@ -288,8 +251,8 @@
     <span class="kw">let </span>root = BitMapBackend::new(
         <span class="kw-2">&amp;</span>path,
         (
-            (boundary_width * scale) <span class="kw">as </span>u32,
-            (boundary_height * scale) <span class="kw">as </span>u32,
+            (BOUNDARY_WIDTH * IMAGE_SCALE) <span class="kw">as </span>u32,
+            (BOUNDARY_HEIGHT * IMAGE_SCALE) <span class="kw">as </span>u32,
         ),
     )
     .into_drawing_area();
@@ -298,7 +261,7 @@
     <span class="kw">let </span>p: Vec&lt;(i32, i32)&gt; = diagram.cells()[<span class="number">0</span>]
         .points()
         .iter()
-        .map(|x| ((x.x * scale) <span class="kw">as </span>i32, (x.y * scale) <span class="kw">as </span>i32))
+        .map(|x| ((x.x * IMAGE_SCALE) <span class="kw">as </span>i32, (x.y * IMAGE_SCALE) <span class="kw">as </span>i32))
         .collect();
     <span class="kw">let </span>(r, g, b) = random_rgb();
     <span class="kw">let </span>color = RGBColor(r, g, b);
@@ -307,11 +270,7 @@
     root.draw(<span class="kw-2">&amp;</span>polygon).unwrap();
 
     <span class="comment">//println!(&quot;{:?}&quot;, diagram.sites[0]);
-    </span><span class="kw">let </span>p = (
-        (diagram.sites[<span class="number">0</span>].x * scale) <span class="kw">as </span>i32,
-        (diagram.sites[<span class="number">0</span>].y * scale) <span class="kw">as </span>i32,
-    );
-    root.draw(<span class="kw-2">&amp;</span>dot_and_label(p.<span class="number">0</span>, p.<span class="number">1</span>, <span class="number">0</span>)).unwrap();
+    </span>root.draw(<span class="kw-2">&amp;</span>dot_and_label(diagram.sites[<span class="number">0</span>].x, diagram.sites[<span class="number">0</span>].y, <span class="number">0</span>)).unwrap();
 
     <span class="kw">let _ </span>= root;
 }
@@ -329,12 +288,9 @@
         list.extend(neighbours.clone());
 
         <span class="kw">let </span>points: Vec&lt;(f64, f64)&gt; = list.values().cloned().collect();
-
-        <span class="kw">let </span>boundary_width = <span class="number">100.</span>;
-        <span class="kw">let </span>boundary_height = <span class="number">100.</span>;
         <span class="kw">let </span>diagram = VoronoiDiagram::&lt;Point&gt;::from_tuple(
             <span class="kw-2">&amp;</span>(<span class="number">0.</span>, <span class="number">0.</span>),
-            <span class="kw-2">&amp;</span>(boundary_width, boundary_height),
+            <span class="kw-2">&amp;</span>(BOUNDARY_WIDTH, BOUNDARY_HEIGHT),
             <span class="kw-2">&amp;</span>points,
         )
         .unwrap();
@@ -370,14 +326,15 @@
     Text&lt;<span class="lifetime">&#39;static</span>, (i32, i32), String&gt;,
 &gt;;
 
-<span class="kw">fn </span>dot_and_label(x: i32, y: i32, i: usize) -&gt; DotAndLabelType {
+<span class="kw">fn </span>dot_and_label(x_in: f64, y_in: f64, i: usize) -&gt; DotAndLabelType {
+    <span class="kw">let </span>(x,y) = ((x_in * IMAGE_SCALE) <span class="kw">as </span>i32, (y_in * IMAGE_SCALE) <span class="kw">as </span>i32);
     <span class="kw">return </span>EmptyElement::at((x, y))
-        + Circle::new((<span class="number">0</span>, <span class="number">0</span>), <span class="number">3</span>, ShapeStyle::from(<span class="kw-2">&amp;</span>BLACK).filled())
+        + Circle::new((<span class="number">0</span>, <span class="number">0</span>), IMAGE_SCALE <span class="kw">as </span>i32/<span class="number">5</span>, ShapeStyle::from(<span class="kw-2">&amp;</span>BLACK).filled())
         + Text::new(
-            <span class="macro">format!</span>(<span class="string">&quot;#{}:   ({},{})&quot;</span>, i, x, y),
+            <span class="macro">format!</span>(<span class="string">&quot;#{}: ({:.2},{:.2})&quot;</span>, i, x_in, y_in),
             (<span class="number">10</span>, <span class="number">0</span>),
-            (<span class="string">&quot;sans-serif&quot;</span>, <span class="number">15.0</span>).into_font(),
+            (<span class="string">&quot;sans-serif&quot;</span>, IMAGE_SCALE+<span class="number">5.</span>).into_font(),
         );
 }
-</code></pre></div>
-</section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="space_net" data-themes="" data-resource-suffix="" data-rustdoc-version="1.68.2 (9eb3afe9e 2023-03-27)" data-search-js="search-98d53477a794af0b.js" data-settings-js="settings-c3c521c753752a1a.js" data-settings-css="settings-08ddfdda51b8ee2e.css" ></div></body></html>
+<span class="comment">//todo: new drawing? cleanup</span></code></pre></div>
+</section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="space_net" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

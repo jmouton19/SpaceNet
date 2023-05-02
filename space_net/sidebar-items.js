@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["boot_node",""],["c_ffi",""],["handlers",""],["message",""],["node",""],["types",""],["utils",""]]};
+window.SIDEBAR_ITEMS = {"mod":["boot_node","c_ffi","handlers","message","node","types","utils"]};

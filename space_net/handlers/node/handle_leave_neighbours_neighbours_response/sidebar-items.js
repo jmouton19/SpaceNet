@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["handle_leave_neighbours_neighbours_response","Combine all neighbour lists received. If number of messages received is equal to the expected number tell all neighbours to calculate new voronoi without leavers site. Drop leaver node instance."]]};
+window.SIDEBAR_ITEMS = {"fn":["handle_leave_neighbours_neighbours_response"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["handle_neighbours_neighbours_request","Sends list of neighbours to new node"]]};
+window.SIDEBAR_ITEMS = {"fn":["handle_neighbours_neighbours_request"]};

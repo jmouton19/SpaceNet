@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["delay",""],["timeout",""]],"mod":[["gossip",""],["multicast",""]]};
+window.SIDEBAR_ITEMS = {"constant":["delay","timeout"],"mod":["gossip","multicast"]};

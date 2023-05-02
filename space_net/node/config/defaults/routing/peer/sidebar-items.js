@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":[["mode",""]]};
+window.SIDEBAR_ITEMS = {"constant":["mode"]};

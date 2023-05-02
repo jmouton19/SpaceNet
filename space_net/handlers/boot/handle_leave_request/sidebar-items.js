@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":[["handle_leave_request","Handles a leave request from a node. Boot node removes the node from the cluster and polygon list."]]};
+window.SIDEBAR_ITEMS = {"fn":["handle_leave_request"]};

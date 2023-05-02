@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":[["c_bindings",""]]};
+window.SIDEBAR_ITEMS = {"mod":["c_bindings"]};
