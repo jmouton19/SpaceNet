@@ -1,3 +1,5 @@
+use std::thread;
+use std::time::Duration;
 use crate::handlers::node::handle_join_response::handle_join_response;
 use crate::handlers::node::handle_leave_neighbours_neighbours_request::handle_leave_neighbours_neighbours_request;
 use crate::handlers::node::handle_leave_neighbours_neighbours_response::handle_leave_neighbours_neighbours_response;
@@ -90,6 +92,8 @@ impl Node<'_> {
             let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
             println!("Received message on topic... {:?}", topic);
             let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
+            //sleep 1 seconds to delay message
+            //thread::sleep(Duration::from_secs(1));
 
             match topic {
                 "new_reply" => {

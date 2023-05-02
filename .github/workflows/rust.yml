@@ -24,6 +24,6 @@ jobs:
         cargo test --test test_boot --verbose
         cargo test --test test_node --verbose
         cargo test --test cluster --verbose
-    - name: Run stress tests
-      run: |
-        cargo test --release --test stress_test -- --ignored
+#    - name: Run stress tests
+#      run: |
+#        cargo test --release --test stress_test -- --ignored

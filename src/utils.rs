@@ -7,20 +7,14 @@ use std::fs;
 use voronator::delaunator::Point;
 use voronator::VoronoiDiagram;
 
+
+static BOUNDARY_WIDTH: f64 = 100.;
+static BOUNDARY_HEIGHT: f64 = 100.;
+static IMAGE_SCALE: f64 = 20.;
+
+
 /// Draws a voronoi (containing all polygons) onto canvas and saves to png
 pub fn draw_voronoi_full(map_pairs: &OrderedMapPairs, map_polygon: &OrderedMapPolygon, name: &str) {
-    let boundary_width = 100.;
-    let boundary_height = 100.;
-    let scale = 10.;
-
-    // let exe_path = std::env::current_exe().unwrap();
-    // println!("exe_path: {:?}", exe_path);
-    // let images_path = exe_path.parent().unwrap().join("images");
-    // println!("images_path: {:?}", images_path);
-    // if !images_path.exists() {
-    //     fs::create_dir(&images_path).unwrap();
-    // }
-
     let images_path = dirs::document_dir()
         .unwrap_or_else(|| {
             // Handle the case where the document directory is not available
@@ -39,8 +33,8 @@ pub fn draw_voronoi_full(map_pairs: &OrderedMapPairs, map_polygon: &OrderedMapPo
     let root = BitMapBackend::new(
         &path,
         (
-            (boundary_width * scale) as u32,
-            (boundary_height * scale) as u32,
+            (BOUNDARY_WIDTH * IMAGE_SCALE) as u32,
+            (BOUNDARY_HEIGHT * IMAGE_SCALE) as u32,
         ),
     )
     .into_drawing_area();
@@ -49,7 +43,7 @@ pub fn draw_voronoi_full(map_pairs: &OrderedMapPairs, map_polygon: &OrderedMapPo
     for cell in map_polygon.values() {
         let p: Vec<(i32, i32)> = cell
             .iter()
-            .map(|x| ((x.0 * scale) as i32, (x.1 * scale) as i32))
+            .map(|x| ((x.0 * IMAGE_SCALE) as i32, (x.1 * IMAGE_SCALE) as i32))
             .collect();
 
         let (r, g, b) = random_rgb();
@@ -62,22 +56,12 @@ pub fn draw_voronoi_full(map_pairs: &OrderedMapPairs, map_polygon: &OrderedMapPo
 
     for (i, site) in map_pairs.values().enumerate() {
         // println!("{:?}", site);
-        let p = ((site.0 * scale) as i32, (site.1 * scale) as i32);
-        root.draw(&dot_and_label(p.0, p.1, i)).unwrap();
+        root.draw(&dot_and_label(site.0, site.1, i)).unwrap();
     }
     let _ = root;
 }
 /// Draws a voronoi (containing one polygon) onto canvas and saves to png
 pub fn draw_voronoi(diagram: &VoronoiDiagram<Point>, name: &str) {
-    let boundary_width = 100.;
-    let boundary_height = 100.;
-    let scale = 10.;
-
-    // let exe_path = std::env::current_exe().unwrap();
-    // let images_path = exe_path.parent().unwrap().join("images");
-    // if !images_path.exists() {
-    //     fs::create_dir(&images_path).unwrap();
-    // }
 
     let images_path = dirs::document_dir()
         .unwrap_or_else(|| {
@@ -97,8 +81,8 @@ pub fn draw_voronoi(diagram: &VoronoiDiagram<Point>, name: &str) {
     let root = BitMapBackend::new(
         &path,
         (
-            (boundary_width * scale) as u32,
-            (boundary_height * scale) as u32,
+            (BOUNDARY_WIDTH * IMAGE_SCALE) as u32,
+            (BOUNDARY_HEIGHT * IMAGE_SCALE) as u32,
         ),
     )
     .into_drawing_area();
@@ -107,7 +91,7 @@ pub fn draw_voronoi(diagram: &VoronoiDiagram<Point>, name: &str) {
     let p: Vec<(i32, i32)> = diagram.cells()[0]
         .points()
         .iter()
-        .map(|x| ((x.x * scale) as i32, (x.y * scale) as i32))
+        .map(|x| ((x.x * IMAGE_SCALE) as i32, (x.y * IMAGE_SCALE) as i32))
         .collect();
     let (r, g, b) = random_rgb();
     let color = RGBColor(r, g, b);
@@ -116,11 +100,7 @@ pub fn draw_voronoi(diagram: &VoronoiDiagram<Point>, name: &str) {
     root.draw(&polygon).unwrap();
 
     //println!("{:?}", diagram.sites[0]);
-    let p = (
-        (diagram.sites[0].x * scale) as i32,
-        (diagram.sites[0].y * scale) as i32,
-    );
-    root.draw(&dot_and_label(p.0, p.1, 0)).unwrap();
+    root.draw(&dot_and_label(diagram.sites[0].x, diagram.sites[0].y, 0)).unwrap();
 
     let _ = root;
 }
@@ -138,12 +118,9 @@ impl Voronoi {
         list.extend(neighbours.clone());
 
         let points: Vec<(f64, f64)> = list.values().cloned().collect();
-
-        let boundary_width = 100.;
-        let boundary_height = 100.;
         let diagram = VoronoiDiagram::<Point>::from_tuple(
             &(0., 0.),
-            &(boundary_width, boundary_height),
+            &(BOUNDARY_WIDTH, BOUNDARY_HEIGHT),
             &points,
         )
         .unwrap();
@@ -179,12 +156,14 @@ type DotAndLabelType = ComposedElement<
     Text<'static, (i32, i32), String>,
 >;
 
-fn dot_and_label(x: i32, y: i32, i: usize) -> DotAndLabelType {
+fn dot_and_label(x_in: f64, y_in: f64, i: usize) -> DotAndLabelType {
+    let (x,y) = ((x_in * IMAGE_SCALE) as i32, (y_in * IMAGE_SCALE) as i32);
     return EmptyElement::at((x, y))
-        + Circle::new((0, 0), 3, ShapeStyle::from(&BLACK).filled())
+        + Circle::new((0, 0), IMAGE_SCALE as i32/5, ShapeStyle::from(&BLACK).filled())
         + Text::new(
-            format!("#{}:   ({},{})", i, x, y),
+            format!("#{}: ({:.2},{:.2})", i, x_in, y_in),
             (10, 0),
-            ("sans-serif", 15.0).into_font(),
+            ("sans-serif", IMAGE_SCALE+5.).into_font(),
         );
 }
+//todo: new drawing? cleanup

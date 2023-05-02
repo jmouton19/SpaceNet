@@ -6,6 +6,7 @@ use crate::node::SyncResolve;
 use crate::types::{OrderedMapPairs, OrderedMapPolygon};
 use crate::utils::{draw_voronoi_full, Voronoi};
 use std::sync::Arc;
+use std::time::Duration;
 pub use zenoh::prelude::sync::*;
 use zenoh::prelude::Sample;
 use zenoh::subscriber::Subscriber;
@@ -71,6 +72,8 @@ impl BootNode<'_> {
             // } else {
             //     let payload = sample.value.payload.contiguous();
             // }
+
+            //thread::sleep(Duration::from_secs(5));
             match topic {
                 "new" => {
                     handle_join_request(payload, self);
