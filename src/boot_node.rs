@@ -113,29 +113,7 @@ impl BootNode<'_> {
                     &self.polygon_list,
                     format!("{}voronoi", self.draw_count).as_str(),
                 );
-                //correct voronoi
-                let mut hash_map = self.cluster.clone();
-                self.correct_polygon_list = OrderedMapPolygon::new();
-                let (first_zid, first_site) = hash_map
-                    .iter()
-                    .next()
-                    .map(|(k, v)| (k.clone(), *v))
-                    .unwrap();
-                hash_map.swap_remove_index(0);
-
-                let diagram = Voronoi::new((first_zid, first_site), &hash_map);
-
-                for (i, cell) in diagram.diagram.cells().iter().enumerate() {
-                    let polygon = cell.points().iter().map(|x| (x.x, x.y)).collect();
-                    let site_id = diagram.input.keys().nth(i).unwrap();
-                    self.correct_polygon_list
-                        .insert(site_id.to_string(), polygon);
-                }
-                draw_voronoi_full(
-                    &self.cluster,
-                    &self.correct_polygon_list,
-                    format!("{}confirm", self.draw_count).as_str(),
-                );
+                //old stuff
                 self.draw_count += 1;
             };
         }

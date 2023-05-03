@@ -1,5 +1,3 @@
-use std::thread;
-use std::time::Duration;
 use crate::handlers::node::handle_join_response::handle_join_response;
 use crate::handlers::node::handle_leave_neighbours_neighbours_request::handle_leave_neighbours_neighbours_request;
 use crate::handlers::node::handle_leave_neighbours_neighbours_response::handle_leave_neighbours_neighbours_response;
@@ -16,6 +14,8 @@ use async_std::io::ReadExt;
 use async_std::sync::Arc;
 use async_std::{io, task};
 use bincode::serialize;
+use std::thread;
+use std::time::Duration;
 pub use zenoh::prelude::sync::*;
 use zenoh::subscriber::Subscriber;
 

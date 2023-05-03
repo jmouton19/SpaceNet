@@ -1,7 +1,10 @@
 use crate::boot_node::BootNode;
-use crate::message::{DefaultMessage, NewNodeResponse};
+use crate::message::{
+    DefaultMessage, NeighboursResponse, NewNodeResponse, NewResponse, NewVoronoiRequest,
+};
 use crate::node::SyncResolve;
-use crate::types::{closest_point, point_within_distance};
+use crate::types::{closest_point, point_within_distance, OrderedMapPolygon};
+use crate::utils::{draw_voronoi_full, Voronoi};
 use bincode::{deserialize, serialize};
 use rand::Rng;
 use std::fs::File;
@@ -15,7 +18,7 @@ pub fn handle_join_request(payload: &[u8], boot_node: &mut BootNode) {
     //get random point to give to new node
 
     let mut rng = rand::thread_rng();
-    let mut point = (rng.gen_range(1.0..=99.0), rng.gen_range(1.0..=99.0)); // generate random (f64, f64) tuple
+    let mut point = (-1., -1.);
 
     //find closest node to new point
     if boot_node.cluster.is_empty() {
@@ -26,7 +29,7 @@ pub fn handle_join_request(payload: &[u8], boot_node: &mut BootNode) {
             .insert(data.sender_id.to_string(), vec![]);
     } else {
         //check if a point exist in boot_node.cluster.values that is within X distance of the new point if so precalculate the new point
-        let mut point = (rng.gen_range(1.0..=99.0), rng.gen_range(1.0..=99.0));
+        point = (rng.gen_range(1.0..=99.0), rng.gen_range(1.0..=99.0));
         let tolerance = 0.1;
         while point_within_distance(&boot_node.cluster, point, tolerance) {
             point = (rng.gen_range(1.0..=99.0), rng.gen_range(1.0..=99.0));
@@ -59,19 +62,46 @@ pub fn handle_join_request(payload: &[u8], boot_node: &mut BootNode) {
     println!("Giving point {:?}.... to {:?}", point, data.sender_id);
     println!("------------------------------------");
 
-    let (land_owner_site, land_owner) = closest_point(&boot_node.cluster, point);
-    println!("{}", land_owner);
+    // let (land_owner_site, land_owner) = closest_point(&boot_node.cluster, point);
+    // println!("{}", land_owner);
+
+    //correct voronoi
+    // boot_node.correct_polygon_list = OrderedMapPolygon::new();
+
+    let diagram = Voronoi::new((data.sender_id.clone(), point), &boot_node.cluster);
+    for (i, cell) in diagram.diagram.cells().iter().enumerate() {
+        let polygon = cell.points().iter().map(|x| (x.x, x.y)).collect();
+        let site_id = diagram.input.keys().nth(i).unwrap();
+        boot_node
+            .correct_polygon_list
+            .insert(site_id.to_string(), polygon);
+    }
+
+    let polygon: Vec<(f64, f64)> = diagram.diagram.cells()[0]
+        .points()
+        .iter()
+        .map(|x| (x.x, x.y))
+        .collect();
 
     //add node to cluster
     boot_node.cluster.insert(data.sender_id.to_string(), point);
+
+
+    draw_voronoi_full(
+        &boot_node.cluster,
+        &boot_node.correct_polygon_list,
+        format!("{}confirm", boot_node.draw_count).as_str(),
+    );
+
     boot_node
         .polygon_list
-        .insert(data.sender_id.to_string(), vec![]);
+        .insert(data.sender_id.to_string(), polygon);
 
-    let json_message = serialize(&NewNodeResponse {
+    let new_site_neighbours = diagram.get_neighbours();
+
+    let json_message = serialize(&NewResponse {
+        neighbours: new_site_neighbours.clone(),
         new_site: point,
-        land_owner,
-        land_owner_site,
         sender_id: boot_node.zid.clone(),
     })
     .unwrap();
@@ -86,4 +116,26 @@ pub fn handle_join_request(payload: &[u8], boot_node: &mut BootNode) {
             json_message,
         )
         .res();
+
+    boot_node.expected_counter = new_site_neighbours.len() as i32;
+
+    //send each node in new_site_neighbours the new nodes point
+    let message = serialize(&NewVoronoiRequest {
+        site: point,
+        sender_id: boot_node.zid.clone(),
+    })
+    .unwrap();
+    for neighbour_id in new_site_neighbours.keys() {
+        boot_node
+            .session
+            .put(
+                format!(
+                    "{}/node/{}/new_voronoi",
+                    boot_node.cluster_name, neighbour_id
+                ),
+                message.clone(),
+            )
+            .res()
+            .unwrap();
+    }
 }

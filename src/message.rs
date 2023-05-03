@@ -33,6 +33,13 @@ pub struct NeighboursResponse {
 }
 
 #[derive(Deserialize, Serialize)]
+pub struct NewResponse {
+    pub neighbours: OrderedMapPairs,
+    pub new_site: (f64, f64),
+    pub sender_id: String,
+}
+
+#[derive(Deserialize, Serialize)]
 pub struct NewVoronoiResponse {
     pub polygon: Vec<(f64, f64)>,
     pub site: (f64, f64),
