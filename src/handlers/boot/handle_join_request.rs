@@ -1,7 +1,5 @@
 use crate::boot_node::BootNode;
-use crate::message::{
-    DefaultMessage, NeighboursResponse, NewNodeResponse, NewResponse, NewVoronoiRequest,
-};
+use crate::message::{DefaultMessage, NeighboursResponse, NewNodeResponse, NewResponse, NewVoronoiRequest, NewVoronoiRequest2};
 use crate::node::SyncResolve;
 use crate::types::{closest_point, point_within_distance, OrderedMapPolygon};
 use crate::utils::{draw_voronoi_full, Voronoi};
@@ -118,10 +116,12 @@ pub fn handle_join_request(payload: &[u8], boot_node: &mut BootNode) {
         .res();
 
     boot_node.expected_counter = new_site_neighbours.len() as i32;
+    println!("expected counter: {}", boot_node.expected_counter);
 
     //send each node in new_site_neighbours the new nodes point
-    let message = serialize(&NewVoronoiRequest {
+    let message = serialize(&NewVoronoiRequest2 {
         site: point,
+        new_zid: data.sender_id.clone(),
         sender_id: boot_node.zid.clone(),
     })
     .unwrap();

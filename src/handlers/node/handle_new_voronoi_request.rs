@@ -1,16 +1,16 @@
-use crate::message::{NewVoronoiRequest, NewVoronoiResponse};
+use crate::message::{NewVoronoiRequest, NewVoronoiRequest2, NewVoronoiResponse};
 use crate::node::{Node, SyncResolve};
 use crate::utils::Voronoi;
 use bincode::{deserialize, serialize};
 
 /// Recalculates voronoi with new site and sends new polygon to boot node
 pub fn handle_new_voronoi_request(payload: &[u8], node: &mut Node) {
-    let data: NewVoronoiRequest = deserialize(payload).unwrap();
+    let data: NewVoronoiRequest2 = deserialize(payload).unwrap();
     println!("Recalculating my voronoi with site... {:?}", data.site);
 
     //recalculate own voronoi
     node.neighbours
-        .insert(data.sender_id.to_string(), data.site);
+        .insert(data.new_zid.to_string(), data.site);
     let diagram = Voronoi::new((node.zid.clone(), node.site), &node.neighbours);
     // draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str());
     //my new visible neighbours

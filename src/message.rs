@@ -27,6 +27,13 @@ pub struct NewVoronoiRequest {
 }
 
 #[derive(Deserialize, Serialize)]
+pub struct NewVoronoiRequest2 {
+    pub site: (f64, f64),
+    pub new_zid: String,
+    pub sender_id: String,
+}
+
+#[derive(Deserialize, Serialize)]
 pub struct NeighboursResponse {
     pub neighbours: OrderedMapPairs,
     pub sender_id: String,
