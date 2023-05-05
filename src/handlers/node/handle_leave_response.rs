@@ -1,4 +1,4 @@
-use crate::message::{DefaultMessage, ExpectedNodes};
+use crate::message::{ExpectedNodes, NeighboursResponse};
 use crate::node::{Node, NodeStatus, SyncResolve};
 use bincode::serialize;
 
@@ -29,24 +29,41 @@ pub fn handle_leave_response(_payload: &[u8], node: &mut Node) {
         node.status = NodeStatus::Offline;
         //let _ = node;
     } else {
-        //get FULL neighbour list
-        //request neighbours from neighbours and send it back to me
-        let message = serialize(&DefaultMessage {
+        //send me neighbours my neighbors and without me
+        let message = serialize(&ExpectedNodes {
+            number: node.neighbours.len() as i32,
             sender_id: node.zid.clone(),
         })
         .unwrap();
+        node.session
+            .put(
+                format!("{}/counter/expected_wait", node.cluster_name),
+                message,
+            )
+            .res()
+            .unwrap();
 
+        let message = serialize(&NeighboursResponse {
+            neighbours: node.neighbours.clone(),
+            sender_id: node.zid.clone(),
+        })
+        .unwrap();
         for neighbour_id in node.neighbours.keys() {
             node.session
                 .put(
-                    format!(
-                        "{}/node/{}/leave_neighbours_neighbours",
-                        node.cluster_name, neighbour_id
-                    ),
+                    format!("{}/node/{}/leave_voronoi", node.cluster_name, neighbour_id),
                     message.clone(),
                 )
                 .res()
                 .unwrap();
         }
+
+        //drop node instance
+        println!("IM SHUTTING DOWN BOOT!");
+        // let message = serialize(&DefaultMessage{
+        // sender_id:node.zid.clone()});
+        // node.session.put("counter/leaving", message.clone()).res().unwrap();
+        node.status = NodeStatus::Offline;
+        //let _ = node;
     }
 }

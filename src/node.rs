@@ -1,5 +1,3 @@
-use crate::handlers::node::handle_leave_neighbours_neighbours_request::handle_leave_neighbours_neighbours_request;
-use crate::handlers::node::handle_leave_neighbours_neighbours_response::handle_leave_neighbours_neighbours_response;
 use crate::handlers::node::handle_leave_response::handle_leave_response;
 use crate::handlers::node::handle_leave_voronoi_request::handle_leave_voronoi_request;
 use crate::handlers::node::handle_neighbours_neighbours_request::handle_neighbours_neighbours_request;
@@ -7,7 +5,6 @@ use crate::handlers::node::handle_neighbours_neighbours_response::handle_neighbo
 use crate::handlers::node::handle_new_voronoi_request::handle_new_voronoi_request;
 use crate::handlers::node::handle_owner_request::handle_owner_request;
 use crate::handlers::node::handle_owner_response::handle_owner_response;
-use crate::handlers::node::set_expected_neighbours::set_expected_neighbours;
 use crate::message::DefaultMessage;
 use crate::types::OrderedMapPairs;
 use async_std::io::ReadExt;
@@ -106,20 +103,11 @@ impl Node<'_> {
                 "owner_response" => {
                     handle_owner_response(payload, self);
                 }
-                "neighbours_expected" => {
-                    set_expected_neighbours(payload, self);
-                }
                 "neighbours_neighbours" => {
                     handle_neighbours_neighbours_request(payload, self);
                 }
-                "leave_neighbours_neighbours" => {
-                    handle_leave_neighbours_neighbours_request(payload, self);
-                }
                 "neighbours_neighbours_reply" => {
                     handle_neighbours_neighbours_response(payload, self);
-                }
-                "Leave_neighbours_neighbours_reply" => {
-                    handle_leave_neighbours_neighbours_response(payload, self);
                 }
                 "new_voronoi" => {
                     handle_new_voronoi_request(payload, self);

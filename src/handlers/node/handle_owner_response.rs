@@ -1,6 +1,4 @@
-use crate::message::{
-    DefaultMessage, ExpectedNodes, NewVoronoiRequest, NewVoronoiResponse, OwnerResponse,
-};
+use crate::message::{DefaultMessage, ExpectedNodes, NewVoronoiResponse, OwnerResponse};
 use crate::node::{Node, NodeStatus, SyncResolve};
 use crate::utils::Voronoi;
 use bincode::{deserialize, serialize};
