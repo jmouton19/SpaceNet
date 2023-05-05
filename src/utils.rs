@@ -7,11 +7,9 @@ use std::fs;
 use voronator::delaunator::Point;
 use voronator::VoronoiDiagram;
 
-
 static BOUNDARY_WIDTH: f64 = 100.;
 static BOUNDARY_HEIGHT: f64 = 100.;
 static IMAGE_SCALE: f64 = 20.;
-
 
 /// Draws a voronoi (containing all polygons) onto canvas and saves to png
 pub fn draw_voronoi_full(map_pairs: &OrderedMapPairs, map_polygon: &OrderedMapPolygon, name: &str) {
@@ -62,7 +60,6 @@ pub fn draw_voronoi_full(map_pairs: &OrderedMapPairs, map_polygon: &OrderedMapPo
 }
 /// Draws a voronoi (containing one polygon) onto canvas and saves to png
 pub fn draw_voronoi(diagram: &VoronoiDiagram<Point>, name: &str) {
-
     let images_path = dirs::document_dir()
         .unwrap_or_else(|| {
             // Handle the case where the document directory is not available
@@ -100,7 +97,8 @@ pub fn draw_voronoi(diagram: &VoronoiDiagram<Point>, name: &str) {
     root.draw(&polygon).unwrap();
 
     //println!("{:?}", diagram.sites[0]);
-    root.draw(&dot_and_label(diagram.sites[0].x, diagram.sites[0].y, 0)).unwrap();
+    root.draw(&dot_and_label(diagram.sites[0].x, diagram.sites[0].y, 0))
+        .unwrap();
 
     let _ = root;
 }
@@ -157,13 +155,17 @@ type DotAndLabelType = ComposedElement<
 >;
 
 fn dot_and_label(x_in: f64, y_in: f64, i: usize) -> DotAndLabelType {
-    let (x,y) = ((x_in * IMAGE_SCALE) as i32, (y_in * IMAGE_SCALE) as i32);
+    let (x, y) = ((x_in * IMAGE_SCALE) as i32, (y_in * IMAGE_SCALE) as i32);
     return EmptyElement::at((x, y))
-        + Circle::new((0, 0), IMAGE_SCALE as i32/5, ShapeStyle::from(&BLACK).filled())
+        + Circle::new(
+            (0, 0),
+            IMAGE_SCALE as i32 / 5,
+            ShapeStyle::from(&BLACK).filled(),
+        )
         + Text::new(
             format!("#{}: ({:.2},{:.2})", i, x_in, y_in),
             (10, 0),
-            ("sans-serif", IMAGE_SCALE+5.).into_font(),
+            ("sans-serif", IMAGE_SCALE + 5.).into_font(),
         );
 }
 //todo: new drawing? cleanup

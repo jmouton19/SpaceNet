@@ -1,14 +1,12 @@
-use std::thread;
-use std::time::Duration;
-use crate::handlers::node::handle_join_response::handle_join_response;
 use crate::handlers::node::handle_leave_neighbours_neighbours_request::handle_leave_neighbours_neighbours_request;
 use crate::handlers::node::handle_leave_neighbours_neighbours_response::handle_leave_neighbours_neighbours_response;
 use crate::handlers::node::handle_leave_response::handle_leave_response;
 use crate::handlers::node::handle_leave_voronoi_request::handle_leave_voronoi_request;
 use crate::handlers::node::handle_neighbours_neighbours_request::handle_neighbours_neighbours_request;
 use crate::handlers::node::handle_neighbours_neighbours_response::handle_neighbours_neighbours_response;
-use crate::handlers::node::handle_neighbours_request::handle_neighbours_request;
 use crate::handlers::node::handle_new_voronoi_request::handle_new_voronoi_request;
+use crate::handlers::node::handle_owner_request::handle_owner_request;
+use crate::handlers::node::handle_owner_response::handle_owner_response;
 use crate::handlers::node::set_expected_neighbours::set_expected_neighbours;
 use crate::message::DefaultMessage;
 use crate::types::OrderedMapPairs;
@@ -16,6 +14,7 @@ use async_std::io::ReadExt;
 use async_std::sync::Arc;
 use async_std::{io, task};
 use bincode::serialize;
+
 pub use zenoh::prelude::sync::*;
 use zenoh::subscriber::Subscriber;
 
@@ -25,6 +24,7 @@ pub struct Node<'a> {
     pub(crate) session: Arc<Session>,
     pub(crate) site: (f64, f64),
     pub(crate) neighbours: OrderedMapPairs,
+    pub(crate) k_hop_neighbours: OrderedMapPairs,
     pub(crate) zid: String,
     pub(crate) received_counter: i32,
     pub(crate) expected_counter: i32,
@@ -68,6 +68,7 @@ impl Node<'_> {
             session,
             site: (-1., -1.),
             neighbours: OrderedMapPairs::new(),
+            k_hop_neighbours: OrderedMapPairs::new(),
             polygon: vec![],
             received_counter: 0,
             expected_counter: -1,
@@ -97,10 +98,13 @@ impl Node<'_> {
 
             match topic {
                 "new_reply" => {
-                    handle_join_response(payload, self);
+                    handle_owner_request(payload, self);
                 }
-                "new_neighbours" => {
-                    handle_neighbours_request(payload, self);
+                "owner_request" => {
+                    handle_owner_request(payload, self);
+                }
+                "owner_response" => {
+                    handle_owner_response(payload, self);
                 }
                 "neighbours_expected" => {
                     set_expected_neighbours(payload, self);

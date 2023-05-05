@@ -9,8 +9,7 @@ pub struct DefaultMessage {
 #[derive(Deserialize, Serialize)]
 pub struct NewNodeResponse {
     pub new_site: (f64, f64),
-    pub land_owner: String,
-    pub land_owner_site: (f64, f64),
+    pub new_id: String,
     pub sender_id: String,
 }
 
@@ -29,6 +28,14 @@ pub struct NewVoronoiRequest {
 #[derive(Deserialize, Serialize)]
 pub struct NeighboursResponse {
     pub neighbours: OrderedMapPairs,
+    pub sender_id: String,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct OwnerResponse {
+    pub neighbours: OrderedMapPairs,
+    pub new_site: (f64, f64),
+    pub sender_site: (f64, f64),
     pub sender_id: String,
 }
 

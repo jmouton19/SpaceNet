@@ -15,8 +15,9 @@ pub fn handle_join_request(payload: &[u8], boot_node: &mut BootNode) {
     //get random point to give to new node
 
     let mut rng = rand::thread_rng();
-    let mut point = (rng.gen_range(1.0..=99.0), rng.gen_range(1.0..=99.0)); // generate random (f64, f64) tuple
+    let mut point;
 
+    //do something here
     //find closest node to new point
     if boot_node.cluster.is_empty() {
         point = (50.0, 50.0);
@@ -26,7 +27,7 @@ pub fn handle_join_request(payload: &[u8], boot_node: &mut BootNode) {
             .insert(data.sender_id.to_string(), vec![]);
     } else {
         //check if a point exist in boot_node.cluster.values that is within X distance of the new point if so precalculate the new point
-        let mut point = (rng.gen_range(1.0..=99.0), rng.gen_range(1.0..=99.0));
+        point = (rng.gen_range(1.0..=99.0), rng.gen_range(1.0..=99.0));
         let tolerance = 0.1;
         while point_within_distance(&boot_node.cluster, point, tolerance) {
             point = (rng.gen_range(1.0..=99.0), rng.gen_range(1.0..=99.0));
@@ -48,7 +49,7 @@ pub fn handle_join_request(payload: &[u8], boot_node: &mut BootNode) {
     //         let x = parts.next().unwrap().parse::<f64>().unwrap();
     //         let y = parts.next().unwrap().parse::<f64>().unwrap();
     //         point = (x, y);
-    //         if boot_node.draw_count==86{
+    //         if boot_node.draw_count == 86 {
     //             point = (x, y);
     //         }
     //         break;
@@ -59,7 +60,7 @@ pub fn handle_join_request(payload: &[u8], boot_node: &mut BootNode) {
     println!("Giving point {:?}.... to {:?}", point, data.sender_id);
     println!("------------------------------------");
 
-    let (land_owner_site, land_owner) = closest_point(&boot_node.cluster, point);
+    let (_, land_owner) = closest_point(&boot_node.cluster, point);
     println!("{}", land_owner);
 
     //add node to cluster
@@ -68,22 +69,23 @@ pub fn handle_join_request(payload: &[u8], boot_node: &mut BootNode) {
         .polygon_list
         .insert(data.sender_id.to_string(), vec![]);
 
+    //send land owner its
     let json_message = serialize(&NewNodeResponse {
         new_site: point,
-        land_owner,
-        land_owner_site,
+        new_id: data.sender_id,
         sender_id: boot_node.zid.clone(),
     })
     .unwrap();
 
-    let _ = boot_node
+    boot_node
         .session
         .put(
             format!(
-                "{}/node/{}/new_reply",
-                boot_node.cluster_name, data.sender_id
+                "{}/node/{}/owner_request",
+                boot_node.cluster_name, land_owner
             ),
             json_message,
         )
-        .res();
+        .res()
+        .unwrap();
 }
