@@ -51,11 +51,28 @@
 <a href="#50" id="50">50</a>
 <a href="#51" id="51">51</a>
 <a href="#52" id="52">52</a>
-</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::message::{DefaultMessage, ExpectedNodes};
+<a href="#53" id="53">53</a>
+<a href="#54" id="54">54</a>
+<a href="#55" id="55">55</a>
+<a href="#56" id="56">56</a>
+<a href="#57" id="57">57</a>
+<a href="#58" id="58">58</a>
+<a href="#59" id="59">59</a>
+<a href="#60" id="60">60</a>
+<a href="#61" id="61">61</a>
+<a href="#62" id="62">62</a>
+<a href="#63" id="63">63</a>
+<a href="#64" id="64">64</a>
+<a href="#65" id="65">65</a>
+<a href="#66" id="66">66</a>
+<a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::message::{ExpectedNodes, NeighboursResponse};
 <span class="kw">use </span><span class="kw">crate</span>::node::{Node, NodeStatus, SyncResolve};
 <span class="kw">use </span>bincode::serialize;
 
-<span class="doccomment">/// Handles leave response, if no neighbours, shut down, else request neighbour list from neighbours
+<span class="doccomment">/// Handles leave response, if no neighbours, shut down, else tell neighbours to recalculate voronoi without me but with my neighbours.
 </span><span class="kw">pub fn </span>handle_leave_response(_payload: <span class="kw-2">&amp;</span>[u8], node: <span class="kw-2">&amp;mut </span>Node) {
     <span class="comment">//tell me how many to wait for
     </span>node.expected_counter = node.neighbours.len() <span class="kw">as </span>i32;
@@ -82,26 +99,43 @@
         node.status = NodeStatus::Offline;
         <span class="comment">//let _ = node;
     </span>} <span class="kw">else </span>{
-        <span class="comment">//get FULL neighbour list
-        //request neighbours from neighbours and send it back to me
-        </span><span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>DefaultMessage {
+        <span class="comment">//send me neighbours my neighbors and without me
+        </span><span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>ExpectedNodes {
+            number: node.neighbours.len() <span class="kw">as </span>i32,
             sender_id: node.zid.clone(),
         })
         .unwrap();
+        node.session
+            .put(
+                <span class="macro">format!</span>(<span class="string">&quot;{}/counter/expected_wait&quot;</span>, node.cluster_name),
+                message,
+            )
+            .res()
+            .unwrap();
 
+        <span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>NeighboursResponse {
+            neighbours: node.neighbours.clone(),
+            sender_id: node.zid.clone(),
+        })
+        .unwrap();
         <span class="kw">for </span>neighbour_id <span class="kw">in </span>node.neighbours.keys() {
             node.session
                 .put(
-                    <span class="macro">format!</span>(
-                        <span class="string">&quot;{}/node/{}/leave_neighbours_neighbours&quot;</span>,
-                        node.cluster_name, neighbour_id
-                    ),
+                    <span class="macro">format!</span>(<span class="string">&quot;{}/node/{}/leave_voronoi&quot;</span>, node.cluster_name, neighbour_id),
                     message.clone(),
                 )
                 .res()
                 .unwrap();
         }
-    }
+
+        <span class="comment">//drop node instance
+        </span><span class="macro">println!</span>(<span class="string">&quot;IM SHUTTING DOWN BOOT!&quot;</span>);
+        <span class="comment">// let message = serialize(&amp;DefaultMessage{
+        // sender_id:node.zid.clone()});
+        // node.session.put(&quot;counter/leaving&quot;, message.clone()).res().unwrap();
+        </span>node.status = NodeStatus::Offline;
+        <span class="comment">//let _ = node;
+    </span>}
 }
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="space_net" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

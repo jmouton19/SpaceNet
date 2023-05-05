@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["handle_leave_neighbours_neighbours_request"]};

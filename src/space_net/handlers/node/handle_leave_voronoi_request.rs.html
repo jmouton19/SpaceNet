@@ -48,7 +48,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::utils::Voronoi;
 <span class="kw">use </span>bincode::{deserialize, serialize};
 
-<span class="doccomment">/// Calculates new voronoi without leavers site and sends new polygon to boot node.
+<span class="doccomment">/// Calculates new voronoi without leavers site but with his neighbours and sends new polygon to boot node.
 </span><span class="kw">pub fn </span>handle_leave_voronoi_request(payload: <span class="kw-2">&amp;</span>[u8], node: <span class="kw-2">&amp;mut </span>Node) {
     <span class="kw">let </span>data: NeighboursResponse = deserialize(payload).unwrap();
     <span class="macro">println!</span>(

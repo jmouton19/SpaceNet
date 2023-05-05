@@ -83,16 +83,12 @@
 <a href="#82" id="82">82</a>
 <a href="#83" id="83">83</a>
 <a href="#84" id="84">84</a>
-<a href="#85" id="85">85</a>
-<a href="#86" id="86">86</a>
-</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::message::{
-    DefaultMessage, ExpectedNodes, NewVoronoiRequest, NewVoronoiResponse, OwnerResponse,
-};
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::message::{DefaultMessage, ExpectedNodes, NewVoronoiResponse, OwnerResponse};
 <span class="kw">use </span><span class="kw">crate</span>::node::{Node, NodeStatus, SyncResolve};
 <span class="kw">use </span><span class="kw">crate</span>::utils::Voronoi;
 <span class="kw">use </span>bincode::{deserialize, serialize};
 
-<span class="doccomment">/// Sets site given from boot node and messages land owner to request neighbour list
+<span class="doccomment">/// Sets given site and calculates initial voronoi from owner and his neighbours. Then asks for neighbours from neighbours.
 </span><span class="kw">pub fn </span>handle_owner_response(payload: <span class="kw-2">&amp;</span>[u8], node: <span class="kw-2">&amp;mut </span>Node) {
     <span class="kw">let </span>data: OwnerResponse = deserialize(payload).unwrap();
     <span class="macro">println!</span>(

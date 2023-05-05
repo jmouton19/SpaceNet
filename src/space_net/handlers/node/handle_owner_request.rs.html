@@ -36,7 +36,7 @@
 <span class="kw">use </span><span class="kw">crate</span>::node::{Node, SyncResolve};
 <span class="kw">use </span>bincode::{deserialize, serialize};
 
-<span class="doccomment">/// Sets site given from boot node and messages land owner to request neighbour list
+<span class="doccomment">/// Passes on itself, its neighbours and new site point to new node.
 </span><span class="kw">pub fn </span>handle_owner_request(payload: <span class="kw-2">&amp;</span>[u8], node: <span class="kw-2">&amp;mut </span>Node) {
     <span class="kw">let </span>data: NewNodeResponse = deserialize(payload).unwrap();
     <span class="macro">println!</span>(
