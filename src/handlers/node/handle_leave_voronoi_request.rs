@@ -3,7 +3,7 @@ use crate::node::{Node, SyncResolve};
 use crate::utils::Voronoi;
 use bincode::{deserialize, serialize};
 
-/// Calculates new voronoi without leavers site and sends new polygon to boot node.
+/// Calculates new voronoi without leavers site but with his neighbours and sends new polygon to boot node.
 pub fn handle_leave_voronoi_request(payload: &[u8], node: &mut Node) {
     let data: NeighboursResponse = deserialize(payload).unwrap();
     println!(

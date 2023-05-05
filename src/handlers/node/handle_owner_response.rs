@@ -3,7 +3,7 @@ use crate::node::{Node, NodeStatus, SyncResolve};
 use crate::utils::Voronoi;
 use bincode::{deserialize, serialize};
 
-/// Sets site given from boot node and messages land owner to request neighbour list
+/// Sets given site and calculates initial voronoi from owner and his neighbours. Then asks for neighbours from neighbours.
 pub fn handle_owner_response(payload: &[u8], node: &mut Node) {
     let data: OwnerResponse = deserialize(payload).unwrap();
     println!(

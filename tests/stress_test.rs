@@ -11,7 +11,7 @@ mod stress_test {
     #[test]
     #[ignore]
     fn stress_test_x_node_cluster() {
-        let expected_len = 90;
+        let expected_len = 150;
         // let current_time = SystemTime::now();
         // let file_name = format!("{}.log", current_time.format("%H__%M__%S").as_str());
         let file_name = "test2".to_string();

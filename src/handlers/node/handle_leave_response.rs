@@ -2,7 +2,7 @@ use crate::message::{ExpectedNodes, NeighboursResponse};
 use crate::node::{Node, NodeStatus, SyncResolve};
 use bincode::serialize;
 
-/// Handles leave response, if no neighbours, shut down, else request neighbour list from neighbours
+/// Handles leave response, if no neighbours, shut down, else tell neighbours to recalculate voronoi without me but with my neighbours.
 pub fn handle_leave_response(_payload: &[u8], node: &mut Node) {
     //tell me how many to wait for
     node.expected_counter = node.neighbours.len() as i32;

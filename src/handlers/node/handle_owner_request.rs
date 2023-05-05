@@ -2,7 +2,7 @@ use crate::message::{NewNodeResponse, OwnerResponse};
 use crate::node::{Node, SyncResolve};
 use bincode::{deserialize, serialize};
 
-/// Sets site given from boot node and messages land owner to request neighbour list
+/// Passes on itself, its neighbours and new site point to new node.
 pub fn handle_owner_request(payload: &[u8], node: &mut Node) {
     let data: NewNodeResponse = deserialize(payload).unwrap();
     println!(

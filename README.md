@@ -1,7 +1,8 @@
 # SpaceNet
 A rust library for distributed virtual environments using spatial partitioning.
-### This name sucks...
 
+Rust documentation: [Docs](https://jmouton19.github.io/SpaceNet/space_net/index.html)
+### This name sucks...
 # Instructions
 Tested on Fedora 37 Workstation and Zorin OS 16.2.
 ### Install rust
