@@ -239,17 +239,19 @@
 <a href="#238" id="238">238</a>
 <a href="#239" id="239">239</a>
 <a href="#240" id="240">240</a>
-</pre><pre class="rust"><code><span class="kw">use </span>std::thread;
-<span class="kw">use </span>std::time::Duration;
-<span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_join_response::handle_join_response;
-<span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_leave_neighbours_neighbours_request::handle_leave_neighbours_neighbours_request;
+<a href="#241" id="241">241</a>
+<a href="#242" id="242">242</a>
+<a href="#243" id="243">243</a>
+<a href="#244" id="244">244</a>
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_leave_neighbours_neighbours_request::handle_leave_neighbours_neighbours_request;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_leave_neighbours_neighbours_response::handle_leave_neighbours_neighbours_response;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_leave_response::handle_leave_response;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_leave_voronoi_request::handle_leave_voronoi_request;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_neighbours_neighbours_request::handle_neighbours_neighbours_request;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_neighbours_neighbours_response::handle_neighbours_neighbours_response;
-<span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_neighbours_request::handle_neighbours_request;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_new_voronoi_request::handle_new_voronoi_request;
+<span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_owner_request::handle_owner_request;
+<span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_owner_response::handle_owner_response;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::set_expected_neighbours::set_expected_neighbours;
 <span class="kw">use </span><span class="kw">crate</span>::message::DefaultMessage;
 <span class="kw">use </span><span class="kw">crate</span>::types::OrderedMapPairs;
@@ -257,6 +259,7 @@
 <span class="kw">use </span>async_std::sync::Arc;
 <span class="kw">use </span>async_std::{io, task};
 <span class="kw">use </span>bincode::serialize;
+
 <span class="kw">pub use </span>zenoh::prelude::sync::<span class="kw-2">*</span>;
 <span class="kw">use </span>zenoh::subscriber::Subscriber;
 
@@ -266,6 +269,7 @@
     <span class="kw">pub</span>(<span class="kw">crate</span>) session: Arc&lt;Session&gt;,
     <span class="kw">pub</span>(<span class="kw">crate</span>) site: (f64, f64),
     <span class="kw">pub</span>(<span class="kw">crate</span>) neighbours: OrderedMapPairs,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) k_hop_neighbours: OrderedMapPairs,
     <span class="kw">pub</span>(<span class="kw">crate</span>) zid: String,
     <span class="kw">pub</span>(<span class="kw">crate</span>) received_counter: i32,
     <span class="kw">pub</span>(<span class="kw">crate</span>) expected_counter: i32,
@@ -309,6 +313,7 @@
             session,
             site: (-<span class="number">1.</span>, -<span class="number">1.</span>),
             neighbours: OrderedMapPairs::new(),
+            k_hop_neighbours: OrderedMapPairs::new(),
             polygon: <span class="macro">vec!</span>[],
             received_counter: <span class="number">0</span>,
             expected_counter: -<span class="number">1</span>,
@@ -338,10 +343,13 @@
 
             </span><span class="kw">match </span>topic {
                 <span class="string">&quot;new_reply&quot; </span>=&gt; {
-                    handle_join_response(payload, <span class="self">self</span>);
+                    handle_owner_request(payload, <span class="self">self</span>);
                 }
-                <span class="string">&quot;new_neighbours&quot; </span>=&gt; {
-                    handle_neighbours_request(payload, <span class="self">self</span>);
+                <span class="string">&quot;owner_request&quot; </span>=&gt; {
+                    handle_owner_request(payload, <span class="self">self</span>);
+                }
+                <span class="string">&quot;owner_response&quot; </span>=&gt; {
+                    handle_owner_response(payload, <span class="self">self</span>);
                 }
                 <span class="string">&quot;neighbours_expected&quot; </span>=&gt; {
                     set_expected_neighbours(payload, <span class="self">self</span>);

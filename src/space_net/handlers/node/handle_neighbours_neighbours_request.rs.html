@@ -23,13 +23,13 @@
 <a href="#22" id="22">22</a>
 <a href="#23" id="23">23</a>
 <a href="#24" id="24">24</a>
-</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::message::{NeighboursNeighboursRequest, NeighboursResponse};
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::message::{DefaultMessage, NeighboursResponse};
 <span class="kw">use </span><span class="kw">crate</span>::node::{Node, SyncResolve};
 <span class="kw">use </span>bincode::{deserialize, serialize};
 
 <span class="doccomment">/// Sends list of neighbours to new node
 </span><span class="kw">pub fn </span>handle_neighbours_neighbours_request(payload: <span class="kw-2">&amp;</span>[u8], node: <span class="kw-2">&amp;mut </span>Node) {
-    <span class="kw">let </span>data: NeighboursNeighboursRequest = deserialize(payload).unwrap();
+    <span class="kw">let </span>data: DefaultMessage = deserialize(payload).unwrap();
     <span class="comment">//send list of neighbours back to new node
     </span><span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>NeighboursResponse {
         sender_id: node.zid.clone(),
@@ -40,7 +40,7 @@
         .put(
             <span class="macro">format!</span>(
                 <span class="string">&quot;{}/node/{}/neighbours_neighbours_reply&quot;</span>,
-                node.cluster_name, data.new_zid
+                node.cluster_name, data.sender_id
             ),
             message,
         )

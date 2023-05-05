@@ -168,6 +168,8 @@
 <a href="#167" id="167">167</a>
 <a href="#168" id="168">168</a>
 <a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::types::{OrderedMapPairs, OrderedMapPolygon};
 <span class="kw">use </span>dirs;
 <span class="kw">use </span>plotters::element::ComposedElement;
@@ -177,11 +179,9 @@
 <span class="kw">use </span>voronator::delaunator::Point;
 <span class="kw">use </span>voronator::VoronoiDiagram;
 
-
 <span class="kw">static </span>BOUNDARY_WIDTH: f64 = <span class="number">100.</span>;
 <span class="kw">static </span>BOUNDARY_HEIGHT: f64 = <span class="number">100.</span>;
 <span class="kw">static </span>IMAGE_SCALE: f64 = <span class="number">20.</span>;
-
 
 <span class="doccomment">/// Draws a voronoi (containing all polygons) onto canvas and saves to png
 </span><span class="kw">pub fn </span>draw_voronoi_full(map_pairs: <span class="kw-2">&amp;</span>OrderedMapPairs, map_polygon: <span class="kw-2">&amp;</span>OrderedMapPolygon, name: <span class="kw-2">&amp;</span>str) {
@@ -232,7 +232,6 @@
 }
 <span class="doccomment">/// Draws a voronoi (containing one polygon) onto canvas and saves to png
 </span><span class="kw">pub fn </span>draw_voronoi(diagram: <span class="kw-2">&amp;</span>VoronoiDiagram&lt;Point&gt;, name: <span class="kw-2">&amp;</span>str) {
-
     <span class="kw">let </span>images_path = dirs::document_dir()
         .unwrap_or_else(|| {
             <span class="comment">// Handle the case where the document directory is not available
@@ -270,7 +269,8 @@
     root.draw(<span class="kw-2">&amp;</span>polygon).unwrap();
 
     <span class="comment">//println!(&quot;{:?}&quot;, diagram.sites[0]);
-    </span>root.draw(<span class="kw-2">&amp;</span>dot_and_label(diagram.sites[<span class="number">0</span>].x, diagram.sites[<span class="number">0</span>].y, <span class="number">0</span>)).unwrap();
+    </span>root.draw(<span class="kw-2">&amp;</span>dot_and_label(diagram.sites[<span class="number">0</span>].x, diagram.sites[<span class="number">0</span>].y, <span class="number">0</span>))
+        .unwrap();
 
     <span class="kw">let _ </span>= root;
 }
@@ -327,14 +327,19 @@
 &gt;;
 
 <span class="kw">fn </span>dot_and_label(x_in: f64, y_in: f64, i: usize) -&gt; DotAndLabelType {
-    <span class="kw">let </span>(x,y) = ((x_in * IMAGE_SCALE) <span class="kw">as </span>i32, (y_in * IMAGE_SCALE) <span class="kw">as </span>i32);
+    <span class="kw">let </span>(x, y) = ((x_in * IMAGE_SCALE) <span class="kw">as </span>i32, (y_in * IMAGE_SCALE) <span class="kw">as </span>i32);
     <span class="kw">return </span>EmptyElement::at((x, y))
-        + Circle::new((<span class="number">0</span>, <span class="number">0</span>), IMAGE_SCALE <span class="kw">as </span>i32/<span class="number">5</span>, ShapeStyle::from(<span class="kw-2">&amp;</span>BLACK).filled())
+        + Circle::new(
+            (<span class="number">0</span>, <span class="number">0</span>),
+            IMAGE_SCALE <span class="kw">as </span>i32 / <span class="number">5</span>,
+            ShapeStyle::from(<span class="kw-2">&amp;</span>BLACK).filled(),
+        )
         + Text::new(
             <span class="macro">format!</span>(<span class="string">&quot;#{}: ({:.2},{:.2})&quot;</span>, i, x_in, y_in),
             (<span class="number">10</span>, <span class="number">0</span>),
-            (<span class="string">&quot;sans-serif&quot;</span>, IMAGE_SCALE+<span class="number">5.</span>).into_font(),
+            (<span class="string">&quot;sans-serif&quot;</span>, IMAGE_SCALE + <span class="number">5.</span>).into_font(),
         );
 }
-<span class="comment">//todo: new drawing? cleanup</span></code></pre></div>
+<span class="comment">//todo: new drawing? cleanup
+</span></code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="space_net" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
