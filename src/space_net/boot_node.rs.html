@@ -146,6 +146,15 @@
 <a href="#145" id="145">145</a>
 <a href="#146" id="146">146</a>
 <a href="#147" id="147">147</a>
+<a href="#148" id="148">148</a>
+<a href="#149" id="149">149</a>
+<a href="#150" id="150">150</a>
+<a href="#151" id="151">151</a>
+<a href="#152" id="152">152</a>
+<a href="#153" id="153">153</a>
+<a href="#154" id="154">154</a>
+<a href="#155" id="155">155</a>
+<a href="#156" id="156">156</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::handlers::boot::handle_join_request::handle_join_request;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::boot::handle_leave_request::handle_leave_request;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::boot::handle_task_completed::handle_task_completed;
@@ -154,6 +163,9 @@
 <span class="kw">use </span><span class="kw">crate</span>::types::{OrderedMapPairs, OrderedMapPolygon};
 <span class="kw">use </span><span class="kw">crate</span>::utils::{draw_voronoi_full, Voronoi};
 <span class="kw">use </span>std::sync::Arc;
+<span class="kw">use </span>std::thread;
+<span class="kw">use </span>std::time::Duration;
+<span class="kw">use </span>rand::Rng;
 
 <span class="kw">pub use </span>zenoh::prelude::sync::<span class="kw-2">*</span>;
 <span class="kw">use </span>zenoh::prelude::Sample;
@@ -172,12 +184,13 @@
     <span class="kw">pub </span>polygon_list: OrderedMapPolygon,
     <span class="kw">pub </span>correct_polygon_list: OrderedMapPolygon,
     <span class="kw">pub </span>draw_count: i32,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) centralized_voronoi: bool,
 }
 
 <span class="kw">impl </span>BootNode&lt;<span class="lifetime">&#39;_</span>&gt; {
     <span class="doccomment">/// Creates a new boot node instance with a [session](https://docs.rs/zenoh/0.7.0-rc/zenoh/struct.Session.html).
     /// Opens a subscription on topic `{cluster}/boot/*` to receive incoming messages from nodes and a subscription on`{cluster}/counter/*` to count the number of messages its received since processing the current message on the `{cluster}/boot/*` topic.
-    </span><span class="kw">pub fn </span>new(cluster_name: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>new(cluster_name: <span class="kw-2">&amp;</span>str,centralized_voronoi:bool) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>session = zenoh::open(Config::default()).res().unwrap().into_arc();
         <span class="kw">let </span>zid = session.zid().to_string();
 
@@ -202,6 +215,7 @@
             cluster: OrderedMapPairs::new(),
             polygon_list: OrderedMapPolygon::new(),
             correct_polygon_list: OrderedMapPolygon::new(),
+            centralized_voronoi,
             draw_count: <span class="number">0</span>,
             cluster_name: cluster_name.to_string(),
         }
@@ -220,9 +234,10 @@
             // } else {
             //     let payload = sample.value.payload.contiguous();
             // }
-
-            //thread::sleep(Duration::from_secs(5));
-            </span><span class="kw">match </span>topic {
+            </span><span class="kw">let </span><span class="kw-2">mut </span>rng = rand::thread_rng();
+            <span class="kw">let </span>delay = rng.gen_range(<span class="number">1</span>..=<span class="number">10</span>);
+            thread::sleep(Duration::from_millis(delay));
+            <span class="kw">match </span>topic {
                 <span class="string">&quot;new&quot; </span>=&gt; {
                     handle_join_request(payload, <span class="self">self</span>);
                 }
@@ -261,29 +276,32 @@
                     <span class="kw-2">&amp;</span><span class="self">self</span>.polygon_list,
                     <span class="macro">format!</span>(<span class="string">&quot;{}voronoi&quot;</span>, <span class="self">self</span>.draw_count).as_str(),
                 );
-                <span class="comment">//correct voronoi
-                </span><span class="kw">let </span><span class="kw-2">mut </span>hash_map = <span class="self">self</span>.cluster.clone();
-                <span class="self">self</span>.correct_polygon_list = OrderedMapPolygon::new();
-                <span class="kw">let </span>(first_zid, first_site) = hash_map
-                    .iter()
-                    .next()
-                    .map(|(k, v)| (k.clone(), <span class="kw-2">*</span>v))
-                    .unwrap();
-                hash_map.swap_remove_index(<span class="number">0</span>);
 
-                <span class="kw">let </span>diagram = Voronoi::new((first_zid, first_site), <span class="kw-2">&amp;</span>hash_map);
+                <span class="kw">if </span><span class="self">self</span>.centralized_voronoi{
+                    <span class="comment">//correct voronoi
+                    </span><span class="kw">let </span><span class="kw-2">mut </span>hash_map = <span class="self">self</span>.cluster.clone();
+                    <span class="self">self</span>.correct_polygon_list = OrderedMapPolygon::new();
+                    <span class="kw">let </span>(first_zid, first_site) = hash_map
+                        .iter()
+                        .next()
+                        .map(|(k, v)| (k.clone(), <span class="kw-2">*</span>v))
+                        .unwrap();
+                    hash_map.swap_remove_index(<span class="number">0</span>);
 
-                <span class="kw">for </span>(i, cell) <span class="kw">in </span>diagram.diagram.cells().iter().enumerate() {
-                    <span class="kw">let </span>polygon = cell.points().iter().map(|x| (x.x, x.y)).collect();
-                    <span class="kw">let </span>site_id = diagram.input.keys().nth(i).unwrap();
-                    <span class="self">self</span>.correct_polygon_list
-                        .insert(site_id.to_string(), polygon);
+                    <span class="kw">let </span>diagram = Voronoi::new((first_zid, first_site), <span class="kw-2">&amp;</span>hash_map);
+
+                    <span class="kw">for </span>(i, cell) <span class="kw">in </span>diagram.diagram.cells().iter().enumerate() {
+                        <span class="kw">let </span>polygon = cell.points().iter().map(|x| (x.x, x.y)).collect();
+                        <span class="kw">let </span>site_id = diagram.input.keys().nth(i).unwrap();
+                        <span class="self">self</span>.correct_polygon_list
+                            .insert(site_id.to_string(), polygon);
+                    }
+                    draw_voronoi_full(
+                        <span class="kw-2">&amp;</span><span class="self">self</span>.cluster,
+                        <span class="kw-2">&amp;</span><span class="self">self</span>.correct_polygon_list,
+                        <span class="macro">format!</span>(<span class="string">&quot;{}confirm&quot;</span>, <span class="self">self</span>.draw_count).as_str(),
+                    );
                 }
-                draw_voronoi_full(
-                    <span class="kw-2">&amp;</span><span class="self">self</span>.cluster,
-                    <span class="kw-2">&amp;</span><span class="self">self</span>.correct_polygon_list,
-                    <span class="macro">format!</span>(<span class="string">&quot;{}confirm&quot;</span>, <span class="self">self</span>.draw_count).as_str(),
-                );
                 <span class="self">self</span>.draw_count += <span class="number">1</span>;
             };
         }
