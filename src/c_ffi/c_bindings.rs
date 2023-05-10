@@ -14,10 +14,10 @@ pub extern "C" fn new_node(cluster_name: *const c_char) -> *mut c_void {
 
 //new boot node from C
 #[no_mangle]
-pub extern "C" fn new_boot(cluster_name: *const c_char) -> *mut c_void {
+pub extern "C" fn new_boot(cluster_name: *const c_char,centralized_voronoi: bool) -> *mut c_void {
     let c_str = unsafe { CStr::from_ptr(cluster_name) };
     let cluster_name = c_str.to_str().unwrap();
-    let boot_node = Box::new(BootNode::new(cluster_name));
+    let boot_node = Box::new(BootNode::new(cluster_name,centralized_voronoi));
     Box::into_raw(boot_node) as *mut c_void
 }
 // leave node when key is pressed from C

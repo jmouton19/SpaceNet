@@ -4,15 +4,15 @@
 #include <stdlib.h>
 
 typedef enum NodeStatus {
+  Joining,
   Online,
   Leaving,
-  Joining,
   Offline,
 } NodeStatus;
 
 void *new_node(const char *cluster_name);
 
-void *new_boot(const char *cluster_name);
+void *new_boot(const char *cluster_name, bool centralized_voronoi);
 
 void leave_on_key(void *node_ptr, char key);
 

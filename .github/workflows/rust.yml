@@ -26,4 +26,4 @@ jobs:
         cargo test --test cluster --verbose
 #    - name: Run stress tests
 #      run: |
-#        cargo test --release --test stress_test -- --ignored
+#        cargo test --release --test stress_test -- --ignored --nocapture

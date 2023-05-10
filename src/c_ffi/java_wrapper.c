@@ -47,12 +47,13 @@ JNIEXPORT jint JNICALL Java_Node_isInPolygon(JNIEnv *env, jobject obj, jlong nod
 
 
 //Boot Node
-JNIEXPORT jlong JNICALL Java_BootNode_newBoot(JNIEnv *env, jobject obj, jstring cluster_name) {
+JNIEXPORT jlong JNICALL Java_BootNode_newBoot(JNIEnv *env, jobject obj, jstring cluster_name,jboolean centralized_voronoi){
     const char *native_cluster_name = (*env)->GetStringUTFChars(env, cluster_name, 0);
-    jlong result = (jlong) new_boot(native_cluster_name);
+    jlong result = (jlong) new_boot(native_cluster_name,centralized_voronoi);
     (*env)->ReleaseStringUTFChars(env, cluster_name, native_cluster_name);
     return result;
 }
+
 JNIEXPORT void JNICALL Java_BootNode_run(JNIEnv *env, jobject obj, jlong nodePtr) {
     run_boot((void*) nodePtr);
 }

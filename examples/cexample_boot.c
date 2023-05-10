@@ -3,7 +3,7 @@
 
 int main() {
     const char* cluster_name = "my-cluster";
-    void* boot_node_ptr = new_boot(cluster_name);
+    void* boot_node_ptr = new_boot(cluster_name,false);
     const char* zid_str = get_zid_boot(boot_node_ptr);
     printf("Boot node online... %s\n", zid_str);
 

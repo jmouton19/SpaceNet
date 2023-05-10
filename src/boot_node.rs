@@ -6,6 +6,9 @@ use crate::node::SyncResolve;
 use crate::types::{OrderedMapPairs, OrderedMapPolygon};
 use crate::utils::{draw_voronoi_full, Voronoi};
 use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
+use rand::Rng;
 
 pub use zenoh::prelude::sync::*;
 use zenoh::prelude::Sample;
@@ -24,12 +27,13 @@ pub struct BootNode<'a> {
     pub polygon_list: OrderedMapPolygon,
     pub correct_polygon_list: OrderedMapPolygon,
     pub draw_count: i32,
+    pub(crate) centralized_voronoi: bool,
 }
 
 impl BootNode<'_> {
     /// Creates a new boot node instance with a [session](https://docs.rs/zenoh/0.7.0-rc/zenoh/struct.Session.html).
     /// Opens a subscription on topic `{cluster}/boot/*` to receive incoming messages from nodes and a subscription on`{cluster}/counter/*` to count the number of messages its received since processing the current message on the `{cluster}/boot/*` topic.
-    pub fn new(cluster_name: &str) -> Self {
+    pub fn new(cluster_name: &str,centralized_voronoi:bool) -> Self {
         let session = zenoh::open(Config::default()).res().unwrap().into_arc();
         let zid = session.zid().to_string();
 
@@ -54,6 +58,7 @@ impl BootNode<'_> {
             cluster: OrderedMapPairs::new(),
             polygon_list: OrderedMapPolygon::new(),
             correct_polygon_list: OrderedMapPolygon::new(),
+            centralized_voronoi,
             draw_count: 0,
             cluster_name: cluster_name.to_string(),
         }
@@ -72,8 +77,9 @@ impl BootNode<'_> {
             // } else {
             //     let payload = sample.value.payload.contiguous();
             // }
-
-            //thread::sleep(Duration::from_secs(5));
+            let mut rng = rand::thread_rng();
+            let delay = rng.gen_range(1..=10);
+            thread::sleep(Duration::from_millis(delay));
             match topic {
                 "new" => {
                     handle_join_request(payload, self);
@@ -113,29 +119,32 @@ impl BootNode<'_> {
                     &self.polygon_list,
                     format!("{}voronoi", self.draw_count).as_str(),
                 );
-                //correct voronoi
-                let mut hash_map = self.cluster.clone();
-                self.correct_polygon_list = OrderedMapPolygon::new();
-                let (first_zid, first_site) = hash_map
-                    .iter()
-                    .next()
-                    .map(|(k, v)| (k.clone(), *v))
-                    .unwrap();
-                hash_map.swap_remove_index(0);
 
-                let diagram = Voronoi::new((first_zid, first_site), &hash_map);
+                if self.centralized_voronoi{
+                    //correct voronoi
+                    let mut hash_map = self.cluster.clone();
+                    self.correct_polygon_list = OrderedMapPolygon::new();
+                    let (first_zid, first_site) = hash_map
+                        .iter()
+                        .next()
+                        .map(|(k, v)| (k.clone(), *v))
+                        .unwrap();
+                    hash_map.swap_remove_index(0);
 
-                for (i, cell) in diagram.diagram.cells().iter().enumerate() {
-                    let polygon = cell.points().iter().map(|x| (x.x, x.y)).collect();
-                    let site_id = diagram.input.keys().nth(i).unwrap();
-                    self.correct_polygon_list
-                        .insert(site_id.to_string(), polygon);
+                    let diagram = Voronoi::new((first_zid, first_site), &hash_map);
+
+                    for (i, cell) in diagram.diagram.cells().iter().enumerate() {
+                        let polygon = cell.points().iter().map(|x| (x.x, x.y)).collect();
+                        let site_id = diagram.input.keys().nth(i).unwrap();
+                        self.correct_polygon_list
+                            .insert(site_id.to_string(), polygon);
+                    }
+                    draw_voronoi_full(
+                        &self.cluster,
+                        &self.correct_polygon_list,
+                        format!("{}confirm", self.draw_count).as_str(),
+                    );
                 }
-                draw_voronoi_full(
-                    &self.cluster,
-                    &self.correct_polygon_list,
-                    format!("{}confirm", self.draw_count).as_str(),
-                );
                 self.draw_count += 1;
             };
         }

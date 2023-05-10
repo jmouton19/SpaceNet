@@ -1,3 +1,5 @@
+use std::thread;
+use std::time::Duration;
 use crate::handlers::node::handle_leave_response::handle_leave_response;
 use crate::handlers::node::handle_leave_voronoi_request::handle_leave_voronoi_request;
 use crate::handlers::node::handle_neighbours_neighbours_request::handle_neighbours_neighbours_request;
@@ -11,6 +13,7 @@ use async_std::io::ReadExt;
 use async_std::sync::Arc;
 use async_std::{io, task};
 use bincode::serialize;
+use rand::Rng;
 
 pub use zenoh::prelude::sync::*;
 use zenoh::subscriber::Subscriber;
@@ -91,7 +94,9 @@ impl Node<'_> {
             println!("Received message on topic... {:?}", topic);
             let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
             //sleep 1 seconds to delay message
-            //thread::sleep(Duration::from_secs(1));
+            let mut rng = rand::thread_rng();
+            let delay = rng.gen_range(1..=10);
+            thread::sleep(Duration::from_millis(delay));
 
             match topic {
                 "new_reply" => {
