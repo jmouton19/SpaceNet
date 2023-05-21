@@ -18,7 +18,7 @@ mod stress_test {
         let file_name2 = file_name.clone();
 
         let start_time = Instant::now();
-        let mut boot_server = BootNode::new(file_name.as_str(),true);
+        let mut boot_server = BootNode::new(file_name.as_str(), true);
         let handle1 = thread::spawn(move || loop {
             boot_server.run();
             if boot_server.draw_count == expected_len {

@@ -1,57 +1,66 @@
 use crate::message::{ExpectedNodes, NeighboursResponse};
-use crate::node::{Node, NodeStatus, SyncResolve};
+use crate::node::{Node, NodeData, NodeStatus, SyncResolve};
 use bincode::serialize;
+use std::sync::{Arc, MutexGuard};
+use zenoh::Session;
 
 /// Handles leave response, if no neighbours, shut down, else tell neighbours to recalculate voronoi without me but with my neighbours.
-pub fn handle_leave_response(_payload: &[u8], node: &mut Node) {
+pub fn handle_leave_response(
+    _payload: &[u8],
+    mut node_data: MutexGuard<NodeData>,
+    session: Arc<Session>,
+) {
     //tell me how many to wait for
-    node.expected_counter = node.neighbours.len() as i32;
+    node_data.expected_counter = node_data.neighbours.len() as i32;
     println!(
         "Expecting {} replies... before i leave",
-        node.expected_counter
+        node_data.expected_counter
     );
 
-    if node.neighbours.is_empty() {
+    if node_data.neighbours.is_empty() {
         let message = serialize(&ExpectedNodes {
             number: 0,
-            sender_id: node.zid.clone(),
+            sender_id: node_data.zid.clone(),
         })
         .unwrap();
-        node.session
+        session
             .put(
-                format!("{}/counter/expected_wait", node.cluster_name),
+                format!("{}/counter/expected_wait", node_data.cluster_name),
                 message,
             )
             .res()
             .unwrap();
         println!("IM SHUTTING DOWN BOOT! - i have no friends ;/");
 
-        node.status = NodeStatus::Offline;
+        node_data.status = NodeStatus::Offline;
         //let _ = node;
     } else {
         //send me neighbours my neighbors and without me
         let message = serialize(&ExpectedNodes {
-            number: node.neighbours.len() as i32,
-            sender_id: node.zid.clone(),
+            number: node_data.neighbours.len() as i32,
+            sender_id: node_data.zid.clone(),
         })
         .unwrap();
-        node.session
+        session
             .put(
-                format!("{}/counter/expected_wait", node.cluster_name),
+                format!("{}/counter/expected_wait", node_data.cluster_name),
                 message,
             )
             .res()
             .unwrap();
 
         let message = serialize(&NeighboursResponse {
-            neighbours: node.neighbours.clone(),
-            sender_id: node.zid.clone(),
+            neighbours: node_data.neighbours.clone(),
+            sender_id: node_data.zid.clone(),
         })
         .unwrap();
-        for neighbour_id in node.neighbours.keys() {
-            node.session
+        for neighbour_id in node_data.neighbours.keys() {
+            session
                 .put(
-                    format!("{}/node/{}/leave_voronoi", node.cluster_name, neighbour_id),
+                    format!(
+                        "{}/node/{}/leave_voronoi",
+                        node_data.cluster_name, neighbour_id
+                    ),
                     message.clone(),
                 )
                 .res()
@@ -63,7 +72,7 @@ pub fn handle_leave_response(_payload: &[u8], node: &mut Node) {
         // let message = serialize(&DefaultMessage{
         // sender_id:node.zid.clone()});
         // node.session.put("counter/leaving", message.clone()).res().unwrap();
-        node.status = NodeStatus::Offline;
+        node_data.status = NodeStatus::Offline;
         //let _ = node;
     }
 }

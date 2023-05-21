@@ -61,7 +61,7 @@ pub fn handle_join_request(payload: &[u8], boot_node: &mut BootNode) {
     println!("------------------------------------");
 
     let (_, land_owner) = closest_point(&boot_node.cluster, point);
-    println!("{}", land_owner);
+    println!("OWNER: {}", land_owner);
 
     //add node to cluster
     boot_node.cluster.insert(data.sender_id.to_string(), point);

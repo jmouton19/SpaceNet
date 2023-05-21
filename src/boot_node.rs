@@ -5,10 +5,10 @@ use crate::handlers::boot::set_expected_counter::set_expected_counter;
 use crate::node::SyncResolve;
 use crate::types::{OrderedMapPairs, OrderedMapPolygon};
 use crate::utils::{draw_voronoi_full, Voronoi};
+use rand::Rng;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-use rand::Rng;
 
 pub use zenoh::prelude::sync::*;
 use zenoh::prelude::Sample;
@@ -33,7 +33,7 @@ pub struct BootNode<'a> {
 impl BootNode<'_> {
     /// Creates a new boot node instance with a [session](https://docs.rs/zenoh/0.7.0-rc/zenoh/struct.Session.html).
     /// Opens a subscription on topic `{cluster}/boot/*` to receive incoming messages from nodes and a subscription on`{cluster}/counter/*` to count the number of messages its received since processing the current message on the `{cluster}/boot/*` topic.
-    pub fn new(cluster_name: &str,centralized_voronoi:bool) -> Self {
+    pub fn new(cluster_name: &str, centralized_voronoi: bool) -> Self {
         let session = zenoh::open(Config::default()).res().unwrap().into_arc();
         let zid = session.zid().to_string();
 
@@ -120,7 +120,7 @@ impl BootNode<'_> {
                     format!("{}voronoi", self.draw_count).as_str(),
                 );
 
-                if self.centralized_voronoi{
+                if self.centralized_voronoi {
                     //correct voronoi
                     let mut hash_map = self.cluster.clone();
                     self.correct_polygon_list = OrderedMapPolygon::new();

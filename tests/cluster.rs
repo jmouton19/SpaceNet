@@ -12,7 +12,7 @@ mod test {
         let expected_len = 5;
 
         let start_time = Instant::now();
-        let mut boot_server = BootNode::new("test1",true);
+        let mut boot_server = BootNode::new("test1", true);
         let handle1 = thread::spawn(move || loop {
             boot_server.run();
             if boot_server.draw_count == expected_len - 1 {
