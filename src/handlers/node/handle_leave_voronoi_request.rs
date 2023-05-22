@@ -1,5 +1,5 @@
 use crate::message::{NeighboursResponse, NewVoronoiResponse};
-use crate::node::{Node, NodeData, SyncResolve};
+use crate::node::{NodeData, SyncResolve};
 use crate::utils::Voronoi;
 use bincode::{deserialize, serialize};
 use std::sync::{Arc, MutexGuard};

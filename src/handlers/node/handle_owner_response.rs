@@ -1,5 +1,5 @@
 use crate::message::{DefaultMessage, ExpectedNodes, NewVoronoiResponse, OwnerResponse};
-use crate::node::{Node, NodeData, NodeStatus, SyncResolve};
+use crate::node::{NodeData, NodeStatus, SyncResolve};
 use crate::utils::Voronoi;
 use bincode::{deserialize, serialize};
 use std::sync::{Arc, MutexGuard};

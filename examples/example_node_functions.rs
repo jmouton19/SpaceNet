@@ -1,5 +1,3 @@
-use space_net::node::*;
-
 fn main() {
     // let mut node = Node::new("network_1");
     // println!("node online..... {:?}", node.get_zid());

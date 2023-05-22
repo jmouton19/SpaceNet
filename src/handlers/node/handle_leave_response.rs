@@ -1,5 +1,5 @@
 use crate::message::{ExpectedNodes, NeighboursResponse};
-use crate::node::{Node, NodeData, NodeStatus, SyncResolve};
+use crate::node::{NodeData, NodeStatus, SyncResolve};
 use bincode::serialize;
 use std::sync::{Arc, MutexGuard};
 use zenoh::Session;

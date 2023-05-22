@@ -54,9 +54,7 @@ mod test {
 
         for _i in 0..(expected_len - 1) {
             let mut node = Node::new("test1");
-            let _ = thread::spawn(move || loop {
-                node.run();
-            });
+            node.join();
         }
         handle1.join().unwrap();
     }

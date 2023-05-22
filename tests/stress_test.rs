@@ -77,9 +77,7 @@ mod stress_test {
 
         for _i in 0..(expected_len) {
             let mut node = Node::new(file_name2.clone().as_str());
-            let _ = thread::spawn(move || loop {
-                node.run();
-            });
+            node.join();
         }
         handle1.join().unwrap();
     }
