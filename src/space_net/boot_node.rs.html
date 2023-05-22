@@ -162,10 +162,10 @@
 <span class="kw">use </span><span class="kw">crate</span>::node::SyncResolve;
 <span class="kw">use </span><span class="kw">crate</span>::types::{OrderedMapPairs, OrderedMapPolygon};
 <span class="kw">use </span><span class="kw">crate</span>::utils::{draw_voronoi_full, Voronoi};
+<span class="kw">use </span>rand::Rng;
 <span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>std::thread;
 <span class="kw">use </span>std::time::Duration;
-<span class="kw">use </span>rand::Rng;
 
 <span class="kw">pub use </span>zenoh::prelude::sync::<span class="kw-2">*</span>;
 <span class="kw">use </span>zenoh::prelude::Sample;
@@ -190,7 +190,7 @@
 <span class="kw">impl </span>BootNode&lt;<span class="lifetime">&#39;_</span>&gt; {
     <span class="doccomment">/// Creates a new boot node instance with a [session](https://docs.rs/zenoh/0.7.0-rc/zenoh/struct.Session.html).
     /// Opens a subscription on topic `{cluster}/boot/*` to receive incoming messages from nodes and a subscription on`{cluster}/counter/*` to count the number of messages its received since processing the current message on the `{cluster}/boot/*` topic.
-    </span><span class="kw">pub fn </span>new(cluster_name: <span class="kw-2">&amp;</span>str,centralized_voronoi:bool) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>new(cluster_name: <span class="kw-2">&amp;</span>str, centralized_voronoi: bool) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>session = zenoh::open(Config::default()).res().unwrap().into_arc();
         <span class="kw">let </span>zid = session.zid().to_string();
 
@@ -277,7 +277,7 @@
                     <span class="macro">format!</span>(<span class="string">&quot;{}voronoi&quot;</span>, <span class="self">self</span>.draw_count).as_str(),
                 );
 
-                <span class="kw">if </span><span class="self">self</span>.centralized_voronoi{
+                <span class="kw">if </span><span class="self">self</span>.centralized_voronoi {
                     <span class="comment">//correct voronoi
                     </span><span class="kw">let </span><span class="kw-2">mut </span>hash_map = <span class="self">self</span>.cluster.clone();
                     <span class="self">self</span>.correct_polygon_list = OrderedMapPolygon::new();

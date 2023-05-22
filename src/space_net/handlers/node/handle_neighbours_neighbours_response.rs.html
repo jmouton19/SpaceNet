@@ -118,41 +118,59 @@
 <a href="#117" id="117">117</a>
 <a href="#118" id="118">118</a>
 <a href="#119" id="119">119</a>
+<a href="#120" id="120">120</a>
+<a href="#121" id="121">121</a>
+<a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::message::{
     DefaultMessage, ExpectedNodes, NeighboursResponse, NewVoronoiRequest, NewVoronoiResponse,
 };
-<span class="kw">use </span><span class="kw">crate</span>::node::{Node, NodeStatus, SyncResolve};
+<span class="kw">use </span><span class="kw">crate</span>::node::{Node, NodeData, NodeStatus, SyncResolve};
 <span class="kw">use </span><span class="kw">crate</span>::utils::Voronoi;
 <span class="kw">use </span>bincode::{deserialize, serialize};
 <span class="kw">use </span>std::collections::HashSet;
+<span class="kw">use </span>std::sync::{Arc, MutexGuard};
+<span class="kw">use </span>zenoh::Session;
 
 <span class="doccomment">/// Keep asking for neighbours until voronoi edges are stable. Once stable tell my neighbours to recalculate voronoi with my new site.
-</span><span class="kw">pub fn </span>handle_neighbours_neighbours_response(payload: <span class="kw-2">&amp;</span>[u8], node: <span class="kw-2">&amp;mut </span>Node) {
+</span><span class="kw">pub fn </span>handle_neighbours_neighbours_response(
+    payload: <span class="kw-2">&amp;</span>[u8],
+    <span class="kw-2">mut </span>node_data: MutexGuard&lt;NodeData&gt;,
+    session: Arc&lt;Session&gt;,
+) {
     <span class="kw">let </span>data: NeighboursResponse = deserialize(payload).unwrap();
 
-    <span class="kw">if </span>node.status != NodeStatus::Online {
+    <span class="kw">if </span>node_data.status != NodeStatus::Online {
         <span class="macro">println!</span>(<span class="string">&quot;NEXT K-HOP NUMBER.....&quot;</span>);
 
-        node.k_hop_neighbours.extend(data.neighbours);
+        node_data.k_hop_neighbours.extend(data.neighbours);
         <span class="comment">//node.neighbours.extend(data.neighbours);
-        </span>node.received_counter += <span class="number">1</span>;
+        </span>node_data.received_counter += <span class="number">1</span>;
         <span class="macro">println!</span>(
             <span class="string">&quot;Message received from {}....  expecting {} more.&quot;</span>,
             data.sender_id,
-            node.expected_counter - node.received_counter
+            node_data.expected_counter - node_data.received_counter
         );
-        <span class="kw">if </span>node.expected_counter == node.received_counter {
-            node.received_counter = <span class="number">0</span>;
-            node.expected_counter = -<span class="number">1</span>;
+        <span class="kw">if </span>node_data.expected_counter == node_data.received_counter {
+            node_data.received_counter = <span class="number">0</span>;
+            node_data.expected_counter = -<span class="number">1</span>;
 
             <span class="comment">//calc new voronoi then check if neigh list changed
-            </span><span class="kw">let </span><span class="kw-2">mut </span>temp = node.neighbours.clone();
-            temp.extend(node.k_hop_neighbours.clone());
-            <span class="kw">let </span>diagram = Voronoi::new((node.zid.clone(), node.site), <span class="kw-2">&amp;</span>temp);
+            </span><span class="kw">let </span><span class="kw-2">mut </span>temp = node_data.neighbours.clone();
+            temp.extend(node_data.k_hop_neighbours.clone());
+            <span class="kw">let </span>diagram = Voronoi::new((node_data.zid.clone(), node_data.site), <span class="kw-2">&amp;</span>temp);
             <span class="comment">//  draw_voronoi(&amp;diagram.diagram, format!(&quot;new_{}&quot;, node.session.zid()).as_str());
             //get my visible neighbours
 
-            </span><span class="kw">let </span>old_neighbours_keys: HashSet&lt;<span class="kw">_</span>&gt; = node.neighbours.keys().cloned().collect();
+            </span><span class="kw">let </span>old_neighbours_keys: HashSet&lt;<span class="kw">_</span>&gt; = node_data.neighbours.keys().cloned().collect();
             <span class="kw">let </span>new_neighbours = diagram.get_neighbours();
             <span class="kw">let </span>new_neighbours_keys: HashSet&lt;<span class="kw">_</span>&gt; = new_neighbours.keys().cloned().collect();
 
@@ -162,20 +180,20 @@
                 .collect();
 
             <span class="kw">if </span>!added.is_empty() {
-                node.status = NodeStatus::Joining;
-                node.neighbours = new_neighbours;
+                node_data.status = NodeStatus::Joining;
+                node_data.neighbours = new_neighbours;
                 <span class="comment">//ask new neighbour list for their neighbours
-                </span>node.expected_counter = added.len() <span class="kw">as </span>i32;
+                </span>node_data.expected_counter = added.len() <span class="kw">as </span>i32;
                 <span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>DefaultMessage {
-                    sender_id: node.zid.clone(),
+                    sender_id: node_data.zid.clone(),
                 })
                 .unwrap();
                 <span class="kw">for </span>neighbour_id <span class="kw">in </span>added {
-                    node.session
+                    session
                         .put(
                             <span class="macro">format!</span>(
                                 <span class="string">&quot;{}/node/{}/neighbours_neighbours&quot;</span>,
-                                node.cluster_name, neighbour_id
+                                node_data.cluster_name, neighbour_id
                             ),
                             message.clone(),
                         )
@@ -183,17 +201,17 @@
                         .unwrap();
                 }
             } <span class="kw">else </span>{
-                node.k_hop_neighbours.clear();
+                node_data.k_hop_neighbours.clear();
                 <span class="comment">//neighbor unchanged so finalize
                 //tell boot how many to wait for
                 </span><span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>ExpectedNodes {
-                    number: node.neighbours.len() <span class="kw">as </span>i32 + <span class="number">1</span>,
-                    sender_id: node.zid.clone(),
+                    number: node_data.neighbours.len() <span class="kw">as </span>i32 + <span class="number">1</span>,
+                    sender_id: node_data.zid.clone(),
                 })
                 .unwrap();
-                node.session
+                session
                     .put(
-                        <span class="macro">format!</span>(<span class="string">&quot;{}/counter/expected_wait&quot;</span>, node.cluster_name),
+                        <span class="macro">format!</span>(<span class="string">&quot;{}/counter/expected_wait&quot;</span>, node_data.cluster_name),
                         message,
                     )
                     .res()
@@ -201,14 +219,17 @@
 
                 <span class="comment">//tell all neighbours to calc new voronoi with my new site.
                 </span><span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>NewVoronoiRequest {
-                    site: node.site,
-                    sender_id: node.zid.clone(),
+                    site: node_data.site,
+                    sender_id: node_data.zid.clone(),
                 })
                 .unwrap();
-                <span class="kw">for </span>neighbour_id <span class="kw">in </span>node.neighbours.keys() {
-                    node.session
+                <span class="kw">for </span>neighbour_id <span class="kw">in </span>node_data.neighbours.keys() {
+                    session
                         .put(
-                            <span class="macro">format!</span>(<span class="string">&quot;{}/node/{}/new_voronoi&quot;</span>, node.cluster_name, neighbour_id),
+                            <span class="macro">format!</span>(
+                                <span class="string">&quot;{}/node/{}/new_voronoi&quot;</span>,
+                                node_data.cluster_name, neighbour_id
+                            ),
                             message.clone(),
                         )
                         .res()
@@ -221,18 +242,21 @@
                     .iter()
                     .map(|x| (x.x, x.y))
                     .collect();
-                node.polygon = polygon.clone();
+                node_data.polygon = polygon.clone();
                 <span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>NewVoronoiResponse {
                     polygon,
-                    sender_id: node.zid.clone(),
-                    site: node.site,
+                    sender_id: node_data.zid.clone(),
+                    site: node_data.site,
                 })
                 .unwrap();
-                node.session
-                    .put(<span class="macro">format!</span>(<span class="string">&quot;{}/counter/complete&quot;</span>, node.cluster_name), message)
+                session
+                    .put(
+                        <span class="macro">format!</span>(<span class="string">&quot;{}/counter/complete&quot;</span>, node_data.cluster_name),
+                        message,
+                    )
                     .res()
                     .unwrap();
-                node.status = NodeStatus::Online;
+                node_data.status = NodeStatus::Online;
             }
         } <span class="comment">//else do nothing
     </span>}

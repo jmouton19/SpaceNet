@@ -83,52 +83,77 @@
 <a href="#82" id="82">82</a>
 <a href="#83" id="83">83</a>
 <a href="#84" id="84">84</a>
+<a href="#85" id="85">85</a>
+<a href="#86" id="86">86</a>
+<a href="#87" id="87">87</a>
+<a href="#88" id="88">88</a>
+<a href="#89" id="89">89</a>
+<a href="#90" id="90">90</a>
+<a href="#91" id="91">91</a>
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+<a href="#98" id="98">98</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::message::{DefaultMessage, ExpectedNodes, NewVoronoiResponse, OwnerResponse};
-<span class="kw">use </span><span class="kw">crate</span>::node::{Node, NodeStatus, SyncResolve};
+<span class="kw">use </span><span class="kw">crate</span>::node::{Node, NodeData, NodeStatus, SyncResolve};
 <span class="kw">use </span><span class="kw">crate</span>::utils::Voronoi;
 <span class="kw">use </span>bincode::{deserialize, serialize};
+<span class="kw">use </span>std::sync::{Arc, MutexGuard};
+<span class="kw">use </span>zenoh::Session;
 
 <span class="doccomment">/// Sets given site and calculates initial voronoi from owner and his neighbours. Then asks for neighbours from neighbours.
-</span><span class="kw">pub fn </span>handle_owner_response(payload: <span class="kw-2">&amp;</span>[u8], node: <span class="kw-2">&amp;mut </span>Node) {
+</span><span class="kw">pub fn </span>handle_owner_response(
+    payload: <span class="kw-2">&amp;</span>[u8],
+    <span class="kw-2">mut </span>node_data: MutexGuard&lt;NodeData&gt;,
+    session: Arc&lt;Session&gt;,
+) {
+    <span class="macro">println!</span>(<span class="string">&quot;IM NOT BEING USED&quot;</span>);
     <span class="kw">let </span>data: OwnerResponse = deserialize(payload).unwrap();
     <span class="macro">println!</span>(
         <span class="string">&quot;New node at site... {:?} from owner id... {:?}&quot;</span>,
         data.new_site, data.sender_id
     );
 
-    node.site = data.new_site;
-    node.neighbours = data.neighbours.clone();
-    node.neighbours
+    node_data.site = data.new_site;
+    node_data.neighbours = data.neighbours.clone();
+    node_data
+        .neighbours
         .insert(data.sender_id.clone(), data.sender_site);
 
-    <span class="macro">println!</span>(<span class="string">&quot;My neighbours are {:?}&quot;</span>, node.neighbours);
+    <span class="macro">println!</span>(<span class="string">&quot;My neighbours are {:?}&quot;</span>, node_data.neighbours);
 
     <span class="comment">//calc initial voronoi
-    </span><span class="kw">let </span>diagram = Voronoi::new((node.zid.clone(), node.site), <span class="kw-2">&amp;</span>node.neighbours);
+    </span><span class="kw">let </span>diagram = Voronoi::new(
+        (node_data.zid.clone(), node_data.site),
+        <span class="kw-2">&amp;</span>node_data.neighbours,
+    );
     <span class="comment">// draw_voronoi(&amp;diagram.diagram,format!(&quot;new_{}&quot;,node.session.zid()).as_str());
     //my new visible neighbours
-    </span>node.neighbours = diagram.get_neighbours();
+    </span>node_data.neighbours = diagram.get_neighbours();
 
     <span class="comment">//set my k-hop wait
-    </span>node.expected_counter = node.neighbours.len() <span class="kw">as </span>i32;
+    </span>node_data.expected_counter = node_data.neighbours.len() <span class="kw">as </span>i32;
 
     <span class="comment">//ask initial neighbours for their neighbours
     //request neighbours from neighbours and send it to new node
 
     </span><span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>DefaultMessage {
-        sender_id: node.zid.clone(),
+        sender_id: node_data.zid.clone(),
     })
     .unwrap();
 
-    <span class="kw">if </span>node.neighbours.is_empty() {
+    <span class="kw">if </span>node_data.neighbours.is_empty() {
         <span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>ExpectedNodes {
             number: <span class="number">1</span>,
-            sender_id: node.zid.clone(),
+            sender_id: node_data.zid.clone(),
         })
         .unwrap();
-        node.session
+        session
             .put(
-                <span class="macro">format!</span>(<span class="string">&quot;{}/counter/expected_wait&quot;</span>, node.cluster_name),
+                <span class="macro">format!</span>(<span class="string">&quot;{}/counter/expected_wait&quot;</span>, node_data.cluster_name),
                 message,
             )
             .res()
@@ -140,25 +165,28 @@
             .iter()
             .map(|x| (x.x, x.y))
             .collect();
-        node.polygon = polygon.clone();
+        node_data.polygon = polygon.clone();
         <span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>NewVoronoiResponse {
             polygon,
-            sender_id: node.zid.clone(),
-            site: node.site,
+            sender_id: node_data.zid.clone(),
+            site: node_data.site,
         })
         .unwrap();
-        node.session
-            .put(<span class="macro">format!</span>(<span class="string">&quot;{}/counter/complete&quot;</span>, node.cluster_name), message)
+        session
+            .put(
+                <span class="macro">format!</span>(<span class="string">&quot;{}/counter/complete&quot;</span>, node_data.cluster_name),
+                message,
+            )
             .res()
             .unwrap();
-        node.status = NodeStatus::Online;
+        node_data.status = NodeStatus::Online;
     } <span class="kw">else </span>{
-        <span class="kw">for </span>neighbour_id <span class="kw">in </span>node.neighbours.keys() {
-            node.session
+        <span class="kw">for </span>neighbour_id <span class="kw">in </span>node_data.neighbours.keys() {
+            session
                 .put(
                     <span class="macro">format!</span>(
                         <span class="string">&quot;{}/node/{}/neighbours_neighbours&quot;</span>,
-                        node.cluster_name, neighbour_id
+                        node_data.cluster_name, neighbour_id
                     ),
                     message.clone(),
                 )

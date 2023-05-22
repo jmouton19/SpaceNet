@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["get_status","get_zid_boot","get_zid_node","is_in_polygon","is_neighbour","leave","leave_on_key","new_boot","new_node","run","run_boot"]};
+window.SIDEBAR_ITEMS = {};

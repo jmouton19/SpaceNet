@@ -121,127 +121,127 @@
 <a href="#120" id="120">120</a>
 <a href="#121" id="121">121</a>
 <a href="#122" id="122">122</a>
-</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::boot_node::BootNode;
-<span class="kw">use </span><span class="kw">crate</span>::node::{Node, NodeStatus};
-<span class="kw">use </span>libc::{c_char, c_int};
-<span class="kw">use </span>std::ffi::{c_void, CStr, CString};
-
-<span class="comment">//new node from C
-</span><span class="attr">#[no_mangle]
-</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>new_node(cluster_name: <span class="kw-2">*const </span>c_char) -&gt; <span class="kw-2">*mut </span>c_void {
-    <span class="kw">let </span>c_str = <span class="kw">unsafe </span>{ CStr::from_ptr(cluster_name) };
-    <span class="kw">let </span>cluster_name = c_str.to_str().unwrap();
-    <span class="kw">let </span>node = Box::new(Node::new(cluster_name));
-    Box::into_raw(node) <span class="kw">as </span><span class="kw-2">*mut </span>c_void
-}
-
-<span class="comment">//new boot node from C
-</span><span class="attr">#[no_mangle]
-</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>new_boot(cluster_name: <span class="kw-2">*const </span>c_char,centralized_voronoi: bool) -&gt; <span class="kw-2">*mut </span>c_void {
-    <span class="kw">let </span>c_str = <span class="kw">unsafe </span>{ CStr::from_ptr(cluster_name) };
-    <span class="kw">let </span>cluster_name = c_str.to_str().unwrap();
-    <span class="kw">let </span>boot_node = Box::new(BootNode::new(cluster_name,centralized_voronoi));
-    Box::into_raw(boot_node) <span class="kw">as </span><span class="kw-2">*mut </span>c_void
-}
-<span class="comment">// leave node when key is pressed from C
-</span><span class="attr">#[no_mangle]
-</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>leave_on_key(node_ptr: <span class="kw-2">*mut </span>c_void, key: c_char) {
-    <span class="kw">let </span>node = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(node_ptr <span class="kw">as </span><span class="kw-2">*mut </span>Node) };
-    <span class="kw">let </span>key = key <span class="kw">as </span>u8 <span class="kw">as </span>char;
-    node.leave_on_pressed(key);
-}
-
-<span class="comment">// leave node from C
-</span><span class="attr">#[no_mangle]
-</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>leave(node_ptr: <span class="kw-2">*mut </span>c_void) {
-    <span class="kw">let </span>node = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(node_ptr <span class="kw">as </span><span class="kw-2">*mut </span>Node) };
-    node.leave();
-}
-
-<span class="comment">// get zid from C
-</span><span class="attr">#[no_mangle]
-</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>get_zid_node(node_ptr: <span class="kw-2">*mut </span>c_void) -&gt; <span class="kw-2">*const </span>c_char {
-    <span class="kw">let </span>node = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(node_ptr <span class="kw">as </span><span class="kw-2">*mut </span>Node) };
-    <span class="kw">let </span>zid_str = node.get_zid();
-    <span class="kw">let </span>c_string = CString::new(zid_str).unwrap();
-    c_string.into_raw()
-}
-
-<span class="comment">//get node status from C
-</span><span class="attr">#[no_mangle]
-</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>get_status(node_ptr: <span class="kw-2">*mut </span>c_void) -&gt; NodeStatus {
-    <span class="kw">let </span>node = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(node_ptr <span class="kw">as </span><span class="kw-2">*mut </span>Node) };
-    node.get_status()
-}
-
-<span class="comment">// get zid boot from C
-</span><span class="attr">#[no_mangle]
-</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>get_zid_boot(boot_ptr: <span class="kw-2">*mut </span>c_void) -&gt; <span class="kw-2">*const </span>c_char {
-    <span class="kw">let </span>boot = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(boot_ptr <span class="kw">as </span><span class="kw-2">*mut </span>BootNode) };
-    <span class="kw">let </span>zid_str = boot.get_zid();
-    <span class="kw">let </span>c_string = CString::new(zid_str).unwrap();
-    c_string.into_raw()
-}
-
-<span class="comment">// //get neighbours from C
+</pre><pre class="rust"><code><span class="comment">// use crate::boot_node::BootNode;
+// use crate::node::{Node, NodeStatus};
+// use libc::{c_char, c_int};
+// use std::ffi::{c_void, CStr, CString};
+//
+// //new node from C
 // #[no_mangle]
-// pub extern &quot;C&quot; fn get_neighbours(node_ptr: *mut c_void) -&gt; *const c_char {
+// pub extern &quot;C&quot; fn new_node(cluster_name: *const c_char) -&gt; *mut c_void {
+//     let c_str = unsafe { CStr::from_ptr(cluster_name) };
+//     let cluster_name = c_str.to_str().unwrap();
+//     let node = Box::new(Node::new(cluster_name));
+//     Box::into_raw(node) as *mut c_void
+// }
+//
+// //new boot node from C
+// #[no_mangle]
+// pub extern &quot;C&quot; fn new_boot(cluster_name: *const c_char, centralized_voronoi: bool) -&gt; *mut c_void {
+//     let c_str = unsafe { CStr::from_ptr(cluster_name) };
+//     let cluster_name = c_str.to_str().unwrap();
+//     let boot_node = Box::new(BootNode::new(cluster_name, centralized_voronoi));
+//     Box::into_raw(boot_node) as *mut c_void
+// }
+// // leave node when key is pressed from C
+// #[no_mangle]
+// pub extern &quot;C&quot; fn leave_on_key(node_ptr: *mut c_void, key: c_char) {
 //     let node = unsafe { &amp;*(node_ptr as *mut Node) };
+//     let key = key as u8 as char;
+//     node.leave_on_pressed(key);
 // }
-
-// Check if the node is a neighbour from c
-</span><span class="attr">#[no_mangle]
-</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>is_neighbour(node_ptr: <span class="kw-2">*mut </span>c_void, zid: <span class="kw-2">*const </span>c_char) -&gt; c_int {
-    <span class="kw">let </span>c_str = <span class="kw">unsafe </span>{ CStr::from_ptr(zid) };
-    <span class="kw">let </span>zid = c_str.to_str().unwrap();
-    <span class="kw">let </span>node = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(node_ptr <span class="kw">as </span><span class="kw-2">*mut </span>Node) };
-    <span class="kw">if </span>node.is_neighbour(zid) {
-        <span class="number">1
-    </span>} <span class="kw">else </span>{
-        <span class="number">0
-    </span>}
-}
-
-<span class="comment">// /// Get the polygon of the node
-// pub fn get_polygon(&amp;self) -&gt; Vec&lt;(f64, f64)&gt; {
-//     self.polygon.clone()
-// }
-
-// Check if the point site is in the polygon from c
-</span><span class="attr">#[no_mangle]
-</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>is_in_polygon(node_ptr: <span class="kw-2">*mut </span>c_void, x: f64, y: f64) -&gt; c_int {
-    <span class="kw">let </span>node = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(node_ptr <span class="kw">as </span><span class="kw-2">*mut </span>Node) };
-    <span class="kw">let </span>point = (x, y);
-    <span class="kw">if </span>node.is_in_polygon(point) {
-        <span class="number">1
-    </span>} <span class="kw">else </span>{
-        <span class="number">0
-    </span>}
-}
-
-<span class="comment">// // free zid from C
+//
+// // leave node from C
 // #[no_mangle]
-// pub extern &quot;C&quot; fn free_zid(s: *mut c_char) {
-//     unsafe {
-//         if s.is_null() {
-//             return;
-//         }
-//         CString::from_raw(s)
-//     };
+// pub extern &quot;C&quot; fn leave(node_ptr: *mut c_void) {
+//     let node = unsafe { &amp;mut *(node_ptr as *mut Node) };
+//     node.leave();
 // }
-
-//run boot node from C
-</span><span class="attr">#[no_mangle]
-</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>run_boot(boot_ptr: <span class="kw-2">*mut </span>c_void) {
-    <span class="kw">let </span>boot = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(boot_ptr <span class="kw">as </span><span class="kw-2">*mut </span>BootNode) };
-    boot.run();
-}
-
-<span class="comment">// run node from C
-</span><span class="attr">#[no_mangle]
-</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>run(node_ptr: <span class="kw-2">*mut </span>c_void) {
-    <span class="kw">let </span>node = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(node_ptr <span class="kw">as </span><span class="kw-2">*mut </span>Node) };
-    node.run();
-}
-</code></pre></div>
+//
+// // get zid from C
+// #[no_mangle]
+// pub extern &quot;C&quot; fn get_zid_node(node_ptr: *mut c_void) -&gt; *const c_char {
+//     let node = unsafe { &amp;*(node_ptr as *mut Node) };
+//     let zid_str = node.get_zid();
+//     let c_string = CString::new(zid_str).unwrap();
+//     c_string.into_raw()
+// }
+//
+// //get node status from C
+// #[no_mangle]
+// pub extern &quot;C&quot; fn get_status(node_ptr: *mut c_void) -&gt; NodeStatus {
+//     let node = unsafe { &amp;*(node_ptr as *mut Node) };
+//     node.get_status()
+// }
+//
+// // get zid boot from C
+// #[no_mangle]
+// pub extern &quot;C&quot; fn get_zid_boot(boot_ptr: *mut c_void) -&gt; *const c_char {
+//     let boot = unsafe { &amp;*(boot_ptr as *mut BootNode) };
+//     let zid_str = boot.get_zid();
+//     let c_string = CString::new(zid_str).unwrap();
+//     c_string.into_raw()
+// }
+//
+// // //get neighbours from C
+// // #[no_mangle]
+// // pub extern &quot;C&quot; fn get_neighbours(node_ptr: *mut c_void) -&gt; *const c_char {
+// //     let node = unsafe { &amp;*(node_ptr as *mut Node) };
+// // }
+//
+// // Check if the node is a neighbour from c
+// #[no_mangle]
+// pub extern &quot;C&quot; fn is_neighbour(node_ptr: *mut c_void, zid: *const c_char) -&gt; c_int {
+//     let c_str = unsafe { CStr::from_ptr(zid) };
+//     let zid = c_str.to_str().unwrap();
+//     let node = unsafe { &amp;*(node_ptr as *mut Node) };
+//     if node.is_neighbour(zid) {
+//         1
+//     } else {
+//         0
+//     }
+// }
+//
+// // /// Get the polygon of the node
+// // pub fn get_polygon(&amp;self) -&gt; Vec&lt;(f64, f64)&gt; {
+// //     self.polygon.clone()
+// // }
+//
+// // Check if the point site is in the polygon from c
+// #[no_mangle]
+// pub extern &quot;C&quot; fn is_in_polygon(node_ptr: *mut c_void, x: f64, y: f64) -&gt; c_int {
+//     let node = unsafe { &amp;*(node_ptr as *mut Node) };
+//     let point = (x, y);
+//     if node.is_in_polygon(point) {
+//         1
+//     } else {
+//         0
+//     }
+// }
+//
+// // // free zid from C
+// // #[no_mangle]
+// // pub extern &quot;C&quot; fn free_zid(s: *mut c_char) {
+// //     unsafe {
+// //         if s.is_null() {
+// //             return;
+// //         }
+// //         CString::from_raw(s)
+// //     };
+// // }
+//
+// //run boot node from C
+// #[no_mangle]
+// pub extern &quot;C&quot; fn run_boot(boot_ptr: *mut c_void) {
+//     let boot = unsafe { &amp;mut *(boot_ptr as *mut BootNode) };
+//     boot.run();
+// }
+//
+// // run node from C
+// #[no_mangle]
+// pub extern &quot;C&quot; fn run(node_ptr: *mut c_void) {
+//     let node = unsafe { &amp;mut *(node_ptr as *mut Node) };
+//     node.run();
+// }
+</span></code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="space_net" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>

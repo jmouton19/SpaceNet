@@ -68,60 +68,78 @@
 <a href="#67" id="67">67</a>
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
+<a href="#72" id="72">72</a>
+<a href="#73" id="73">73</a>
+<a href="#74" id="74">74</a>
+<a href="#75" id="75">75</a>
+<a href="#76" id="76">76</a>
+<a href="#77" id="77">77</a>
+<a href="#78" id="78">78</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::message::{ExpectedNodes, NeighboursResponse};
-<span class="kw">use </span><span class="kw">crate</span>::node::{Node, NodeStatus, SyncResolve};
+<span class="kw">use </span><span class="kw">crate</span>::node::{Node, NodeData, NodeStatus, SyncResolve};
 <span class="kw">use </span>bincode::serialize;
+<span class="kw">use </span>std::sync::{Arc, MutexGuard};
+<span class="kw">use </span>zenoh::Session;
 
 <span class="doccomment">/// Handles leave response, if no neighbours, shut down, else tell neighbours to recalculate voronoi without me but with my neighbours.
-</span><span class="kw">pub fn </span>handle_leave_response(_payload: <span class="kw-2">&amp;</span>[u8], node: <span class="kw-2">&amp;mut </span>Node) {
+</span><span class="kw">pub fn </span>handle_leave_response(
+    _payload: <span class="kw-2">&amp;</span>[u8],
+    <span class="kw-2">mut </span>node_data: MutexGuard&lt;NodeData&gt;,
+    session: Arc&lt;Session&gt;,
+) {
     <span class="comment">//tell me how many to wait for
-    </span>node.expected_counter = node.neighbours.len() <span class="kw">as </span>i32;
+    </span>node_data.expected_counter = node_data.neighbours.len() <span class="kw">as </span>i32;
     <span class="macro">println!</span>(
         <span class="string">&quot;Expecting {} replies... before i leave&quot;</span>,
-        node.expected_counter
+        node_data.expected_counter
     );
 
-    <span class="kw">if </span>node.neighbours.is_empty() {
+    <span class="kw">if </span>node_data.neighbours.is_empty() {
         <span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>ExpectedNodes {
             number: <span class="number">0</span>,
-            sender_id: node.zid.clone(),
+            sender_id: node_data.zid.clone(),
         })
         .unwrap();
-        node.session
+        session
             .put(
-                <span class="macro">format!</span>(<span class="string">&quot;{}/counter/expected_wait&quot;</span>, node.cluster_name),
+                <span class="macro">format!</span>(<span class="string">&quot;{}/counter/expected_wait&quot;</span>, node_data.cluster_name),
                 message,
             )
             .res()
             .unwrap();
         <span class="macro">println!</span>(<span class="string">&quot;IM SHUTTING DOWN BOOT! - i have no friends ;/&quot;</span>);
 
-        node.status = NodeStatus::Offline;
+        node_data.status = NodeStatus::Offline;
         <span class="comment">//let _ = node;
     </span>} <span class="kw">else </span>{
         <span class="comment">//send me neighbours my neighbors and without me
         </span><span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>ExpectedNodes {
-            number: node.neighbours.len() <span class="kw">as </span>i32,
-            sender_id: node.zid.clone(),
+            number: node_data.neighbours.len() <span class="kw">as </span>i32,
+            sender_id: node_data.zid.clone(),
         })
         .unwrap();
-        node.session
+        session
             .put(
-                <span class="macro">format!</span>(<span class="string">&quot;{}/counter/expected_wait&quot;</span>, node.cluster_name),
+                <span class="macro">format!</span>(<span class="string">&quot;{}/counter/expected_wait&quot;</span>, node_data.cluster_name),
                 message,
             )
             .res()
             .unwrap();
 
         <span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>NeighboursResponse {
-            neighbours: node.neighbours.clone(),
-            sender_id: node.zid.clone(),
+            neighbours: node_data.neighbours.clone(),
+            sender_id: node_data.zid.clone(),
         })
         .unwrap();
-        <span class="kw">for </span>neighbour_id <span class="kw">in </span>node.neighbours.keys() {
-            node.session
+        <span class="kw">for </span>neighbour_id <span class="kw">in </span>node_data.neighbours.keys() {
+            session
                 .put(
-                    <span class="macro">format!</span>(<span class="string">&quot;{}/node/{}/leave_voronoi&quot;</span>, node.cluster_name, neighbour_id),
+                    <span class="macro">format!</span>(
+                        <span class="string">&quot;{}/node/{}/leave_voronoi&quot;</span>,
+                        node_data.cluster_name, neighbour_id
+                    ),
                     message.clone(),
                 )
                 .res()
@@ -133,7 +151,7 @@
         <span class="comment">// let message = serialize(&amp;DefaultMessage{
         // sender_id:node.zid.clone()});
         // node.session.put(&quot;counter/leaving&quot;, message.clone()).res().unwrap();
-        </span>node.status = NodeStatus::Offline;
+        </span>node_data.status = NodeStatus::Offline;
         <span class="comment">//let _ = node;
     </span>}
 }
