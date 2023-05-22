@@ -1,13 +1,19 @@
-use crate::boot_node::BootNode;
+use crate::boot_node::{BootNode, BootNodeData};
 use crate::message::{DefaultMessage, NewNodeResponse};
 use crate::node::SyncResolve;
 use crate::types::{closest_point, point_within_distance};
 use bincode::{deserialize, serialize};
 use rand::Rng;
+use std::sync::{Arc, MutexGuard};
+use zenoh::Session;
 
 /// Handles a join request from a new node. Boot node assigns a point to the new node and states the closest node (`land_owner`) to the new point. Sends the new node to the 'land_owner' node.
 /// Adds new node to cluster and polygon list of boot node.
-pub fn handle_join_request(payload: &[u8], boot_node: &mut BootNode) {
+pub fn handle_join_request(
+    payload: &[u8],
+    mut boot_node_data: MutexGuard<BootNodeData>,
+    session: Arc<Session>,
+) {
     let data: DefaultMessage = deserialize(payload).unwrap();
     //get random point to give to new node
 
@@ -16,17 +22,19 @@ pub fn handle_join_request(payload: &[u8], boot_node: &mut BootNode) {
 
     //do something here
     //find closest node to new point
-    if boot_node.cluster.is_empty() {
+    if boot_node_data.cluster.is_empty() {
         point = (50.0, 50.0);
-        boot_node.cluster.insert(data.sender_id.to_string(), point);
-        boot_node
+        boot_node_data
+            .cluster
+            .insert(data.sender_id.to_string(), point);
+        boot_node_data
             .polygon_list
             .insert(data.sender_id.to_string(), vec![]);
     } else {
         //check if a point exist in boot_node.cluster.values that is within X distance of the new point if so precalculate the new point
         point = (rng.gen_range(1.0..=99.0), rng.gen_range(1.0..=99.0));
         let tolerance = 0.1;
-        while point_within_distance(&boot_node.cluster, point, tolerance) {
+        while point_within_distance(&boot_node_data.cluster, point, tolerance) {
             point = (rng.gen_range(1.0..=99.0), rng.gen_range(1.0..=99.0));
         }
     }
@@ -57,12 +65,14 @@ pub fn handle_join_request(payload: &[u8], boot_node: &mut BootNode) {
     println!("Giving point {:?}.... to {:?}", point, data.sender_id);
     println!("------------------------------------");
 
-    let (_, land_owner) = closest_point(&boot_node.cluster, point);
+    let (_, land_owner) = closest_point(&boot_node_data.cluster, point);
     println!("OWNER: {}", land_owner);
 
     //add node to cluster
-    boot_node.cluster.insert(data.sender_id.to_string(), point);
-    boot_node
+    boot_node_data
+        .cluster
+        .insert(data.sender_id.to_string(), point);
+    boot_node_data
         .polygon_list
         .insert(data.sender_id.to_string(), vec![]);
 
@@ -70,16 +80,15 @@ pub fn handle_join_request(payload: &[u8], boot_node: &mut BootNode) {
     let json_message = serialize(&NewNodeResponse {
         new_site: point,
         new_id: data.sender_id,
-        sender_id: boot_node.zid.clone(),
+        sender_id: boot_node_data.zid.clone(),
     })
     .unwrap();
 
-    boot_node
-        .session
+    session
         .put(
             format!(
                 "{}/node/{}/owner_request",
-                boot_node.cluster_name, land_owner
+                boot_node_data.cluster_name, land_owner
             ),
             json_message,
         )

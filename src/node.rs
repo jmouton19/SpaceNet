@@ -13,6 +13,8 @@ use bincode::serialize;
 
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::Duration;
+use rand::Rng;
 
 pub use zenoh::prelude::sync::*;
 
@@ -66,15 +68,17 @@ impl Node {
             drop(guard);
             loop {
                 //maybe dont break if offline just dont execute?
-                if node_data_clone.lock().unwrap().status == NodeStatus::Offline {
-                    break;
-                }
+                // if node_data_clone.lock().unwrap().status == NodeStatus::Offline {
+                //     break;
+                // }
                 while let Ok(sample) = subscription.try_recv() {
                     let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
                     println!("Received message on topic... {:?}", topic);
                     let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
                     let node_data_guard_clone = node_data_clone.lock().unwrap();
-
+                    let mut rng = rand::thread_rng();
+                    let delay = rng.gen_range(1..=10);
+                    thread::sleep(Duration::from_millis(delay));
                     match topic {
                         "new_reply" => {
                             handle_owner_request(
@@ -211,7 +215,13 @@ impl Node {
     }
     ///Get node status
     pub fn get_status(&self) -> NodeStatus {
-        self.node_data.lock().unwrap().status.clone()
+        loop {
+            if let Ok(guard) = self.node_data.try_lock() {
+                return guard.status.clone();
+            }
+            // Optional: Add a small delay between attempts to avoid spinning too quickly
+            thread::sleep(std::time::Duration::from_millis(10));
+        }
     }
     /// Get the neighbours of the node
     pub fn get_neighbours(&self) -> Vec<(String, (f64, f64))> {

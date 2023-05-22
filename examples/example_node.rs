@@ -7,8 +7,8 @@ fn main() {
     println!("node online..... {:?}", node.get_zid());
 
     loop {
-        if node.get_status() == NodeStatus::Offline {
-            break;
-        }
+        // if node.get_status() == NodeStatus::Offline {
+        //     break;
+        // }
     }
 }
