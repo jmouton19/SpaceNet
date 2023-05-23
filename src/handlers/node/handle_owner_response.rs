@@ -2,14 +2,17 @@ use crate::message::{DefaultMessage, ExpectedNodes, NewVoronoiResponse, OwnerRes
 use crate::node::{NodeData, NodeStatus, SyncResolve};
 use crate::utils::Voronoi;
 use bincode::{deserialize, serialize};
-use std::sync::{Arc, MutexGuard};
+
+use std::sync::Arc;
 use zenoh::Session;
 
 /// Sets given site and calculates initial voronoi from owner and his neighbours. Then asks for neighbours from neighbours.
 pub fn handle_owner_response(
     payload: &[u8],
-    mut node_data: MutexGuard<NodeData>,
+    node_data: &mut NodeData,
     session: Arc<Session>,
+    zid: &str,
+    cluster_name: &str,
 ) {
     println!("IM NOT BEING USED");
     let data: OwnerResponse = deserialize(payload).unwrap();
@@ -27,10 +30,7 @@ pub fn handle_owner_response(
     println!("My neighbours are {:?}", node_data.neighbours);
 
     //calc initial voronoi
-    let diagram = Voronoi::new(
-        (node_data.zid.clone(), node_data.site),
-        &node_data.neighbours,
-    );
+    let diagram = Voronoi::new((zid.to_string(), node_data.site), &node_data.neighbours);
     // draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str());
     //my new visible neighbours
     node_data.neighbours = diagram.get_neighbours();
@@ -42,21 +42,18 @@ pub fn handle_owner_response(
     //request neighbours from neighbours and send it to new node
 
     let message = serialize(&DefaultMessage {
-        sender_id: node_data.zid.clone(),
+        sender_id: zid.to_string(),
     })
     .unwrap();
 
     if node_data.neighbours.is_empty() {
         let message = serialize(&ExpectedNodes {
             number: 1,
-            sender_id: node_data.zid.clone(),
+            sender_id: zid.to_string(),
         })
         .unwrap();
         session
-            .put(
-                format!("{}/counter/expected_wait", node_data.cluster_name),
-                message,
-            )
+            .put(format!("{}/counter/expected_wait", cluster_name), message)
             .res()
             .unwrap();
 
@@ -69,15 +66,12 @@ pub fn handle_owner_response(
         node_data.polygon = polygon.clone();
         let message = serialize(&NewVoronoiResponse {
             polygon,
-            sender_id: node_data.zid.clone(),
+            sender_id: zid.to_string(),
             site: node_data.site,
         })
         .unwrap();
         session
-            .put(
-                format!("{}/counter/complete", node_data.cluster_name),
-                message,
-            )
+            .put(format!("{}/counter/complete", cluster_name), message)
             .res()
             .unwrap();
         node_data.status = NodeStatus::Online;
@@ -87,7 +81,7 @@ pub fn handle_owner_response(
                 .put(
                     format!(
                         "{}/node/{}/neighbours_neighbours",
-                        node_data.cluster_name, neighbour_id
+                        cluster_name, neighbour_id
                     ),
                     message.clone(),
                 )

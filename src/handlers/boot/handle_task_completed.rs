@@ -1,6 +1,6 @@
 use crate::boot_node::BootNodeData;
 use crate::message::NewVoronoiResponse;
-use crate::types::{OrderedMapPairs, OrderedMapPolygon};
+
 use bincode::deserialize;
 use std::sync::MutexGuard;
 

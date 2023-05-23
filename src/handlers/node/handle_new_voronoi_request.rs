@@ -2,14 +2,17 @@ use crate::message::{NewVoronoiRequest, NewVoronoiResponse};
 use crate::node::{NodeData, SyncResolve};
 use crate::utils::Voronoi;
 use bincode::{deserialize, serialize};
-use std::sync::{Arc, MutexGuard};
+
+use std::sync::Arc;
 use zenoh::Session;
 
 /// Recalculates voronoi with new site and sends new polygon to boot node
 pub fn handle_new_voronoi_request(
     payload: &[u8],
-    mut node_data: MutexGuard<NodeData>,
+    node_data: &mut NodeData,
     session: Arc<Session>,
+    zid: &str,
+    cluster_name: &str,
 ) {
     let data: NewVoronoiRequest = deserialize(payload).unwrap();
     println!("Recalculating my voronoi with site... {:?}", data.site);
@@ -18,10 +21,7 @@ pub fn handle_new_voronoi_request(
     node_data
         .neighbours
         .insert(data.sender_id.to_string(), data.site);
-    let diagram = Voronoi::new(
-        (node_data.zid.clone(), node_data.site),
-        &node_data.neighbours,
-    );
+    let diagram = Voronoi::new((zid.to_string(), node_data.site), &node_data.neighbours);
     // draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str());
     //my new visible neighbours
     node_data.neighbours = diagram.get_neighbours();
@@ -34,15 +34,12 @@ pub fn handle_new_voronoi_request(
     node_data.polygon = polygon.clone();
     let message = serialize(&NewVoronoiResponse {
         polygon,
-        sender_id: node_data.zid.clone(),
+        sender_id: zid.to_string(),
         site: node_data.site,
     })
     .unwrap();
     session
-        .put(
-            format!("{}/counter/complete", node_data.cluster_name),
-            message,
-        )
+        .put(format!("{}/counter/complete", cluster_name), message)
         .res()
         .unwrap();
 }

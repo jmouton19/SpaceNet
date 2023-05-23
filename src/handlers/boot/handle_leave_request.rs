@@ -1,4 +1,4 @@
-use crate::boot_node::{BootNode, BootNodeData};
+use crate::boot_node::BootNodeData;
 use crate::message::DefaultMessage;
 use crate::node::SyncResolve;
 use bincode::{deserialize, serialize};

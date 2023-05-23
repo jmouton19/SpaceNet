@@ -11,14 +11,14 @@ use async_std::io::ReadExt;
 use async_std::{io, task};
 use bincode::serialize;
 
-use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time::Duration;
-use rand::Rng;
+use std::sync::Arc;
+
+use zenoh::prelude::r#async::AsyncResolve;
 
 pub use zenoh::prelude::sync::*;
 
 /// A node in a network that has a point site which is used in the calculation of the voronoi diagram of a cluster. Computes its own voronoi polygon from its list of neighbours. Does not store information on entire cluster.
+#[derive(Clone)]
 pub struct NodeData {
     pub(crate) site: (f64, f64),
     pub(crate) neighbours: OrderedMapPairs,
@@ -27,155 +27,202 @@ pub struct NodeData {
     pub(crate) expected_counter: i32,
     pub(crate) polygon: Vec<(f64, f64)>,
     pub(crate) status: NodeStatus,
-    pub(crate) cluster_name: String,
-    pub(crate) zid: String,
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub enum API_MESSAGE {
+    GetStatus,
+}
+#[derive(PartialEq, Clone, Debug)]
+pub enum API_RESPONSE {
+    GetStatusResponse(NodeStatus),
 }
 
 pub struct Node {
-    pub(crate) node_data: Arc<Mutex<NodeData>>,
+    //pub(crate) node_data: NodeData,
     pub(crate) session: Arc<Session>,
+    pub(crate) cluster_name: String,
+    pub(crate) zid: String,
+    pub(crate) api_requester_tx: flume::Sender<API_MESSAGE>,
+    pub(crate) api_responder_rx: flume::Receiver<API_RESPONSE>,
     // subscription: Option<Subscriber<'a, ()>>,
 }
 
 impl Node {
-    pub fn new(cluster: &str) -> Self {
+    pub fn new(cluster_name: &str) -> Self {
         let session = zenoh::open(config::default())
             .res_sync()
             .unwrap()
             .into_arc();
         let zid = session.zid().to_string();
-        let node_data = NodeData::new(cluster, zid);
-        let node_data = Arc::new(Mutex::new(node_data));
+
+        let session_clone = Arc::clone(&session);
+        let (zenoh_tx, zenoh_rx) = flume::unbounded();
+        let cluster_name_clone = cluster_name.to_string();
+        let zid_clone = zid.to_string();
+        //task to listen for zenoh messages, sends message to processor task.
+        async_std::task::spawn(async move {
+            let subscriber = session_clone
+                .declare_subscriber(format!("{}/node/{}/*", cluster_name_clone, zid_clone))
+                .with(flume::unbounded())
+                .reliable()
+                .res_async()
+                .await
+                .unwrap();
+            while let Ok(sample) = subscriber.recv_async().await {
+                zenoh_tx.send(sample).unwrap();
+            }
+        });
+
+        //Processor task, handles messages from zenoh. Update node_data copy in API task
+        let session_clone = Arc::clone(&session);
+        let (node_update_tx, node_update_rx) = flume::unbounded();
+        let cluster_name_clone = cluster_name.to_string();
+        let zid_clone = zid.to_string();
+        async_std::task::spawn(async move {
+            let mut node_data = NodeData::new();
+
+            while let Ok(sample) = zenoh_rx.recv_async().await {
+                let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
+                println!("Received message on topic... {:?}", topic);
+                let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
+                let session_clone = session_clone.clone();
+                let cluster_name = cluster_name_clone.as_str();
+                let zid = zid_clone.as_str();
+                match topic {
+                    "new_reply" => {
+                        handle_owner_request(
+                            payload,
+                            &mut node_data,
+                            session_clone,
+                            zid,
+                            cluster_name,
+                        );
+                    }
+                    "owner_request" => {
+                        handle_owner_request(
+                            payload,
+                            &mut node_data,
+                            session_clone,
+                            zid,
+                            cluster_name,
+                        );
+                    }
+                    "owner_response" => {
+                        handle_owner_response(
+                            payload,
+                            &mut node_data,
+                            session_clone,
+                            zid,
+                            cluster_name,
+                        );
+                    }
+                    "neighbours_neighbours" => {
+                        handle_neighbours_neighbours_request(
+                            payload,
+                            &mut node_data,
+                            session_clone,
+                            zid,
+                            cluster_name,
+                        );
+                    }
+                    "neighbours_neighbours_reply" => {
+                        handle_neighbours_neighbours_response(
+                            payload,
+                            &mut node_data,
+                            session_clone,
+                            zid,
+                            cluster_name,
+                        );
+                    }
+                    "new_voronoi" => {
+                        handle_new_voronoi_request(
+                            payload,
+                            &mut node_data,
+                            session_clone,
+                            zid,
+                            cluster_name,
+                        );
+                    }
+                    "leave_voronoi" => {
+                        handle_leave_voronoi_request(
+                            payload,
+                            &mut node_data,
+                            session_clone,
+                            zid,
+                            cluster_name,
+                        );
+                    }
+                    "leave_reply" => {
+                        handle_leave_response(
+                            payload,
+                            &mut node_data,
+                            session_clone,
+                            zid,
+                            cluster_name,
+                        );
+                    }
+                    _ => println!("UNKNOWN NODE TOPIC"),
+                }
+            }
+            //ok ive updated node data send to API task
+            node_update_tx.send(node_data.clone()).unwrap();
+        });
+
+        let (api_requester_tx, api_requester_rx) = flume::unbounded();
+        let (api_responder_tx, api_responder_rx) = flume::unbounded();
+
+        async_std::task::spawn(async move {
+            let mut node_data_copy = NodeData::new();
+            while let Ok(updated_node_data) = node_update_rx.recv_async().await {
+                node_data_copy = updated_node_data.clone();
+            }
+            if node_update_rx.is_empty() {
+                while let Ok(api_message) = api_requester_rx.recv_async().await {
+                    let api_response = match api_message {
+                        API_MESSAGE::GetStatus => {
+                            API_RESPONSE::GetStatusResponse(node_data_copy.status.clone())
+                        }
+                    };
+                    api_responder_tx.send(api_response).unwrap();
+                }
+            }
+        });
+
         Self {
-            node_data,
+            //node_data,
             session,
+            cluster_name: cluster_name.to_string(),
+            zid,
             //subscription: None,
+            api_requester_tx,
+            api_responder_rx,
         }
     }
 
     // Process the current messages that are in the subscription channel queue one at a time. Handles each topic with a different [handler](crate::handlers::node).
     pub fn join(&mut self) {
-        let node_data_clone = Arc::clone(&self.node_data);
-        let session_clone = Arc::clone(&self.session);
-
-        thread::spawn(move || {
-            let guard = node_data_clone.lock().unwrap();
-            let subscription = session_clone
-                .declare_subscriber(format!("{}/node/{}/*", guard.cluster_name, guard.zid))
-                .reliable()
-                .res_sync()
-                .unwrap();
-            drop(guard);
-            loop {
-                //maybe dont break if offline just dont execute?
-                // if node_data_clone.lock().unwrap().status == NodeStatus::Offline {
-                //     break;
-                // }
-                while let Ok(sample) = subscription.try_recv() {
-                    let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
-                    println!("Received message on topic... {:?}", topic);
-                    let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
-                    let node_data_guard_clone = node_data_clone.lock().unwrap();
-                    let mut rng = rand::thread_rng();
-                    let delay = rng.gen_range(1..=10);
-                    thread::sleep(Duration::from_millis(delay));
-                    match topic {
-                        "new_reply" => {
-                            handle_owner_request(
-                                payload,
-                                node_data_guard_clone,
-                                session_clone.clone(),
-                            );
-                        }
-                        "owner_request" => {
-                            handle_owner_request(
-                                payload,
-                                node_data_guard_clone,
-                                session_clone.clone(),
-                            );
-                        }
-                        "owner_response" => {
-                            handle_owner_response(
-                                payload,
-                                node_data_guard_clone,
-                                session_clone.clone(),
-                            );
-                        }
-                        "neighbours_neighbours" => {
-                            handle_neighbours_neighbours_request(
-                                payload,
-                                node_data_guard_clone,
-                                session_clone.clone(),
-                            );
-                        }
-                        "neighbours_neighbours_reply" => {
-                            handle_neighbours_neighbours_response(
-                                payload,
-                                node_data_guard_clone,
-                                session_clone.clone(),
-                            );
-                        }
-                        "new_voronoi" => {
-                            handle_new_voronoi_request(
-                                payload,
-                                node_data_guard_clone,
-                                session_clone.clone(),
-                            );
-                        }
-                        "leave_voronoi" => {
-                            handle_leave_voronoi_request(
-                                payload,
-                                node_data_guard_clone,
-                                session_clone.clone(),
-                            );
-                        }
-                        "leave_reply" => {
-                            handle_leave_response(
-                                payload,
-                                node_data_guard_clone,
-                                session_clone.clone(),
-                            );
-                        }
-                        _ => println!("UNKNOWN NODE TOPIC"),
-                    }
-                    //thread::sleep(Duration::from_secs(2));
-                }
-            }
-        });
-
-        let node_data_guard = self.node_data.lock().unwrap();
-
         let message = serialize(&DefaultMessage {
-            sender_id: node_data_guard.zid.clone(),
+            sender_id: self.zid.clone(),
         })
         .unwrap();
-
         self.session
-            .put(
-                format!("{}/node/boot/new", node_data_guard.cluster_name),
-                message,
-            )
+            .put(format!("{}/node/boot/new", self.cluster_name), message)
             .res_sync()
             .unwrap();
-
-        //self.subscription = Some(subscription);
     }
 
     ///Node is dropped and leaves the cluster when not busy with task.
     pub fn leave(&mut self) {
-        let mut node_data_guard = self.node_data.lock().unwrap();
-        if !matches!(
-            node_data_guard.status,
-            NodeStatus::Leaving | NodeStatus::Offline
-        ) {
-            node_data_guard.status = NodeStatus::Leaving;
+        let status = self.get_status();
+        if !matches!(status, NodeStatus::Leaving | NodeStatus::Offline) {
             let message = serialize(&DefaultMessage {
-                sender_id: node_data_guard.zid.clone(),
+                sender_id: self.zid.clone(),
             })
             .unwrap();
             self.session
                 .put(
-                    format!("{}/node/boot/leave_request", node_data_guard.cluster_name),
+                    format!("{}/node/boot/leave_request", self.cluster_name),
                     message,
                 )
                 .res_sync()
@@ -187,8 +234,8 @@ impl Node {
     ///use to return Self but cant use builder pattern in C
     pub fn leave_on_pressed(&self, key: char) {
         let session = self.session.clone();
-        let zid = self.node_data.lock().unwrap().zid.clone();
-        let cluster = self.node_data.lock().unwrap().cluster_name.clone();
+        let zid = self.zid.clone();
+        let cluster = self.cluster_name.clone();
         task::spawn(async move {
             let mut buffer = [0; 1];
             loop {
@@ -211,62 +258,62 @@ impl Node {
 
     /// Get the zid of the node
     pub fn get_zid(&self) -> String {
-        self.node_data.lock().unwrap().zid.clone()
+        self.zid.clone()
     }
     ///Get node status
     pub fn get_status(&self) -> NodeStatus {
-        loop {
-            if let Ok(guard) = self.node_data.try_lock() {
-                return guard.status.clone();
-            }
-            // Optional: Add a small delay between attempts to avoid spinning too quickly
-            thread::sleep(std::time::Duration::from_millis(10));
+        self.api_requester_tx.send(API_MESSAGE::GetStatus).unwrap();
+
+        if let API_RESPONSE::GetStatusResponse(status) = self.api_responder_rx.recv().unwrap() {
+            status
+        } else {
+            panic!("Wrong response type");
         }
-    }
-    /// Get the neighbours of the node
-    pub fn get_neighbours(&self) -> Vec<(String, (f64, f64))> {
-        self.node_data
-            .lock()
-            .unwrap()
-            .neighbours
-            .clone()
-            .into_iter()
-            .collect()
-    }
-    /// Check if the node is a neighbour
-    pub fn is_neighbour(&self, zid: &str) -> bool {
-        self.node_data.lock().unwrap().neighbours.contains_key(zid)
-    }
-    /// Get the polygon of the node
-    pub fn get_polygon(&self) -> Vec<(f64, f64)> {
-        self.node_data.lock().unwrap().polygon.clone()
     }
 
-    ///Check if the point site is in the polygon. Ray casting algorithm.
-    pub fn is_in_polygon(&self, point: (f64, f64)) -> bool {
-        let guard = self.node_data.lock().unwrap();
-        if guard.polygon.is_empty() {
-            false
-        } else {
-            let mut i = 0;
-            let mut j = guard.polygon.len() - 1;
-            let mut c = false;
-            while i < guard.polygon.len() {
-                if ((guard.polygon[i].1 > point.1) != (guard.polygon[j].1 > point.1))
-                    && (point.0
-                        < (guard.polygon[j].0 - guard.polygon[i].0)
-                            * (point.1 - guard.polygon[i].1)
-                            / (guard.polygon[j].1 - guard.polygon[i].1)
-                            + guard.polygon[i].0)
-                {
-                    c = !c;
-                }
-                j = i;
-                i += 1;
-            }
-            c
-        }
-    }
+    // /// Get the neighbours of the node
+    // pub fn get_neighbours(&self) -> Vec<(String, (f64, f64))> {
+    //     self.node_data
+    //         .lock()
+    //         .neighbours
+    //         .clone()
+    //         .into_iter()
+    //         .collect()
+    // }
+    // /// Check if the node is a neighbour
+    // pub fn is_neighbour(&self, zid: &str) -> bool {
+    //     self.node_data.lock().neighbours.contains_key(zid)
+    // }
+    // /// Get the polygon of the node
+    // pub fn get_polygon(&self) -> Vec<(f64, f64)> {
+    //     self.node_data.lock().polygon.clone()
+    // }
+    //
+    // ///Check if the point site is in the polygon. Ray casting algorithm.
+    // pub fn is_in_polygon(&self, point: (f64, f64)) -> bool {
+    //     let guard = self.node_data.lock();
+    //     if guard.polygon.is_empty() {
+    //         false
+    //     } else {
+    //         let mut i = 0;
+    //         let mut j = guard.polygon.len() - 1;
+    //         let mut c = false;
+    //         while i < guard.polygon.len() {
+    //             if ((guard.polygon[i].1 > point.1) != (guard.polygon[j].1 > point.1))
+    //                 && (point.0
+    //                     < (guard.polygon[j].0 - guard.polygon[i].0)
+    //                         * (point.1 - guard.polygon[i].1)
+    //                         / (guard.polygon[j].1 - guard.polygon[i].1)
+    //                         + guard.polygon[i].0)
+    //             {
+    //                 c = !c;
+    //             }
+    //             j = i;
+    //             i += 1;
+    //         }
+    //         c
+    //     }
+    // }
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -281,7 +328,7 @@ pub enum NodeStatus {
 impl NodeData {
     // Creates a new node instance with a [session](https://docs.rs/zenoh/0.7.0-rc/zenoh/struct.Session.html). Joins the cluster by messaging a boot node on that cluster.
     // Opens a subscription on topic `{cluster}/node/{zid}/*` to receive incoming messages.
-    pub fn new(cluster: &str, zid: String) -> Self {
+    pub fn new() -> Self {
         Self {
             site: (-1., -1.),
             neighbours: OrderedMapPairs::new(),
@@ -289,9 +336,7 @@ impl NodeData {
             polygon: vec![],
             received_counter: 0,
             expected_counter: -1,
-            cluster_name: cluster.to_string(),
             status: NodeStatus::Joining,
-            zid,
         }
     }
 }

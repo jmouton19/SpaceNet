@@ -5,15 +5,12 @@ use crate::handlers::boot::set_expected_counter::set_expected_counter;
 use crate::node::SyncResolve;
 use crate::types::{OrderedMapPairs, OrderedMapPolygon};
 use crate::utils::{draw_voronoi_full, Voronoi};
-use libc::sleep;
-use rand::Rng;
+
 use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time::Duration;
+
+use zenoh::prelude::r#async::AsyncResolve;
 
 pub use zenoh::prelude::sync::*;
-use zenoh::prelude::Sample;
-use zenoh::subscriber::Subscriber;
 
 /// A boot node in a network acts as the entry point for new nodes to join the cluster. It also acts as a central point for nodes to leave the cluster. Stores the site and polygon information of all nodes in the network. Constructs the distributed voronoi diagram from received polygons as well as a centralized voronoi diagram.
 pub struct BootNode {
@@ -37,7 +34,10 @@ pub struct BootNodeData {
 
 impl BootNode {
     pub fn new(cluster_name: &str, centralized_voronoi: bool) -> Self {
-        let session = zenoh::open(Config::default()).res().unwrap().into_arc();
+        let session = zenoh::open(Config::default())
+            .res_sync()
+            .unwrap()
+            .into_arc();
         let zid = session.zid().to_string();
 
         let boot_node_data = Arc::new(Mutex::new(BootNodeData::new(
@@ -56,119 +56,120 @@ impl BootNode {
         let boot_node_data_clone = Arc::clone(&self.boot_node_data);
         let session_clone = Arc::clone(&self.session);
 
-        thread::spawn(move || {
-            let guard = boot_node_data_clone.lock().unwrap();
-            let counter_subscriber = session_clone
-                .declare_subscriber(format!("{}/counter/*", guard.cluster_name))
-                .reliable()
-                .res()
-                .unwrap();
+        let cluster_name = boot_node_data_clone.lock().unwrap().cluster_name.clone();
+
+        let (tx, rx) = flume::unbounded();
+        let (tx2, rx2) = flume::unbounded();
+        async_std::task::spawn(async move {
             let boot_subscriber = session_clone
-                .declare_subscriber(format!("{}/node/boot/*", guard.cluster_name))
+                .declare_subscriber(format!("{}/node/boot/*", cluster_name))
+                .with(flume::unbounded())
                 .reliable()
-                .res()
+                .res_async()
+                .await
                 .unwrap();
-            drop(guard);
+            while let Ok(sample) = boot_subscriber.recv_async().await {
+                tx.send(sample).unwrap();
+            }
+        });
+        let session_clone = Arc::clone(&self.session);
+        let cluster_name = boot_node_data_clone.lock().unwrap().cluster_name.clone();
+        async_std::task::spawn(async move {
+            let counter_subscriber = session_clone
+                .declare_subscriber(format!("{}/counter/*", cluster_name))
+                .with(flume::unbounded())
+                .reliable()
+                .res_async()
+                .await
+                .unwrap();
+            while let Ok(sample) = counter_subscriber.recv_async().await {
+                tx2.send(sample).unwrap();
+            }
+        });
 
-            loop {
-                while let Ok(sample) = boot_subscriber.try_recv() {
-                    let mut boot_node_data_guard_clone = boot_node_data_clone.lock().unwrap();
-                    boot_node_data_guard_clone.expected_counter = -1;
-                    boot_node_data_guard_clone.received_counter = 0;
+        let session_clone = Arc::clone(&self.session);
+        async_std::task::spawn(async move {
+            while let Ok(sample) = rx.recv_async().await {
+                let mut guard_clone = boot_node_data_clone.lock().unwrap();
+                guard_clone.expected_counter = -1;
+                guard_clone.received_counter = 0;
 
-                    let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
-                    println!("Message received on topic... {:?}", topic);
-                    let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
-                    let mut rng = rand::thread_rng();
-                    let delay = rng.gen_range(1..=10);
-                    thread::sleep(Duration::from_millis(delay));
-                    match topic {
-                        "new" => {
-                            handle_join_request(
-                                payload,
-                                boot_node_data_guard_clone,
-                                session_clone.clone(),
-                            );
-                        }
-                        "leave_request" => {
-                            handle_leave_request(
-                                payload,
-                                boot_node_data_guard_clone,
-                                session_clone.clone(),
-                            );
-                        }
-                        _ => println!("UNKNOWN BOOT TOPIC"),
+                let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
+                println!("Message received on topic... {:?}", topic);
+                let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
+                // let mut rng = rand::thread_rng();
+                // let delay = rng.gen_range(1..=10);
+                // thread::sleep(Duration::from_millis(delay));
+                match topic {
+                    "new" => {
+                        handle_join_request(payload, guard_clone, session_clone.clone());
                     }
-                    let mut expected_counter =
-                        boot_node_data_clone.lock().unwrap().expected_counter;
-                    let mut received_counter =
-                        boot_node_data_clone.lock().unwrap().received_counter;
+                    "leave_request" => {
+                        handle_leave_request(payload, guard_clone, session_clone.clone());
+                    }
+                    _ => println!("UNKNOWN BOOT TOPIC"),
+                }
+                let mut expected_counter = boot_node_data_clone.lock().unwrap().expected_counter;
+                let mut received_counter = boot_node_data_clone.lock().unwrap().received_counter;
 
-                    while expected_counter != received_counter {
-                        while let Ok(sample) = counter_subscriber.try_recv() {
-                            let mut boot_node_data_guard_clone =
-                                boot_node_data_clone.lock().unwrap();
-                            let topic = sample.key_expr.split('/').nth(2).unwrap_or("");
-                            println!("Message received on topic... {:?}", topic);
-                            let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
-                            let mut rng = rand::thread_rng();
-                            let delay = rng.gen_range(1..=10);
-                            thread::sleep(Duration::from_millis(delay));
-                            match topic {
-                                "expected_wait" => {
-                                    set_expected_counter(
-                                        payload,
-                                        &mut boot_node_data_guard_clone.expected_counter,
-                                    );
-                                }
-                                "complete" => {
-                                    handle_task_completed(payload, boot_node_data_guard_clone);
-                                }
-                                _ => println!("UNKNOWN COUNTER TOPIC"),
+                while expected_counter != received_counter {
+                    while let Ok(sample) = rx2.try_recv() {
+                        let mut guard_clone = boot_node_data_clone.lock().unwrap();
+                        let topic = sample.key_expr.split('/').nth(2).unwrap_or("");
+                        println!("Message received on topic... {:?}", topic);
+                        let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
+
+                        match topic {
+                            "expected_wait" => {
+                                set_expected_counter(payload, &mut guard_clone.expected_counter);
                             }
+                            "complete" => {
+                                handle_task_completed(payload, guard_clone);
+                            }
+                            _ => println!("UNKNOWN COUNTER TOPIC"),
                         }
-                        expected_counter = boot_node_data_clone.lock().unwrap().expected_counter;
-                        received_counter = boot_node_data_clone.lock().unwrap().received_counter;
                     }
+                    expected_counter = boot_node_data_clone.lock().unwrap().expected_counter;
+                    received_counter = boot_node_data_clone.lock().unwrap().received_counter;
+                }
 
-                    let mut guard = boot_node_data_clone.lock().unwrap();
-                    if !guard.cluster.is_empty() {
-                        //redraw distributed voronoi
+                let mut guard = boot_node_data_clone.lock().unwrap();
+                if !guard.cluster.is_empty() {
+                    //redraw distributed voronoi
+                    draw_voronoi_full(
+                        &guard.cluster,
+                        &guard.polygon_list,
+                        format!("{}voronoi", guard.draw_count).as_str(),
+                    );
+                    if guard.centralized_voronoi {
+                        //correct voronoi
+                        let mut hash_map = guard.cluster.clone();
+                        guard.correct_polygon_list = OrderedMapPolygon::new();
+                        let (first_zid, first_site) = hash_map
+                            .iter()
+                            .next()
+                            .map(|(k, v)| (k.clone(), *v))
+                            .unwrap();
+                        hash_map.swap_remove_index(0);
+
+                        let diagram = Voronoi::new((first_zid, first_site), &hash_map);
+
+                        for (i, cell) in diagram.diagram.cells().iter().enumerate() {
+                            let polygon = cell.points().iter().map(|x| (x.x, x.y)).collect();
+                            let site_id = diagram.input.keys().nth(i).unwrap();
+                            guard
+                                .correct_polygon_list
+                                .insert(site_id.to_string(), polygon);
+                        }
                         draw_voronoi_full(
                             &guard.cluster,
-                            &guard.polygon_list,
-                            format!("{}voronoi", guard.draw_count).as_str(),
+                            &guard.correct_polygon_list,
+                            format!("{}confirm", guard.draw_count).as_str(),
                         );
-                        if guard.centralized_voronoi {
-                            //correct voronoi
-                            let mut hash_map = guard.cluster.clone();
-                            guard.correct_polygon_list = OrderedMapPolygon::new();
-                            let (first_zid, first_site) = hash_map
-                                .iter()
-                                .next()
-                                .map(|(k, v)| (k.clone(), *v))
-                                .unwrap();
-                            hash_map.swap_remove_index(0);
-
-                            let diagram = Voronoi::new((first_zid, first_site), &hash_map);
-
-                            for (i, cell) in diagram.diagram.cells().iter().enumerate() {
-                                let polygon = cell.points().iter().map(|x| (x.x, x.y)).collect();
-                                let site_id = diagram.input.keys().nth(i).unwrap();
-                                guard
-                                    .correct_polygon_list
-                                    .insert(site_id.to_string(), polygon);
-                            }
-                            draw_voronoi_full(
-                                &guard.cluster,
-                                &guard.correct_polygon_list,
-                                format!("{}confirm", guard.draw_count).as_str(),
-                            );
-                        }
-                        guard.draw_count += 1;
-                        drop(guard);
-                    };
-                }
+                    }
+                    guard.draw_count += 1;
+                    drop(guard);
+                };
             }
         });
     }

@@ -1,4 +1,4 @@
-use crate::boot_node::{BootNode, BootNodeData};
+use crate::boot_node::BootNodeData;
 use crate::message::{DefaultMessage, NewNodeResponse};
 use crate::node::SyncResolve;
 use crate::types::{closest_point, point_within_distance};
