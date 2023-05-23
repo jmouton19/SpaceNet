@@ -29,22 +29,28 @@
 <a href="#28" id="28">28</a>
 <a href="#29" id="29">29</a>
 <a href="#30" id="30">30</a>
+<a href="#31" id="31">31</a>
+<a href="#32" id="32">32</a>
+<a href="#33" id="33">33</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::message::{DefaultMessage, NeighboursResponse};
 <span class="kw">use </span><span class="kw">crate</span>::node::{NodeData, SyncResolve};
 <span class="kw">use </span>bincode::{deserialize, serialize};
-<span class="kw">use </span>std::sync::{Arc, MutexGuard};
+
+<span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>zenoh::Session;
 
 <span class="doccomment">/// Sends list of neighbours to new node
 </span><span class="kw">pub fn </span>handle_neighbours_neighbours_request(
     payload: <span class="kw-2">&amp;</span>[u8],
-    node_data: MutexGuard&lt;NodeData&gt;,
+    node_data: <span class="kw-2">&amp;mut </span>NodeData,
     session: Arc&lt;Session&gt;,
+    zid: <span class="kw-2">&amp;</span>str,
+    cluster_name: <span class="kw-2">&amp;</span>str,
 ) {
     <span class="kw">let </span>data: DefaultMessage = deserialize(payload).unwrap();
     <span class="comment">//send list of neighbours back to new node
     </span><span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>NeighboursResponse {
-        sender_id: node_data.zid.clone(),
+        sender_id: zid.to_string(),
         neighbours: node_data.neighbours.clone(),
     })
     .unwrap();
@@ -52,7 +58,7 @@
         .put(
             <span class="macro">format!</span>(
                 <span class="string">&quot;{}/node/{}/neighbours_neighbours_reply&quot;</span>,
-                node_data.cluster_name, data.sender_id
+                cluster_name, data.sender_id
             ),
             message,
         )

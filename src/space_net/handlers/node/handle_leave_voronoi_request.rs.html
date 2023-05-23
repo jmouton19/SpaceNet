@@ -60,14 +60,17 @@
 <span class="kw">use </span><span class="kw">crate</span>::node::{NodeData, SyncResolve};
 <span class="kw">use </span><span class="kw">crate</span>::utils::Voronoi;
 <span class="kw">use </span>bincode::{deserialize, serialize};
-<span class="kw">use </span>std::sync::{Arc, MutexGuard};
+
+<span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>zenoh::Session;
 
 <span class="doccomment">/// Calculates new voronoi without leavers site but with his neighbours and sends new polygon to boot node.
 </span><span class="kw">pub fn </span>handle_leave_voronoi_request(
     payload: <span class="kw-2">&amp;</span>[u8],
-    <span class="kw-2">mut </span>node_data: MutexGuard&lt;NodeData&gt;,
+    node_data: <span class="kw-2">&amp;mut </span>NodeData,
     session: Arc&lt;Session&gt;,
+    zid: <span class="kw-2">&amp;</span>str,
+    cluster_name: <span class="kw-2">&amp;</span>str,
 ) {
     <span class="kw">let </span>data: NeighboursResponse = deserialize(payload).unwrap();
     <span class="macro">println!</span>(
@@ -79,16 +82,16 @@
     //recalculate own voronoi
     </span>node_data.neighbours.remove(data.sender_id.as_str());
     node_data.neighbours.extend(data.neighbours);
-    <span class="kw">let </span>zid = node_data.zid.clone();
-    node_data.neighbours.remove(zid.as_str());
+
+    {
+        <span class="kw">let </span>zid = zid.to_string();
+        node_data.neighbours.remove(zid.as_str());
+    }
     <span class="kw">if </span>node_data.neighbours.is_empty() {
         node_data.site = (<span class="number">50.0</span>, <span class="number">50.0</span>);
     }
 
-    <span class="kw">let </span>diagram = Voronoi::new(
-        (node_data.zid.clone(), node_data.site),
-        <span class="kw-2">&amp;</span>node_data.neighbours,
-    );
+    <span class="kw">let </span>diagram = Voronoi::new((zid.to_string(), node_data.site), <span class="kw-2">&amp;</span>node_data.neighbours);
     <span class="comment">// draw_voronoi(&amp;diagram.diagram,format!(&quot;new_{}&quot;,node.session.zid()).as_str());
     //my new visible neighbours
     </span>node_data.neighbours = diagram.get_neighbours();
@@ -101,15 +104,12 @@
     node_data.polygon = polygon.clone();
     <span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>NewVoronoiResponse {
         polygon,
-        sender_id: node_data.zid.clone(),
+        sender_id: zid.to_string(),
         site: node_data.site,
     })
     .unwrap();
     session
-        .put(
-            <span class="macro">format!</span>(<span class="string">&quot;{}/counter/complete&quot;</span>, node_data.cluster_name),
-            message,
-        )
+        .put(<span class="macro">format!</span>(<span class="string">&quot;{}/counter/complete&quot;</span>, cluster_name), message)
         .res()
         .unwrap();
 }

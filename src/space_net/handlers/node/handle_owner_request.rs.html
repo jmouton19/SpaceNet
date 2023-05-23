@@ -44,14 +44,17 @@
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::message::{NewNodeResponse, OwnerResponse};
 <span class="kw">use </span><span class="kw">crate</span>::node::{NodeData, SyncResolve};
 <span class="kw">use </span>bincode::{deserialize, serialize};
-<span class="kw">use </span>std::sync::{Arc, MutexGuard};
+
+<span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>zenoh::Session;
 
 <span class="doccomment">/// Passes on itself, its neighbours and new site point to new node.
 </span><span class="kw">pub fn </span>handle_owner_request(
     payload: <span class="kw-2">&amp;</span>[u8],
-    <span class="kw-2">mut </span>node_data: MutexGuard&lt;NodeData&gt;,
+    node_data: <span class="kw-2">&amp;mut </span>NodeData,
     session: Arc&lt;Session&gt;,
+    zid: <span class="kw-2">&amp;</span>str,
+    cluster_name: <span class="kw-2">&amp;</span>str,
 ) {
     <span class="kw">let </span>data: NewNodeResponse = deserialize(payload).unwrap();
     <span class="macro">println!</span>(
@@ -59,13 +62,13 @@
         data.new_site, data.new_id
     );
 
-    <span class="kw">if </span>node_data.zid == data.new_id {
+    <span class="kw">if </span>zid == data.new_id {
         node_data.site = data.new_site;
     }
 
     <span class="comment">// send my point &amp; my neighbors to new node with new site
     </span><span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>OwnerResponse {
-        sender_id: node_data.zid.clone(),
+        sender_id: zid.to_string(),
         sender_site: node_data.site,
         new_site: data.new_site,
         neighbours: node_data.neighbours.clone(),
@@ -74,10 +77,7 @@
 
     session
         .put(
-            <span class="macro">format!</span>(
-                <span class="string">&quot;{}/node/{}/owner_response&quot;</span>,
-                node_data.cluster_name, data.new_id
-            ),
+            <span class="macro">format!</span>(<span class="string">&quot;{}/node/{}/owner_response&quot;</span>, cluster_name, data.new_id),
             message,
         )
         .res()

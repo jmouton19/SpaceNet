@@ -72,23 +72,22 @@
 <a href="#71" id="71">71</a>
 <a href="#72" id="72">72</a>
 <a href="#73" id="73">73</a>
-<a href="#74" id="74">74</a>
-<a href="#75" id="75">75</a>
-<a href="#76" id="76">76</a>
-<a href="#77" id="77">77</a>
-<a href="#78" id="78">78</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::message::{ExpectedNodes, NeighboursResponse};
 <span class="kw">use </span><span class="kw">crate</span>::node::{NodeData, NodeStatus, SyncResolve};
 <span class="kw">use </span>bincode::serialize;
-<span class="kw">use </span>std::sync::{Arc, MutexGuard};
+
+<span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>zenoh::Session;
 
 <span class="doccomment">/// Handles leave response, if no neighbours, shut down, else tell neighbours to recalculate voronoi without me but with my neighbours.
 </span><span class="kw">pub fn </span>handle_leave_response(
     _payload: <span class="kw-2">&amp;</span>[u8],
-    <span class="kw-2">mut </span>node_data: MutexGuard&lt;NodeData&gt;,
+    node_data: <span class="kw-2">&amp;mut </span>NodeData,
     session: Arc&lt;Session&gt;,
+    zid: <span class="kw-2">&amp;</span>str,
+    cluster_name: <span class="kw-2">&amp;</span>str,
 ) {
+    node_data.status = NodeStatus::Leaving;
     <span class="comment">//tell me how many to wait for
     </span>node_data.expected_counter = node_data.neighbours.len() <span class="kw">as </span>i32;
     <span class="macro">println!</span>(
@@ -99,14 +98,11 @@
     <span class="kw">if </span>node_data.neighbours.is_empty() {
         <span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>ExpectedNodes {
             number: <span class="number">0</span>,
-            sender_id: node_data.zid.clone(),
+            sender_id: zid.to_string(),
         })
         .unwrap();
         session
-            .put(
-                <span class="macro">format!</span>(<span class="string">&quot;{}/counter/expected_wait&quot;</span>, node_data.cluster_name),
-                message,
-            )
+            .put(<span class="macro">format!</span>(<span class="string">&quot;{}/counter/expected_wait&quot;</span>, cluster_name), message)
             .res()
             .unwrap();
         <span class="macro">println!</span>(<span class="string">&quot;IM SHUTTING DOWN BOOT! - i have no friends ;/&quot;</span>);
@@ -117,29 +113,23 @@
         <span class="comment">//send me neighbours my neighbors and without me
         </span><span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>ExpectedNodes {
             number: node_data.neighbours.len() <span class="kw">as </span>i32,
-            sender_id: node_data.zid.clone(),
+            sender_id: zid.to_string(),
         })
         .unwrap();
         session
-            .put(
-                <span class="macro">format!</span>(<span class="string">&quot;{}/counter/expected_wait&quot;</span>, node_data.cluster_name),
-                message,
-            )
+            .put(<span class="macro">format!</span>(<span class="string">&quot;{}/counter/expected_wait&quot;</span>, cluster_name), message)
             .res()
             .unwrap();
 
         <span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>NeighboursResponse {
             neighbours: node_data.neighbours.clone(),
-            sender_id: node_data.zid.clone(),
+            sender_id: zid.to_string(),
         })
         .unwrap();
         <span class="kw">for </span>neighbour_id <span class="kw">in </span>node_data.neighbours.keys() {
             session
                 .put(
-                    <span class="macro">format!</span>(
-                        <span class="string">&quot;{}/node/{}/leave_voronoi&quot;</span>,
-                        node_data.cluster_name, neighbour_id
-                    ),
+                    <span class="macro">format!</span>(<span class="string">&quot;{}/node/{}/leave_voronoi&quot;</span>, cluster_name, neighbour_id),
                     message.clone(),
                 )
                 .res()

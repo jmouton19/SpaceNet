@@ -197,6 +197,7 @@
 <a href="#196" id="196">196</a>
 <a href="#197" id="197">197</a>
 <a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::handlers::boot::handle_join_request::handle_join_request;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::boot::handle_leave_request::handle_leave_request;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::boot::handle_task_completed::handle_task_completed;
@@ -204,15 +205,12 @@
 <span class="kw">use </span><span class="kw">crate</span>::node::SyncResolve;
 <span class="kw">use </span><span class="kw">crate</span>::types::{OrderedMapPairs, OrderedMapPolygon};
 <span class="kw">use </span><span class="kw">crate</span>::utils::{draw_voronoi_full, Voronoi};
-<span class="kw">use </span>libc::sleep;
-<span class="kw">use </span>rand::Rng;
+
 <span class="kw">use </span>std::sync::{Arc, Mutex};
-<span class="kw">use </span>std::thread;
-<span class="kw">use </span>std::time::Duration;
+
+<span class="kw">use </span>zenoh::prelude::r#async::AsyncResolve;
 
 <span class="kw">pub use </span>zenoh::prelude::sync::<span class="kw-2">*</span>;
-<span class="kw">use </span>zenoh::prelude::Sample;
-<span class="kw">use </span>zenoh::subscriber::Subscriber;
 
 <span class="doccomment">/// A boot node in a network acts as the entry point for new nodes to join the cluster. It also acts as a central point for nodes to leave the cluster. Stores the site and polygon information of all nodes in the network. Constructs the distributed voronoi diagram from received polygons as well as a centralized voronoi diagram.
 </span><span class="kw">pub struct </span>BootNode {
@@ -236,7 +234,10 @@
 
 <span class="kw">impl </span>BootNode {
     <span class="kw">pub fn </span>new(cluster_name: <span class="kw-2">&amp;</span>str, centralized_voronoi: bool) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>session = zenoh::open(Config::default()).res().unwrap().into_arc();
+        <span class="kw">let </span>session = zenoh::open(Config::default())
+            .res_sync()
+            .unwrap()
+            .into_arc();
         <span class="kw">let </span>zid = session.zid().to_string();
 
         <span class="kw">let </span>boot_node_data = Arc::new(Mutex::new(BootNodeData::new(
@@ -255,119 +256,120 @@
         <span class="kw">let </span>boot_node_data_clone = Arc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.boot_node_data);
         <span class="kw">let </span>session_clone = Arc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.session);
 
-        thread::spawn(<span class="kw">move </span>|| {
-            <span class="kw">let </span>guard = boot_node_data_clone.lock().unwrap();
-            <span class="kw">let </span>counter_subscriber = session_clone
-                .declare_subscriber(<span class="macro">format!</span>(<span class="string">&quot;{}/counter/*&quot;</span>, guard.cluster_name))
-                .reliable()
-                .res()
-                .unwrap();
+        <span class="kw">let </span>cluster_name = boot_node_data_clone.lock().unwrap().cluster_name.clone();
+
+        <span class="kw">let </span>(tx, rx) = flume::unbounded();
+        <span class="kw">let </span>(tx2, rx2) = flume::unbounded();
+        async_std::task::spawn(<span class="kw">async move </span>{
             <span class="kw">let </span>boot_subscriber = session_clone
-                .declare_subscriber(<span class="macro">format!</span>(<span class="string">&quot;{}/node/boot/*&quot;</span>, guard.cluster_name))
+                .declare_subscriber(<span class="macro">format!</span>(<span class="string">&quot;{}/node/boot/*&quot;</span>, cluster_name))
+                .with(flume::unbounded())
                 .reliable()
-                .res()
-                .unwrap();
-            drop(guard);
+                .res_async()
+                .<span class="kw">await
+                </span>.unwrap();
+            <span class="kw">while let </span><span class="prelude-val">Ok</span>(sample) = boot_subscriber.recv_async().<span class="kw">await </span>{
+                tx.send(sample).unwrap();
+            }
+        });
+        <span class="kw">let </span>session_clone = Arc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.session);
+        <span class="kw">let </span>cluster_name = boot_node_data_clone.lock().unwrap().cluster_name.clone();
+        async_std::task::spawn(<span class="kw">async move </span>{
+            <span class="kw">let </span>counter_subscriber = session_clone
+                .declare_subscriber(<span class="macro">format!</span>(<span class="string">&quot;{}/counter/*&quot;</span>, cluster_name))
+                .with(flume::unbounded())
+                .reliable()
+                .res_async()
+                .<span class="kw">await
+                </span>.unwrap();
+            <span class="kw">while let </span><span class="prelude-val">Ok</span>(sample) = counter_subscriber.recv_async().<span class="kw">await </span>{
+                tx2.send(sample).unwrap();
+            }
+        });
 
-            <span class="kw">loop </span>{
-                <span class="kw">while let </span><span class="prelude-val">Ok</span>(sample) = boot_subscriber.try_recv() {
-                    <span class="kw">let </span><span class="kw-2">mut </span>boot_node_data_guard_clone = boot_node_data_clone.lock().unwrap();
-                    boot_node_data_guard_clone.expected_counter = -<span class="number">1</span>;
-                    boot_node_data_guard_clone.received_counter = <span class="number">0</span>;
+        <span class="kw">let </span>session_clone = Arc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.session);
+        async_std::task::spawn(<span class="kw">async move </span>{
+            <span class="kw">while let </span><span class="prelude-val">Ok</span>(sample) = rx.recv_async().<span class="kw">await </span>{
+                <span class="kw">let </span><span class="kw-2">mut </span>guard_clone = boot_node_data_clone.lock().unwrap();
+                guard_clone.expected_counter = -<span class="number">1</span>;
+                guard_clone.received_counter = <span class="number">0</span>;
 
-                    <span class="kw">let </span>topic = sample.key_expr.split(<span class="string">&#39;/&#39;</span>).nth(<span class="number">3</span>).unwrap_or(<span class="string">&quot;&quot;</span>);
-                    <span class="macro">println!</span>(<span class="string">&quot;Message received on topic... {:?}&quot;</span>, topic);
-                    <span class="kw">let </span>payload = sample.value.payload.get_zslice(<span class="number">0</span>).unwrap().as_ref();
-                    <span class="kw">let </span><span class="kw-2">mut </span>rng = rand::thread_rng();
-                    <span class="kw">let </span>delay = rng.gen_range(<span class="number">1</span>..=<span class="number">10</span>);
-                    thread::sleep(Duration::from_millis(delay));
-                    <span class="kw">match </span>topic {
-                        <span class="string">&quot;new&quot; </span>=&gt; {
-                            handle_join_request(
-                                payload,
-                                boot_node_data_guard_clone,
-                                session_clone.clone(),
-                            );
-                        }
-                        <span class="string">&quot;leave_request&quot; </span>=&gt; {
-                            handle_leave_request(
-                                payload,
-                                boot_node_data_guard_clone,
-                                session_clone.clone(),
-                            );
-                        }
-                        <span class="kw">_ </span>=&gt; <span class="macro">println!</span>(<span class="string">&quot;UNKNOWN BOOT TOPIC&quot;</span>),
+                <span class="kw">let </span>topic = sample.key_expr.split(<span class="string">&#39;/&#39;</span>).nth(<span class="number">3</span>).unwrap_or(<span class="string">&quot;&quot;</span>);
+                <span class="macro">println!</span>(<span class="string">&quot;Message received on topic... {:?}&quot;</span>, topic);
+                <span class="kw">let </span>payload = sample.value.payload.get_zslice(<span class="number">0</span>).unwrap().as_ref();
+                <span class="comment">// let mut rng = rand::thread_rng();
+                // let delay = rng.gen_range(1..=10);
+                // thread::sleep(Duration::from_millis(delay));
+                </span><span class="kw">match </span>topic {
+                    <span class="string">&quot;new&quot; </span>=&gt; {
+                        handle_join_request(payload, guard_clone, session_clone.clone());
                     }
-                    <span class="kw">let </span><span class="kw-2">mut </span>expected_counter =
-                        boot_node_data_clone.lock().unwrap().expected_counter;
-                    <span class="kw">let </span><span class="kw-2">mut </span>received_counter =
-                        boot_node_data_clone.lock().unwrap().received_counter;
-
-                    <span class="kw">while </span>expected_counter != received_counter {
-                        <span class="kw">while let </span><span class="prelude-val">Ok</span>(sample) = counter_subscriber.try_recv() {
-                            <span class="kw">let </span><span class="kw-2">mut </span>boot_node_data_guard_clone =
-                                boot_node_data_clone.lock().unwrap();
-                            <span class="kw">let </span>topic = sample.key_expr.split(<span class="string">&#39;/&#39;</span>).nth(<span class="number">2</span>).unwrap_or(<span class="string">&quot;&quot;</span>);
-                            <span class="macro">println!</span>(<span class="string">&quot;Message received on topic... {:?}&quot;</span>, topic);
-                            <span class="kw">let </span>payload = sample.value.payload.get_zslice(<span class="number">0</span>).unwrap().as_ref();
-                            <span class="kw">let </span><span class="kw-2">mut </span>rng = rand::thread_rng();
-                            <span class="kw">let </span>delay = rng.gen_range(<span class="number">1</span>..=<span class="number">10</span>);
-                            thread::sleep(Duration::from_millis(delay));
-                            <span class="kw">match </span>topic {
-                                <span class="string">&quot;expected_wait&quot; </span>=&gt; {
-                                    set_expected_counter(
-                                        payload,
-                                        <span class="kw-2">&amp;mut </span>boot_node_data_guard_clone.expected_counter,
-                                    );
-                                }
-                                <span class="string">&quot;complete&quot; </span>=&gt; {
-                                    handle_task_completed(payload, boot_node_data_guard_clone);
-                                }
-                                <span class="kw">_ </span>=&gt; <span class="macro">println!</span>(<span class="string">&quot;UNKNOWN COUNTER TOPIC&quot;</span>),
-                            }
-                        }
-                        expected_counter = boot_node_data_clone.lock().unwrap().expected_counter;
-                        received_counter = boot_node_data_clone.lock().unwrap().received_counter;
+                    <span class="string">&quot;leave_request&quot; </span>=&gt; {
+                        handle_leave_request(payload, guard_clone, session_clone.clone());
                     }
-
-                    <span class="kw">let </span><span class="kw-2">mut </span>guard = boot_node_data_clone.lock().unwrap();
-                    <span class="kw">if </span>!guard.cluster.is_empty() {
-                        <span class="comment">//redraw distributed voronoi
-                        </span>draw_voronoi_full(
-                            <span class="kw-2">&amp;</span>guard.cluster,
-                            <span class="kw-2">&amp;</span>guard.polygon_list,
-                            <span class="macro">format!</span>(<span class="string">&quot;{}voronoi&quot;</span>, guard.draw_count).as_str(),
-                        );
-                        <span class="kw">if </span>guard.centralized_voronoi {
-                            <span class="comment">//correct voronoi
-                            </span><span class="kw">let </span><span class="kw-2">mut </span>hash_map = guard.cluster.clone();
-                            guard.correct_polygon_list = OrderedMapPolygon::new();
-                            <span class="kw">let </span>(first_zid, first_site) = hash_map
-                                .iter()
-                                .next()
-                                .map(|(k, v)| (k.clone(), <span class="kw-2">*</span>v))
-                                .unwrap();
-                            hash_map.swap_remove_index(<span class="number">0</span>);
-
-                            <span class="kw">let </span>diagram = Voronoi::new((first_zid, first_site), <span class="kw-2">&amp;</span>hash_map);
-
-                            <span class="kw">for </span>(i, cell) <span class="kw">in </span>diagram.diagram.cells().iter().enumerate() {
-                                <span class="kw">let </span>polygon = cell.points().iter().map(|x| (x.x, x.y)).collect();
-                                <span class="kw">let </span>site_id = diagram.input.keys().nth(i).unwrap();
-                                guard
-                                    .correct_polygon_list
-                                    .insert(site_id.to_string(), polygon);
-                            }
-                            draw_voronoi_full(
-                                <span class="kw-2">&amp;</span>guard.cluster,
-                                <span class="kw-2">&amp;</span>guard.correct_polygon_list,
-                                <span class="macro">format!</span>(<span class="string">&quot;{}confirm&quot;</span>, guard.draw_count).as_str(),
-                            );
-                        }
-                        guard.draw_count += <span class="number">1</span>;
-                        drop(guard);
-                    };
+                    <span class="kw">_ </span>=&gt; <span class="macro">println!</span>(<span class="string">&quot;UNKNOWN BOOT TOPIC&quot;</span>),
                 }
+                <span class="kw">let </span><span class="kw-2">mut </span>expected_counter = boot_node_data_clone.lock().unwrap().expected_counter;
+                <span class="kw">let </span><span class="kw-2">mut </span>received_counter = boot_node_data_clone.lock().unwrap().received_counter;
+
+                <span class="kw">while </span>expected_counter != received_counter {
+                    <span class="kw">while let </span><span class="prelude-val">Ok</span>(sample) = rx2.try_recv() {
+                        <span class="kw">let </span><span class="kw-2">mut </span>guard_clone = boot_node_data_clone.lock().unwrap();
+                        <span class="kw">let </span>topic = sample.key_expr.split(<span class="string">&#39;/&#39;</span>).nth(<span class="number">2</span>).unwrap_or(<span class="string">&quot;&quot;</span>);
+                        <span class="macro">println!</span>(<span class="string">&quot;Message received on topic... {:?}&quot;</span>, topic);
+                        <span class="kw">let </span>payload = sample.value.payload.get_zslice(<span class="number">0</span>).unwrap().as_ref();
+
+                        <span class="kw">match </span>topic {
+                            <span class="string">&quot;expected_wait&quot; </span>=&gt; {
+                                set_expected_counter(payload, <span class="kw-2">&amp;mut </span>guard_clone.expected_counter);
+                            }
+                            <span class="string">&quot;complete&quot; </span>=&gt; {
+                                handle_task_completed(payload, guard_clone);
+                            }
+                            <span class="kw">_ </span>=&gt; <span class="macro">println!</span>(<span class="string">&quot;UNKNOWN COUNTER TOPIC&quot;</span>),
+                        }
+                    }
+                    expected_counter = boot_node_data_clone.lock().unwrap().expected_counter;
+                    received_counter = boot_node_data_clone.lock().unwrap().received_counter;
+                }
+
+                <span class="kw">let </span><span class="kw-2">mut </span>guard = boot_node_data_clone.lock().unwrap();
+                <span class="kw">if </span>!guard.cluster.is_empty() {
+                    <span class="comment">//redraw distributed voronoi
+                    </span>draw_voronoi_full(
+                        <span class="kw-2">&amp;</span>guard.cluster,
+                        <span class="kw-2">&amp;</span>guard.polygon_list,
+                        <span class="macro">format!</span>(<span class="string">&quot;{}voronoi&quot;</span>, guard.draw_count).as_str(),
+                    );
+                    <span class="kw">if </span>guard.centralized_voronoi {
+                        <span class="comment">//correct voronoi
+                        </span><span class="kw">let </span><span class="kw-2">mut </span>hash_map = guard.cluster.clone();
+                        guard.correct_polygon_list = OrderedMapPolygon::new();
+                        <span class="kw">let </span>(first_zid, first_site) = hash_map
+                            .iter()
+                            .next()
+                            .map(|(k, v)| (k.clone(), <span class="kw-2">*</span>v))
+                            .unwrap();
+                        hash_map.swap_remove_index(<span class="number">0</span>);
+
+                        <span class="kw">let </span>diagram = Voronoi::new((first_zid, first_site), <span class="kw-2">&amp;</span>hash_map);
+
+                        <span class="kw">for </span>(i, cell) <span class="kw">in </span>diagram.diagram.cells().iter().enumerate() {
+                            <span class="kw">let </span>polygon = cell.points().iter().map(|x| (x.x, x.y)).collect();
+                            <span class="kw">let </span>site_id = diagram.input.keys().nth(i).unwrap();
+                            guard
+                                .correct_polygon_list
+                                .insert(site_id.to_string(), polygon);
+                        }
+                        draw_voronoi_full(
+                            <span class="kw-2">&amp;</span>guard.cluster,
+                            <span class="kw-2">&amp;</span>guard.correct_polygon_list,
+                            <span class="macro">format!</span>(<span class="string">&quot;{}confirm&quot;</span>, guard.draw_count).as_str(),
+                        );
+                    }
+                    guard.draw_count += <span class="number">1</span>;
+                    drop(guard);
+                };
             }
         });
     }
