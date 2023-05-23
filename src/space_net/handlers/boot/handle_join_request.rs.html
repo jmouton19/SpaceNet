@@ -90,19 +90,28 @@
 <a href="#89" id="89">89</a>
 <a href="#90" id="90">90</a>
 <a href="#91" id="91">91</a>
-</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::boot_node::BootNode;
+<a href="#92" id="92">92</a>
+<a href="#93" id="93">93</a>
+<a href="#94" id="94">94</a>
+<a href="#95" id="95">95</a>
+<a href="#96" id="96">96</a>
+<a href="#97" id="97">97</a>
+</pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::boot_node::{BootNode, BootNodeData};
 <span class="kw">use </span><span class="kw">crate</span>::message::{DefaultMessage, NewNodeResponse};
 <span class="kw">use </span><span class="kw">crate</span>::node::SyncResolve;
 <span class="kw">use </span><span class="kw">crate</span>::types::{closest_point, point_within_distance};
 <span class="kw">use </span>bincode::{deserialize, serialize};
 <span class="kw">use </span>rand::Rng;
-<span class="kw">use </span>std::fs::File;
-<span class="kw">use </span>std::io::BufRead;
-<span class="kw">use </span>std::io::BufReader;
+<span class="kw">use </span>std::sync::{Arc, MutexGuard};
+<span class="kw">use </span>zenoh::Session;
 
 <span class="doccomment">/// Handles a join request from a new node. Boot node assigns a point to the new node and states the closest node (`land_owner`) to the new point. Sends the new node to the &#39;land_owner&#39; node.
 /// Adds new node to cluster and polygon list of boot node.
-</span><span class="kw">pub fn </span>handle_join_request(payload: <span class="kw-2">&amp;</span>[u8], boot_node: <span class="kw-2">&amp;mut </span>BootNode) {
+</span><span class="kw">pub fn </span>handle_join_request(
+    payload: <span class="kw-2">&amp;</span>[u8],
+    <span class="kw-2">mut </span>boot_node_data: MutexGuard&lt;BootNodeData&gt;,
+    session: Arc&lt;Session&gt;,
+) {
     <span class="kw">let </span>data: DefaultMessage = deserialize(payload).unwrap();
     <span class="comment">//get random point to give to new node
 
@@ -111,17 +120,19 @@
 
     <span class="comment">//do something here
     //find closest node to new point
-    </span><span class="kw">if </span>boot_node.cluster.is_empty() {
+    </span><span class="kw">if </span>boot_node_data.cluster.is_empty() {
         point = (<span class="number">50.0</span>, <span class="number">50.0</span>);
-        boot_node.cluster.insert(data.sender_id.to_string(), point);
-        boot_node
+        boot_node_data
+            .cluster
+            .insert(data.sender_id.to_string(), point);
+        boot_node_data
             .polygon_list
             .insert(data.sender_id.to_string(), <span class="macro">vec!</span>[]);
     } <span class="kw">else </span>{
         <span class="comment">//check if a point exist in boot_node.cluster.values that is within X distance of the new point if so precalculate the new point
         </span>point = (rng.gen_range(<span class="number">1.0</span>..=<span class="number">99.0</span>), rng.gen_range(<span class="number">1.0</span>..=<span class="number">99.0</span>));
         <span class="kw">let </span>tolerance = <span class="number">0.1</span>;
-        <span class="kw">while </span>point_within_distance(<span class="kw-2">&amp;</span>boot_node.cluster, point, tolerance) {
+        <span class="kw">while </span>point_within_distance(<span class="kw-2">&amp;</span>boot_node_data.cluster, point, tolerance) {
             point = (rng.gen_range(<span class="number">1.0</span>..=<span class="number">99.0</span>), rng.gen_range(<span class="number">1.0</span>..=<span class="number">99.0</span>));
         }
     }
@@ -152,12 +163,14 @@
     <span class="macro">println!</span>(<span class="string">&quot;Giving point {:?}.... to {:?}&quot;</span>, point, data.sender_id);
     <span class="macro">println!</span>(<span class="string">&quot;------------------------------------&quot;</span>);
 
-    <span class="kw">let </span>(<span class="kw">_</span>, land_owner) = closest_point(<span class="kw-2">&amp;</span>boot_node.cluster, point);
+    <span class="kw">let </span>(<span class="kw">_</span>, land_owner) = closest_point(<span class="kw-2">&amp;</span>boot_node_data.cluster, point);
     <span class="macro">println!</span>(<span class="string">&quot;OWNER: {}&quot;</span>, land_owner);
 
     <span class="comment">//add node to cluster
-    </span>boot_node.cluster.insert(data.sender_id.to_string(), point);
-    boot_node
+    </span>boot_node_data
+        .cluster
+        .insert(data.sender_id.to_string(), point);
+    boot_node_data
         .polygon_list
         .insert(data.sender_id.to_string(), <span class="macro">vec!</span>[]);
 
@@ -165,16 +178,15 @@
     </span><span class="kw">let </span>json_message = serialize(<span class="kw-2">&amp;</span>NewNodeResponse {
         new_site: point,
         new_id: data.sender_id,
-        sender_id: boot_node.zid.clone(),
+        sender_id: boot_node_data.zid.clone(),
     })
     .unwrap();
 
-    boot_node
-        .session
+    session
         .put(
             <span class="macro">format!</span>(
                 <span class="string">&quot;{}/node/{}/owner_request&quot;</span>,
-                boot_node.cluster_name, land_owner
+                boot_node_data.cluster_name, land_owner
             ),
             json_message,
         )

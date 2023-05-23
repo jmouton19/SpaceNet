@@ -155,6 +155,48 @@
 <a href="#154" id="154">154</a>
 <a href="#155" id="155">155</a>
 <a href="#156" id="156">156</a>
+<a href="#157" id="157">157</a>
+<a href="#158" id="158">158</a>
+<a href="#159" id="159">159</a>
+<a href="#160" id="160">160</a>
+<a href="#161" id="161">161</a>
+<a href="#162" id="162">162</a>
+<a href="#163" id="163">163</a>
+<a href="#164" id="164">164</a>
+<a href="#165" id="165">165</a>
+<a href="#166" id="166">166</a>
+<a href="#167" id="167">167</a>
+<a href="#168" id="168">168</a>
+<a href="#169" id="169">169</a>
+<a href="#170" id="170">170</a>
+<a href="#171" id="171">171</a>
+<a href="#172" id="172">172</a>
+<a href="#173" id="173">173</a>
+<a href="#174" id="174">174</a>
+<a href="#175" id="175">175</a>
+<a href="#176" id="176">176</a>
+<a href="#177" id="177">177</a>
+<a href="#178" id="178">178</a>
+<a href="#179" id="179">179</a>
+<a href="#180" id="180">180</a>
+<a href="#181" id="181">181</a>
+<a href="#182" id="182">182</a>
+<a href="#183" id="183">183</a>
+<a href="#184" id="184">184</a>
+<a href="#185" id="185">185</a>
+<a href="#186" id="186">186</a>
+<a href="#187" id="187">187</a>
+<a href="#188" id="188">188</a>
+<a href="#189" id="189">189</a>
+<a href="#190" id="190">190</a>
+<a href="#191" id="191">191</a>
+<a href="#192" id="192">192</a>
+<a href="#193" id="193">193</a>
+<a href="#194" id="194">194</a>
+<a href="#195" id="195">195</a>
+<a href="#196" id="196">196</a>
+<a href="#197" id="197">197</a>
+<a href="#198" id="198">198</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::handlers::boot::handle_join_request::handle_join_request;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::boot::handle_leave_request::handle_leave_request;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::boot::handle_task_completed::handle_task_completed;
@@ -162,8 +204,9 @@
 <span class="kw">use </span><span class="kw">crate</span>::node::SyncResolve;
 <span class="kw">use </span><span class="kw">crate</span>::types::{OrderedMapPairs, OrderedMapPolygon};
 <span class="kw">use </span><span class="kw">crate</span>::utils::{draw_voronoi_full, Voronoi};
+<span class="kw">use </span>libc::sleep;
 <span class="kw">use </span>rand::Rng;
-<span class="kw">use </span>std::sync::Arc;
+<span class="kw">use </span>std::sync::{Arc, Mutex};
 <span class="kw">use </span>std::thread;
 <span class="kw">use </span>std::time::Duration;
 
@@ -172,14 +215,18 @@
 <span class="kw">use </span>zenoh::subscriber::Subscriber;
 
 <span class="doccomment">/// A boot node in a network acts as the entry point for new nodes to join the cluster. It also acts as a central point for nodes to leave the cluster. Stores the site and polygon information of all nodes in the network. Constructs the distributed voronoi diagram from received polygons as well as a centralized voronoi diagram.
-</span><span class="kw">pub struct </span>BootNode&lt;<span class="lifetime">&#39;a</span>&gt; {
+</span><span class="kw">pub struct </span>BootNode {
     <span class="kw">pub</span>(<span class="kw">crate</span>) session: Arc&lt;Session&gt;,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) boot_node_data: Arc&lt;Mutex&lt;BootNodeData&gt;&gt;,
+    <span class="comment">// sub_boot: Subscriber&lt;&#39;a, flume::Receiver&lt;Sample&gt;&gt;,
+    // sub_counter: Subscriber&lt;&#39;a, flume::Receiver&lt;Sample&gt;&gt;,
+</span>}
+
+<span class="kw">pub struct </span>BootNodeData {
     <span class="kw">pub</span>(<span class="kw">crate</span>) zid: String,
     <span class="kw">pub</span>(<span class="kw">crate</span>) cluster_name: String,
     <span class="kw">pub</span>(<span class="kw">crate</span>) received_counter: i32,
     <span class="kw">pub</span>(<span class="kw">crate</span>) expected_counter: i32,
-    sub_boot: Subscriber&lt;<span class="lifetime">&#39;a</span>, flume::Receiver&lt;Sample&gt;&gt;,
-    sub_counter: Subscriber&lt;<span class="lifetime">&#39;a</span>, flume::Receiver&lt;Sample&gt;&gt;,
     <span class="kw">pub </span>cluster: OrderedMapPairs,
     <span class="kw">pub </span>polygon_list: OrderedMapPolygon,
     <span class="kw">pub </span>correct_polygon_list: OrderedMapPolygon,
@@ -187,31 +234,158 @@
     <span class="kw">pub</span>(<span class="kw">crate</span>) centralized_voronoi: bool,
 }
 
-<span class="kw">impl </span>BootNode&lt;<span class="lifetime">&#39;_</span>&gt; {
-    <span class="doccomment">/// Creates a new boot node instance with a [session](https://docs.rs/zenoh/0.7.0-rc/zenoh/struct.Session.html).
-    /// Opens a subscription on topic `{cluster}/boot/*` to receive incoming messages from nodes and a subscription on`{cluster}/counter/*` to count the number of messages its received since processing the current message on the `{cluster}/boot/*` topic.
-    </span><span class="kw">pub fn </span>new(cluster_name: <span class="kw-2">&amp;</span>str, centralized_voronoi: bool) -&gt; <span class="self">Self </span>{
+<span class="kw">impl </span>BootNode {
+    <span class="kw">pub fn </span>new(cluster_name: <span class="kw-2">&amp;</span>str, centralized_voronoi: bool) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>session = zenoh::open(Config::default()).res().unwrap().into_arc();
         <span class="kw">let </span>zid = session.zid().to_string();
 
-        <span class="kw">let </span>counter_subscriber = session
-            .declare_subscriber(<span class="macro">format!</span>(<span class="string">&quot;{}/counter/*&quot;</span>, cluster_name))
-            .reliable()
-            .res()
-            .unwrap();
-        <span class="kw">let </span>boot_subscriber = session
-            .declare_subscriber(<span class="macro">format!</span>(<span class="string">&quot;{}/node/boot/*&quot;</span>, cluster_name))
-            .reliable()
-            .res()
-            .unwrap();
-
+        <span class="kw">let </span>boot_node_data = Arc::new(Mutex::new(BootNodeData::new(
+            cluster_name,
+            centralized_voronoi,
+            zid,
+        )));
         <span class="self">Self </span>{
             session,
+            boot_node_data,
+        }
+    }
+
+    <span class="doccomment">/// Process the current messages that are in the subscription channel queue one at a time. Handles each topic with a different [handler](crate::handlers::boot).
+    </span><span class="kw">pub fn </span>start(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="kw">let </span>boot_node_data_clone = Arc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.boot_node_data);
+        <span class="kw">let </span>session_clone = Arc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.session);
+
+        thread::spawn(<span class="kw">move </span>|| {
+            <span class="kw">let </span>guard = boot_node_data_clone.lock().unwrap();
+            <span class="kw">let </span>counter_subscriber = session_clone
+                .declare_subscriber(<span class="macro">format!</span>(<span class="string">&quot;{}/counter/*&quot;</span>, guard.cluster_name))
+                .reliable()
+                .res()
+                .unwrap();
+            <span class="kw">let </span>boot_subscriber = session_clone
+                .declare_subscriber(<span class="macro">format!</span>(<span class="string">&quot;{}/node/boot/*&quot;</span>, guard.cluster_name))
+                .reliable()
+                .res()
+                .unwrap();
+            drop(guard);
+
+            <span class="kw">loop </span>{
+                <span class="kw">while let </span><span class="prelude-val">Ok</span>(sample) = boot_subscriber.try_recv() {
+                    <span class="kw">let </span><span class="kw-2">mut </span>boot_node_data_guard_clone = boot_node_data_clone.lock().unwrap();
+                    boot_node_data_guard_clone.expected_counter = -<span class="number">1</span>;
+                    boot_node_data_guard_clone.received_counter = <span class="number">0</span>;
+
+                    <span class="kw">let </span>topic = sample.key_expr.split(<span class="string">&#39;/&#39;</span>).nth(<span class="number">3</span>).unwrap_or(<span class="string">&quot;&quot;</span>);
+                    <span class="macro">println!</span>(<span class="string">&quot;Message received on topic... {:?}&quot;</span>, topic);
+                    <span class="kw">let </span>payload = sample.value.payload.get_zslice(<span class="number">0</span>).unwrap().as_ref();
+                    <span class="kw">let </span><span class="kw-2">mut </span>rng = rand::thread_rng();
+                    <span class="kw">let </span>delay = rng.gen_range(<span class="number">1</span>..=<span class="number">10</span>);
+                    thread::sleep(Duration::from_millis(delay));
+                    <span class="kw">match </span>topic {
+                        <span class="string">&quot;new&quot; </span>=&gt; {
+                            handle_join_request(
+                                payload,
+                                boot_node_data_guard_clone,
+                                session_clone.clone(),
+                            );
+                        }
+                        <span class="string">&quot;leave_request&quot; </span>=&gt; {
+                            handle_leave_request(
+                                payload,
+                                boot_node_data_guard_clone,
+                                session_clone.clone(),
+                            );
+                        }
+                        <span class="kw">_ </span>=&gt; <span class="macro">println!</span>(<span class="string">&quot;UNKNOWN BOOT TOPIC&quot;</span>),
+                    }
+                    <span class="kw">let </span><span class="kw-2">mut </span>expected_counter =
+                        boot_node_data_clone.lock().unwrap().expected_counter;
+                    <span class="kw">let </span><span class="kw-2">mut </span>received_counter =
+                        boot_node_data_clone.lock().unwrap().received_counter;
+
+                    <span class="kw">while </span>expected_counter != received_counter {
+                        <span class="kw">while let </span><span class="prelude-val">Ok</span>(sample) = counter_subscriber.try_recv() {
+                            <span class="kw">let </span><span class="kw-2">mut </span>boot_node_data_guard_clone =
+                                boot_node_data_clone.lock().unwrap();
+                            <span class="kw">let </span>topic = sample.key_expr.split(<span class="string">&#39;/&#39;</span>).nth(<span class="number">2</span>).unwrap_or(<span class="string">&quot;&quot;</span>);
+                            <span class="macro">println!</span>(<span class="string">&quot;Message received on topic... {:?}&quot;</span>, topic);
+                            <span class="kw">let </span>payload = sample.value.payload.get_zslice(<span class="number">0</span>).unwrap().as_ref();
+                            <span class="kw">let </span><span class="kw-2">mut </span>rng = rand::thread_rng();
+                            <span class="kw">let </span>delay = rng.gen_range(<span class="number">1</span>..=<span class="number">10</span>);
+                            thread::sleep(Duration::from_millis(delay));
+                            <span class="kw">match </span>topic {
+                                <span class="string">&quot;expected_wait&quot; </span>=&gt; {
+                                    set_expected_counter(
+                                        payload,
+                                        <span class="kw-2">&amp;mut </span>boot_node_data_guard_clone.expected_counter,
+                                    );
+                                }
+                                <span class="string">&quot;complete&quot; </span>=&gt; {
+                                    handle_task_completed(payload, boot_node_data_guard_clone);
+                                }
+                                <span class="kw">_ </span>=&gt; <span class="macro">println!</span>(<span class="string">&quot;UNKNOWN COUNTER TOPIC&quot;</span>),
+                            }
+                        }
+                        expected_counter = boot_node_data_clone.lock().unwrap().expected_counter;
+                        received_counter = boot_node_data_clone.lock().unwrap().received_counter;
+                    }
+
+                    <span class="kw">let </span><span class="kw-2">mut </span>guard = boot_node_data_clone.lock().unwrap();
+                    <span class="kw">if </span>!guard.cluster.is_empty() {
+                        <span class="comment">//redraw distributed voronoi
+                        </span>draw_voronoi_full(
+                            <span class="kw-2">&amp;</span>guard.cluster,
+                            <span class="kw-2">&amp;</span>guard.polygon_list,
+                            <span class="macro">format!</span>(<span class="string">&quot;{}voronoi&quot;</span>, guard.draw_count).as_str(),
+                        );
+                        <span class="kw">if </span>guard.centralized_voronoi {
+                            <span class="comment">//correct voronoi
+                            </span><span class="kw">let </span><span class="kw-2">mut </span>hash_map = guard.cluster.clone();
+                            guard.correct_polygon_list = OrderedMapPolygon::new();
+                            <span class="kw">let </span>(first_zid, first_site) = hash_map
+                                .iter()
+                                .next()
+                                .map(|(k, v)| (k.clone(), <span class="kw-2">*</span>v))
+                                .unwrap();
+                            hash_map.swap_remove_index(<span class="number">0</span>);
+
+                            <span class="kw">let </span>diagram = Voronoi::new((first_zid, first_site), <span class="kw-2">&amp;</span>hash_map);
+
+                            <span class="kw">for </span>(i, cell) <span class="kw">in </span>diagram.diagram.cells().iter().enumerate() {
+                                <span class="kw">let </span>polygon = cell.points().iter().map(|x| (x.x, x.y)).collect();
+                                <span class="kw">let </span>site_id = diagram.input.keys().nth(i).unwrap();
+                                guard
+                                    .correct_polygon_list
+                                    .insert(site_id.to_string(), polygon);
+                            }
+                            draw_voronoi_full(
+                                <span class="kw-2">&amp;</span>guard.cluster,
+                                <span class="kw-2">&amp;</span>guard.correct_polygon_list,
+                                <span class="macro">format!</span>(<span class="string">&quot;{}confirm&quot;</span>, guard.draw_count).as_str(),
+                            );
+                        }
+                        guard.draw_count += <span class="number">1</span>;
+                        drop(guard);
+                    };
+                }
+            }
+        });
+    }
+
+    <span class="doccomment">/// Get the zid of the node
+    </span><span class="kw">pub fn </span>get_zid(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
+        <span class="self">self</span>.boot_node_data.lock().unwrap().zid.clone()
+    }
+}
+
+<span class="kw">impl </span>BootNodeData {
+    <span class="doccomment">/// Creates a new boot node instance with a [session](https://docs.rs/zenoh/0.7.0-rc/zenoh/struct.Session.html).
+    /// Opens a subscription on topic `{cluster}/boot/*` to receive incoming messages from nodes and a subscription on`{cluster}/counter/*` to count the number of messages its received since processing the current message on the `{cluster}/boot/*` topic.
+    </span><span class="kw">pub fn </span>new(cluster_name: <span class="kw-2">&amp;</span>str, centralized_voronoi: bool, zid: String) -&gt; <span class="self">Self </span>{
+        <span class="self">Self </span>{
             zid,
             received_counter: <span class="number">0</span>,
             expected_counter: -<span class="number">1</span>,
-            sub_boot: boot_subscriber,
-            sub_counter: counter_subscriber,
             cluster: OrderedMapPairs::new(),
             polygon_list: OrderedMapPolygon::new(),
             correct_polygon_list: OrderedMapPolygon::new(),
@@ -219,96 +393,6 @@
             draw_count: <span class="number">0</span>,
             cluster_name: cluster_name.to_string(),
         }
-    }
-    <span class="doccomment">/// Process the current messages that are in the subscription channel queue one at a time. Handles each topic with a different [handler](crate::handlers::boot).
-    </span><span class="kw">pub fn </span>run(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
-        <span class="kw">if let </span><span class="prelude-val">Ok</span>(sample) = <span class="self">self</span>.sub_boot.try_recv() {
-            <span class="self">self</span>.expected_counter = -<span class="number">1</span>;
-            <span class="self">self</span>.received_counter = <span class="number">0</span>;
-
-            <span class="kw">let </span>topic = sample.key_expr.split(<span class="string">&#39;/&#39;</span>).nth(<span class="number">3</span>).unwrap_or(<span class="string">&quot;&quot;</span>);
-            <span class="macro">println!</span>(<span class="string">&quot;Message received on topic... {:?}&quot;</span>, topic);
-            <span class="kw">let </span>payload = sample.value.payload.get_zslice(<span class="number">0</span>).unwrap().as_ref();
-            <span class="comment">// if sample.value.payload.is_contiguous() {
-            //     let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
-            // } else {
-            //     let payload = sample.value.payload.contiguous();
-            // }
-            </span><span class="kw">let </span><span class="kw-2">mut </span>rng = rand::thread_rng();
-            <span class="kw">let </span>delay = rng.gen_range(<span class="number">1</span>..=<span class="number">10</span>);
-            thread::sleep(Duration::from_millis(delay));
-            <span class="kw">match </span>topic {
-                <span class="string">&quot;new&quot; </span>=&gt; {
-                    handle_join_request(payload, <span class="self">self</span>);
-                }
-                <span class="string">&quot;leave_request&quot; </span>=&gt; {
-                    handle_leave_request(payload, <span class="self">self</span>);
-                }
-                <span class="kw">_ </span>=&gt; <span class="macro">println!</span>(<span class="string">&quot;UNKNOWN BOOT TOPIC&quot;</span>),
-            }
-
-            <span class="kw">while </span><span class="self">self</span>.expected_counter != <span class="self">self</span>.received_counter {
-                <span class="kw">while let </span><span class="prelude-val">Ok</span>(sample) = <span class="self">self</span>.sub_counter.try_recv() {
-                    <span class="kw">let </span>topic = sample.key_expr.split(<span class="string">&#39;/&#39;</span>).nth(<span class="number">2</span>).unwrap_or(<span class="string">&quot;&quot;</span>);
-                    <span class="macro">println!</span>(<span class="string">&quot;Message received on topic... {:?}&quot;</span>, topic);
-                    <span class="kw">let </span>payload = sample.value.payload.get_zslice(<span class="number">0</span>).unwrap().as_ref();
-                    <span class="kw">match </span>topic {
-                        <span class="string">&quot;expected_wait&quot; </span>=&gt; {
-                            set_expected_counter(payload, <span class="kw-2">&amp;mut </span><span class="self">self</span>.expected_counter);
-                        }
-                        <span class="string">&quot;complete&quot; </span>=&gt; {
-                            handle_task_completed(
-                                payload,
-                                <span class="kw-2">&amp;mut </span><span class="self">self</span>.received_counter,
-                                <span class="kw-2">&amp;mut </span><span class="self">self</span>.polygon_list,
-                                <span class="kw-2">&amp;mut </span><span class="self">self</span>.cluster,
-                            );
-                        }
-                        <span class="kw">_ </span>=&gt; <span class="macro">println!</span>(<span class="string">&quot;UNKNOWN COUNTER TOPIC&quot;</span>),
-                    }
-                }
-            }
-
-            <span class="kw">if </span>!<span class="self">self</span>.cluster.is_empty() {
-                <span class="comment">//redraw distributed voronoi
-                </span>draw_voronoi_full(
-                    <span class="kw-2">&amp;</span><span class="self">self</span>.cluster,
-                    <span class="kw-2">&amp;</span><span class="self">self</span>.polygon_list,
-                    <span class="macro">format!</span>(<span class="string">&quot;{}voronoi&quot;</span>, <span class="self">self</span>.draw_count).as_str(),
-                );
-
-                <span class="kw">if </span><span class="self">self</span>.centralized_voronoi {
-                    <span class="comment">//correct voronoi
-                    </span><span class="kw">let </span><span class="kw-2">mut </span>hash_map = <span class="self">self</span>.cluster.clone();
-                    <span class="self">self</span>.correct_polygon_list = OrderedMapPolygon::new();
-                    <span class="kw">let </span>(first_zid, first_site) = hash_map
-                        .iter()
-                        .next()
-                        .map(|(k, v)| (k.clone(), <span class="kw-2">*</span>v))
-                        .unwrap();
-                    hash_map.swap_remove_index(<span class="number">0</span>);
-
-                    <span class="kw">let </span>diagram = Voronoi::new((first_zid, first_site), <span class="kw-2">&amp;</span>hash_map);
-
-                    <span class="kw">for </span>(i, cell) <span class="kw">in </span>diagram.diagram.cells().iter().enumerate() {
-                        <span class="kw">let </span>polygon = cell.points().iter().map(|x| (x.x, x.y)).collect();
-                        <span class="kw">let </span>site_id = diagram.input.keys().nth(i).unwrap();
-                        <span class="self">self</span>.correct_polygon_list
-                            .insert(site_id.to_string(), polygon);
-                    }
-                    draw_voronoi_full(
-                        <span class="kw-2">&amp;</span><span class="self">self</span>.cluster,
-                        <span class="kw-2">&amp;</span><span class="self">self</span>.correct_polygon_list,
-                        <span class="macro">format!</span>(<span class="string">&quot;{}confirm&quot;</span>, <span class="self">self</span>.draw_count).as_str(),
-                    );
-                }
-                <span class="self">self</span>.draw_count += <span class="number">1</span>;
-            };
-        }
-    }
-    <span class="doccomment">/// Get the zid of the node
-    </span><span class="kw">pub fn </span>get_zid(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
-        <span class="self">self</span>.zid.clone()
     }
 }
 </code></pre></div>

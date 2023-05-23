@@ -245,6 +245,57 @@
 <a href="#244" id="244">244</a>
 <a href="#245" id="245">245</a>
 <a href="#246" id="246">246</a>
+<a href="#247" id="247">247</a>
+<a href="#248" id="248">248</a>
+<a href="#249" id="249">249</a>
+<a href="#250" id="250">250</a>
+<a href="#251" id="251">251</a>
+<a href="#252" id="252">252</a>
+<a href="#253" id="253">253</a>
+<a href="#254" id="254">254</a>
+<a href="#255" id="255">255</a>
+<a href="#256" id="256">256</a>
+<a href="#257" id="257">257</a>
+<a href="#258" id="258">258</a>
+<a href="#259" id="259">259</a>
+<a href="#260" id="260">260</a>
+<a href="#261" id="261">261</a>
+<a href="#262" id="262">262</a>
+<a href="#263" id="263">263</a>
+<a href="#264" id="264">264</a>
+<a href="#265" id="265">265</a>
+<a href="#266" id="266">266</a>
+<a href="#267" id="267">267</a>
+<a href="#268" id="268">268</a>
+<a href="#269" id="269">269</a>
+<a href="#270" id="270">270</a>
+<a href="#271" id="271">271</a>
+<a href="#272" id="272">272</a>
+<a href="#273" id="273">273</a>
+<a href="#274" id="274">274</a>
+<a href="#275" id="275">275</a>
+<a href="#276" id="276">276</a>
+<a href="#277" id="277">277</a>
+<a href="#278" id="278">278</a>
+<a href="#279" id="279">279</a>
+<a href="#280" id="280">280</a>
+<a href="#281" id="281">281</a>
+<a href="#282" id="282">282</a>
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_leave_response::handle_leave_response;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_leave_voronoi_request::handle_leave_voronoi_request;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_neighbours_neighbours_request::handle_neighbours_neighbours_request;
@@ -257,14 +308,13 @@
 <span class="kw">use </span>async_std::io::ReadExt;
 <span class="kw">use </span>async_std::{io, task};
 <span class="kw">use </span>bincode::serialize;
-<span class="kw">use </span>rand::Rng;
+
 <span class="kw">use </span>std::sync::{Arc, Mutex};
 <span class="kw">use </span>std::thread;
 <span class="kw">use </span>std::time::Duration;
-<span class="kw">use </span>zenoh::prelude::r#async::<span class="kw-2">*</span>;
+<span class="kw">use </span>rand::Rng;
 
 <span class="kw">pub use </span>zenoh::prelude::sync::<span class="kw-2">*</span>;
-<span class="kw">use </span>zenoh::subscriber::Subscriber;
 
 <span class="doccomment">/// A node in a network that has a point site which is used in the calculation of the voronoi diagram of a cluster. Computes its own voronoi polygon from its list of neighbours. Does not store information on entire cluster.
 </span><span class="kw">pub struct </span>NodeData {
@@ -279,15 +329,16 @@
     <span class="kw">pub</span>(<span class="kw">crate</span>) zid: String,
 }
 
-<span class="kw">pub struct </span>Node&lt;<span class="lifetime">&#39;a</span>&gt; {
+<span class="kw">pub struct </span>Node {
     <span class="kw">pub</span>(<span class="kw">crate</span>) node_data: Arc&lt;Mutex&lt;NodeData&gt;&gt;,
     <span class="kw">pub</span>(<span class="kw">crate</span>) session: Arc&lt;Session&gt;,
-    subscription: <span class="prelude-ty">Option</span>&lt;Subscriber&lt;<span class="lifetime">&#39;a</span>, ()&gt;&gt;,
-}
+    <span class="comment">// subscription: Option&lt;Subscriber&lt;&#39;a, ()&gt;&gt;,
+</span>}
 
-<span class="kw">impl </span>Node&lt;<span class="lifetime">&#39;_</span>&gt; {
+<span class="kw">impl </span>Node {
     <span class="kw">pub fn </span>new(cluster: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
-        <span class="kw">let </span>session = SyncResolve::res(zenoh::open(config::default()))
+        <span class="kw">let </span>session = zenoh::open(config::default())
+            .res_sync()
             .unwrap()
             .into_arc();
         <span class="kw">let </span>zid = session.zid().to_string();
@@ -296,34 +347,57 @@
         <span class="self">Self </span>{
             node_data,
             session,
-            subscription: <span class="prelude-val">None</span>,
-        }
+            <span class="comment">//subscription: None,
+        </span>}
     }
 
-    <span class="kw">pub async fn </span>start_async(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+    <span class="comment">// Process the current messages that are in the subscription channel queue one at a time. Handles each topic with a different [handler](crate::handlers::node).
+    </span><span class="kw">pub fn </span>join(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
         <span class="kw">let </span>node_data_clone = Arc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.node_data);
         <span class="kw">let </span>session_clone = Arc::clone(<span class="kw-2">&amp;</span><span class="self">self</span>.session);
-        <span class="kw">let </span>node_data_guard= <span class="self">self</span>.node_data.lock().unwrap();
 
-        <span class="kw">let </span>subscription = AsyncResolve::res(
-            <span class="self">self</span>.session
-                .declare_subscriber(<span class="macro">format!</span>(<span class="string">&quot;{}/node/{}/*&quot;</span>, node_data_guard.cluster_name, node_data_guard.zid))
+        thread::spawn(<span class="kw">move </span>|| {
+            <span class="kw">let </span>guard = node_data_clone.lock().unwrap();
+            <span class="kw">let </span>subscription = session_clone
+                .declare_subscriber(<span class="macro">format!</span>(<span class="string">&quot;{}/node/{}/*&quot;</span>, guard.cluster_name, guard.zid))
                 .reliable()
-                .callback(<span class="kw">move </span>|sample| {
+                .res_sync()
+                .unwrap();
+            drop(guard);
+            <span class="kw">loop </span>{
+                <span class="comment">//maybe dont break if offline just dont execute?
+                // if node_data_clone.lock().unwrap().status == NodeStatus::Offline {
+                //     break;
+                // }
+                </span><span class="kw">while let </span><span class="prelude-val">Ok</span>(sample) = subscription.try_recv() {
                     <span class="kw">let </span>topic = sample.key_expr.split(<span class="string">&#39;/&#39;</span>).nth(<span class="number">3</span>).unwrap_or(<span class="string">&quot;&quot;</span>);
                     <span class="macro">println!</span>(<span class="string">&quot;Received message on topic... {:?}&quot;</span>, topic);
                     <span class="kw">let </span>payload = sample.value.payload.get_zslice(<span class="number">0</span>).unwrap().as_ref();
                     <span class="kw">let </span>node_data_guard_clone = node_data_clone.lock().unwrap();
-
+                    <span class="kw">let </span><span class="kw-2">mut </span>rng = rand::thread_rng();
+                    <span class="kw">let </span>delay = rng.gen_range(<span class="number">1</span>..=<span class="number">10</span>);
+                    thread::sleep(Duration::from_millis(delay));
                     <span class="kw">match </span>topic {
                         <span class="string">&quot;new_reply&quot; </span>=&gt; {
-                            handle_owner_request(payload, node_data_guard_clone, session_clone.clone());
+                            handle_owner_request(
+                                payload,
+                                node_data_guard_clone,
+                                session_clone.clone(),
+                            );
                         }
                         <span class="string">&quot;owner_request&quot; </span>=&gt; {
-                            handle_owner_request(payload, node_data_guard_clone, session_clone.clone());
+                            handle_owner_request(
+                                payload,
+                                node_data_guard_clone,
+                                session_clone.clone(),
+                            );
                         }
                         <span class="string">&quot;owner_response&quot; </span>=&gt; {
-                            handle_owner_response(payload, node_data_guard_clone, session_clone.clone());
+                            handle_owner_response(
+                                payload,
+                                node_data_guard_clone,
+                                session_clone.clone(),
+                            );
                         }
                         <span class="string">&quot;neighbours_neighbours&quot; </span>=&gt; {
                             handle_neighbours_neighbours_request(
@@ -340,41 +414,112 @@
                             );
                         }
                         <span class="string">&quot;new_voronoi&quot; </span>=&gt; {
-                            handle_new_voronoi_request(payload, node_data_guard_clone, session_clone.clone());
+                            handle_new_voronoi_request(
+                                payload,
+                                node_data_guard_clone,
+                                session_clone.clone(),
+                            );
                         }
                         <span class="string">&quot;leave_voronoi&quot; </span>=&gt; {
-                            handle_leave_voronoi_request(payload, node_data_guard_clone, session_clone.clone());
+                            handle_leave_voronoi_request(
+                                payload,
+                                node_data_guard_clone,
+                                session_clone.clone(),
+                            );
                         }
                         <span class="string">&quot;leave_reply&quot; </span>=&gt; {
-                            handle_leave_response(payload, node_data_guard_clone, session_clone.clone());
+                            handle_leave_response(
+                                payload,
+                                node_data_guard_clone,
+                                session_clone.clone(),
+                            );
                         }
                         <span class="kw">_ </span>=&gt; <span class="macro">println!</span>(<span class="string">&quot;UNKNOWN NODE TOPIC&quot;</span>),
                     }
-                }),
-        )
-        .<span class="kw">await
-        </span>.unwrap();
+                    <span class="comment">//thread::sleep(Duration::from_secs(2));
+                </span>}
+            }
+        });
+
+        <span class="kw">let </span>node_data_guard = <span class="self">self</span>.node_data.lock().unwrap();
 
         <span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>DefaultMessage {
             sender_id: node_data_guard.zid.clone(),
         })
         .unwrap();
 
-        SyncResolve::res(<span class="self">self</span>.session.put(
-            <span class="macro">format!</span>(<span class="string">&quot;{}/node/boot/new&quot;</span>, node_data_guard.cluster_name),
-            message,
-        ))
-        .unwrap();
+        <span class="self">self</span>.session
+            .put(
+                <span class="macro">format!</span>(<span class="string">&quot;{}/node/boot/new&quot;</span>, node_data_guard.cluster_name),
+                message,
+            )
+            .res_sync()
+            .unwrap();
 
-        <span class="self">self</span>.subscription = <span class="prelude-val">Some</span>(subscription);
+        <span class="comment">//self.subscription = Some(subscription);
+    </span>}
+
+    <span class="doccomment">///Node is dropped and leaves the cluster when not busy with task.
+    </span><span class="kw">pub fn </span>leave(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="kw">let </span><span class="kw-2">mut </span>node_data_guard = <span class="self">self</span>.node_data.lock().unwrap();
+        <span class="kw">if </span>!<span class="macro">matches!</span>(
+            node_data_guard.status,
+            NodeStatus::Leaving | NodeStatus::Offline
+        ) {
+            node_data_guard.status = NodeStatus::Leaving;
+            <span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>DefaultMessage {
+                sender_id: node_data_guard.zid.clone(),
+            })
+            .unwrap();
+            <span class="self">self</span>.session
+                .put(
+                    <span class="macro">format!</span>(<span class="string">&quot;{}/node/boot/leave_request&quot;</span>, node_data_guard.cluster_name),
+                    message,
+                )
+                .res_sync()
+                .unwrap();
+        }
     }
+
+    <span class="doccomment">///End node when the user presses a key. Node is dropped and leaves the cluster.
+    ///use to return Self but cant use builder pattern in C
+    </span><span class="kw">pub fn </span>leave_on_pressed(<span class="kw-2">&amp;</span><span class="self">self</span>, key: char) {
+        <span class="kw">let </span>session = <span class="self">self</span>.session.clone();
+        <span class="kw">let </span>zid = <span class="self">self</span>.node_data.lock().unwrap().zid.clone();
+        <span class="kw">let </span>cluster = <span class="self">self</span>.node_data.lock().unwrap().cluster_name.clone();
+        task::spawn(<span class="kw">async move </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>buffer = [<span class="number">0</span>; <span class="number">1</span>];
+            <span class="kw">loop </span>{
+                <span class="comment">// Read a single byte from stdin
+                </span><span class="kw">if let </span><span class="prelude-val">Ok</span>(()) = io::stdin().read_exact(<span class="kw-2">&amp;mut </span>buffer).<span class="kw">await </span>{
+                    <span class="kw">if </span>buffer[<span class="number">0</span>] == key <span class="kw">as </span>u8 {
+                        <span class="comment">// Call the function when the user presses &#39;q&#39;
+                        </span><span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>DefaultMessage { sender_id: zid }).unwrap();
+                        session
+                            .put(<span class="macro">format!</span>(<span class="string">&quot;{}/node/boot/leave_request&quot;</span>, cluster), message)
+                            .res_sync()
+                            .unwrap();
+                        <span class="kw">break</span>;
+                    }
+                }
+            }
+        });
+        <span class="comment">//self
+    </span>}
+
     <span class="doccomment">/// Get the zid of the node
     </span><span class="kw">pub fn </span>get_zid(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; String {
         <span class="self">self</span>.node_data.lock().unwrap().zid.clone()
     }
     <span class="doccomment">///Get node status
     </span><span class="kw">pub fn </span>get_status(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; NodeStatus {
-        <span class="self">self</span>.node_data.lock().unwrap().status.clone()
+        <span class="kw">loop </span>{
+            <span class="kw">if let </span><span class="prelude-val">Ok</span>(guard) = <span class="self">self</span>.node_data.try_lock() {
+                <span class="kw">return </span>guard.status.clone();
+            }
+            <span class="comment">// Optional: Add a small delay between attempts to avoid spinning too quickly
+            </span>thread::sleep(std::time::Duration::from_millis(<span class="number">10</span>));
+        }
     }
     <span class="doccomment">/// Get the neighbours of the node
     </span><span class="kw">pub fn </span>get_neighbours(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;(String, (f64, f64))&gt; {
@@ -393,6 +538,32 @@
     <span class="doccomment">/// Get the polygon of the node
     </span><span class="kw">pub fn </span>get_polygon(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;(f64, f64)&gt; {
         <span class="self">self</span>.node_data.lock().unwrap().polygon.clone()
+    }
+
+    <span class="doccomment">///Check if the point site is in the polygon. Ray casting algorithm.
+    </span><span class="kw">pub fn </span>is_in_polygon(<span class="kw-2">&amp;</span><span class="self">self</span>, point: (f64, f64)) -&gt; bool {
+        <span class="kw">let </span>guard = <span class="self">self</span>.node_data.lock().unwrap();
+        <span class="kw">if </span>guard.polygon.is_empty() {
+            <span class="bool-val">false
+        </span>} <span class="kw">else </span>{
+            <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
+            <span class="kw">let </span><span class="kw-2">mut </span>j = guard.polygon.len() - <span class="number">1</span>;
+            <span class="kw">let </span><span class="kw-2">mut </span>c = <span class="bool-val">false</span>;
+            <span class="kw">while </span>i &lt; guard.polygon.len() {
+                <span class="kw">if </span>((guard.polygon[i].<span class="number">1 </span>&gt; point.<span class="number">1</span>) != (guard.polygon[j].<span class="number">1 </span>&gt; point.<span class="number">1</span>))
+                    &amp;&amp; (point.<span class="number">0
+                        </span>&lt; (guard.polygon[j].<span class="number">0 </span>- guard.polygon[i].<span class="number">0</span>)
+                            * (point.<span class="number">1 </span>- guard.polygon[i].<span class="number">1</span>)
+                            / (guard.polygon[j].<span class="number">1 </span>- guard.polygon[i].<span class="number">1</span>)
+                            + guard.polygon[i].<span class="number">0</span>)
+                {
+                    c = !c;
+                }
+                j = i;
+                i += <span class="number">1</span>;
+            }
+            c
+        }
     }
 }
 
@@ -421,75 +592,6 @@
             zid,
         }
     }
-    <span class="comment">// Process the current messages that are in the subscription channel queue one at a time. Handles each topic with a different [handler](crate::handlers::node).
-    //
-    // End node when the user presses a key. Node is dropped and leaves the cluster.
-    // use to return Self but cant use builder pattern in C
-    // pub fn leave_on_pressed(&amp;self, key: char) {
-    //     let session = self.session.clone();
-    //     let zid = self.zid.clone();
-    //     let cluster = self.cluster_name.clone();
-    //     task::spawn(async move {
-    //         let mut buffer = [0; 1];
-    //         loop {
-    //             // Read a single byte from stdin
-    //             if let Ok(()) = io::stdin().read_exact(&amp;mut buffer).await {
-    //                 if buffer[0] == key as u8 {
-    //                     // Call the function when the user presses &#39;q&#39;
-    //                     let message = serialize(&amp;DefaultMessage { sender_id: zid }).unwrap();
-    //                     session
-    //                         .put(format!(&quot;{}/node/boot/leave_request&quot;, cluster), message)
-    //                         .res()
-    //                         .unwrap();
-    //                     break;
-    //                 }
-    //             }
-    //         }
-    //     });
-    //     //self
-    // }
-
-    // Node is dropped and leaves the cluster when not busy with task.
-    // pub fn leave(&amp;mut self) {
-    //     if !matches!(self.status, NodeStatus::Leaving | NodeStatus::Offline) {
-    //         self.status = NodeStatus::Leaving;
-    //         let message = serialize(&amp;DefaultMessage {
-    //             sender_id: self.zid.clone(),
-    //         })
-    //         .unwrap();
-    //         self.session
-    //             .put(
-    //                 format!(&quot;{}/node/boot/leave_request&quot;, self.cluster_name),
-    //                 message,
-    //             )
-    //             .res()
-    //             .unwrap();
-    //     }
-    // }
-
-    // Check if the point site is in the polygon. Ray casting algorithm.
-    // pub fn is_in_polygon(&amp;self, point: (f64, f64)) -&gt; bool {
-    //     if self.polygon.is_empty() {
-    //         false
-    //     } else {
-    //         let mut i = 0;
-    //         let mut j = self.polygon.len() - 1;
-    //         let mut c = false;
-    //         while i &lt; self.polygon.len() {
-    //             if ((self.polygon[i].1 &gt; point.1) != (self.polygon[j].1 &gt; point.1))
-    //                 &amp;&amp; (point.0
-    //                     &lt; (self.polygon[j].0 - self.polygon[i].0) * (point.1 - self.polygon[i].1)
-    //                         / (self.polygon[j].1 - self.polygon[i].1)
-    //                         + self.polygon[i].0)
-    //             {
-    //                 c = !c;
-    //             }
-    //             j = i;
-    //             i += 1;
-    //         }
-    //         c
-    //     }
-    // }
-</span>}
+}
 </code></pre></div>
 </section></main><div id="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="space_net" data-themes="" data-resource-suffix="" data-rustdoc-version="1.69.0 (84c898d65 2023-04-16)" data-search-js="search-8a59a8356673ec1f.js" data-settings-js="settings-f0c5c39777a9a2f6.js" data-settings-css="settings-0bcba95ff279c1db.css" ></div></body></html>
