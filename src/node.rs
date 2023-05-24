@@ -12,6 +12,9 @@ use async_std::{io, task};
 use bincode::serialize;
 
 use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
+use rand::Rng;
 
 use zenoh::prelude::r#async::AsyncResolve;
 
@@ -29,23 +32,28 @@ pub struct NodeData {
     pub(crate) status: NodeStatus,
 }
 
-#[derive(PartialEq, Clone, Debug)]
-pub enum API_MESSAGE {
-    GetStatus,
-}
-#[derive(PartialEq, Clone, Debug)]
-pub enum API_RESPONSE {
-    GetStatusResponse(NodeStatus),
-}
-
 pub struct Node {
-    //pub(crate) node_data: NodeData,
     pub(crate) session: Arc<Session>,
     pub(crate) cluster_name: String,
     pub(crate) zid: String,
-    pub(crate) api_requester_tx: flume::Sender<API_MESSAGE>,
-    pub(crate) api_responder_rx: flume::Receiver<API_RESPONSE>,
+    pub(crate) api_requester_tx: flume::Sender<ApiMessage>,
+    pub(crate) api_responder_rx: flume::Receiver<ApiResponse>,
     // subscription: Option<Subscriber<'a, ()>>,
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub enum ApiMessage {
+    GetStatus,
+    GetNeighbours,
+    GetPolygon,
+    IsNeighbour(String),
+}
+#[derive(PartialEq, Clone, Debug)]
+pub enum ApiResponse {
+    GetStatusResponse(NodeStatus),
+    GetNeighboursResponse(Vec<(String, (f64, f64))>),
+    GetPolygonResponse(Vec<(f64, f64)>),
+    IsNeighbourResponse(bool),
 }
 
 impl Node {
@@ -79,122 +87,161 @@ impl Node {
         let (node_update_tx, node_update_rx) = flume::unbounded();
         let cluster_name_clone = cluster_name.to_string();
         let zid_clone = zid.to_string();
-        async_std::task::spawn(async move {
-            let mut node_data = NodeData::new();
 
-            while let Ok(sample) = zenoh_rx.recv_async().await {
-                let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
-                println!("Received message on topic... {:?}", topic);
-                let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
-                let session_clone = session_clone.clone();
-                let cluster_name = cluster_name_clone.as_str();
-                let zid = zid_clone.as_str();
-                match topic {
-                    "new_reply" => {
-                        handle_owner_request(
-                            payload,
-                            &mut node_data,
-                            session_clone,
-                            zid,
-                            cluster_name,
-                        );
+        async_std::task::spawn_blocking(move || {
+            let mut node_data = NodeData::new();
+            loop {
+                while let Ok(sample) = zenoh_rx.try_recv() {
+                    let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
+                    println!("Received message on topic... {:?}", topic);
+                    let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
+                    let session_clone = session_clone.clone();
+                    let cluster_name = cluster_name_clone.as_str();
+                    let zid = zid_clone.as_str();
+                    // let mut rng = rand::thread_rng();
+                    // let delay = rng.gen_range(1..=10);
+                    // thread::sleep(Duration::from_millis(delay));
+                    match topic {
+                        "new_reply" => {
+                            handle_owner_request(
+                                payload,
+                                &mut node_data,
+                                session_clone,
+                                zid,
+                                cluster_name,
+                            );
+                        }
+                        "owner_request" => {
+                            handle_owner_request(
+                                payload,
+                                &mut node_data,
+                                session_clone,
+                                zid,
+                                cluster_name,
+                            );
+                        }
+                        "owner_response" => {
+                            handle_owner_response(
+                                payload,
+                                &mut node_data,
+                                session_clone,
+                                zid,
+                                cluster_name,
+                            );
+                        }
+                        "neighbours_neighbours" => {
+                            handle_neighbours_neighbours_request(
+                                payload,
+                                &mut node_data,
+                                session_clone,
+                                zid,
+                                cluster_name,
+                            );
+                        }
+                        "neighbours_neighbours_reply" => {
+                            handle_neighbours_neighbours_response(
+                                payload,
+                                &mut node_data,
+                                session_clone,
+                                zid,
+                                cluster_name,
+                            );
+                        }
+                        "new_voronoi" => {
+                            handle_new_voronoi_request(
+                                payload,
+                                &mut node_data,
+                                session_clone,
+                                zid,
+                                cluster_name,
+                            );
+                        }
+                        "leave_voronoi" => {
+                            handle_leave_voronoi_request(
+                                payload,
+                                &mut node_data,
+                                session_clone,
+                                zid,
+                                cluster_name,
+                            );
+                        }
+                        "leave_reply" => {
+                            handle_leave_response(
+                                payload,
+                                &mut node_data,
+                                session_clone,
+                                zid,
+                                cluster_name,
+                            );
+                        }
+                        _ => println!("UNKNOWN NODE TOPIC"),
                     }
-                    "owner_request" => {
-                        handle_owner_request(
-                            payload,
-                            &mut node_data,
-                            session_clone,
-                            zid,
-                            cluster_name,
-                        );
-                    }
-                    "owner_response" => {
-                        handle_owner_response(
-                            payload,
-                            &mut node_data,
-                            session_clone,
-                            zid,
-                            cluster_name,
-                        );
-                    }
-                    "neighbours_neighbours" => {
-                        handle_neighbours_neighbours_request(
-                            payload,
-                            &mut node_data,
-                            session_clone,
-                            zid,
-                            cluster_name,
-                        );
-                    }
-                    "neighbours_neighbours_reply" => {
-                        handle_neighbours_neighbours_response(
-                            payload,
-                            &mut node_data,
-                            session_clone,
-                            zid,
-                            cluster_name,
-                        );
-                    }
-                    "new_voronoi" => {
-                        handle_new_voronoi_request(
-                            payload,
-                            &mut node_data,
-                            session_clone,
-                            zid,
-                            cluster_name,
-                        );
-                    }
-                    "leave_voronoi" => {
-                        handle_leave_voronoi_request(
-                            payload,
-                            &mut node_data,
-                            session_clone,
-                            zid,
-                            cluster_name,
-                        );
-                    }
-                    "leave_reply" => {
-                        handle_leave_response(
-                            payload,
-                            &mut node_data,
-                            session_clone,
-                            zid,
-                            cluster_name,
-                        );
-                    }
-                    _ => println!("UNKNOWN NODE TOPIC"),
+                    //ok ive updated node data send to API task
+                    node_update_tx.send(node_data.clone()).unwrap();
                 }
             }
-            //ok ive updated node data send to API task
-            node_update_tx.send(node_data.clone()).unwrap();
         });
 
-        let (api_requester_tx, api_requester_rx) = flume::unbounded();
-        let (api_responder_tx, api_responder_rx) = flume::unbounded();
+        let (api_requester_tx, api_requester_rx) = flume::bounded(32);
+        let (api_responder_tx, api_responder_rx) = flume::bounded(32);
 
-        async_std::task::spawn(async move {
+        async_std::task::spawn_blocking(move || {
             let mut node_data_copy = NodeData::new();
-            while let Ok(updated_node_data) = node_update_rx.recv_async().await {
-                node_data_copy = updated_node_data.clone();
-            }
-            if node_update_rx.is_empty() {
-                while let Ok(api_message) = api_requester_rx.recv_async().await {
+            loop {
+                while let Ok(updated_node_data) = node_update_rx.try_recv() {
+                    node_data_copy = updated_node_data.clone();
+                }
+                while let Ok(api_message) = api_requester_rx.try_recv() {
                     let api_response = match api_message {
-                        API_MESSAGE::GetStatus => {
-                            API_RESPONSE::GetStatusResponse(node_data_copy.status.clone())
+                        ApiMessage::GetStatus => {
+                            ApiResponse::GetStatusResponse(node_data_copy.status.clone())
                         }
+                        ApiMessage::GetNeighbours => ApiResponse::GetNeighboursResponse(
+                            node_data_copy.neighbours.clone().into_iter().collect(),
+                        ),
+                        ApiMessage::GetPolygon => {
+                            ApiResponse::GetPolygonResponse(node_data_copy.polygon.clone())
+                        }
+                        ApiMessage::IsNeighbour(zid) => ApiResponse::IsNeighbourResponse(
+                            node_data_copy.neighbours.contains_key(zid.as_str()),
+                        ),
                     };
                     api_responder_tx.send(api_response).unwrap();
                 }
             }
         });
 
+        // async_std::task::spawn(async move {
+        //     let mut node_data_copy = NodeData::new();
+        //     loop {
+        //         futures::select! {
+        //         updated_node_data = node_update_rx.recv_async() => {
+        //             if let Ok(updated_node_data) = updated_node_data {
+        //                 node_data_copy = updated_node_data.clone();
+        //             } else {
+        //                 break; // Exit the loop if receiving from `node_update_rx` fails
+        //             }
+        //         }
+        //         api_message = api_requester_rx.recv_async() => {
+        //             if let Ok(api_message) = api_message {
+        //                 let api_response = match api_message {
+        //                     ApiMessage::GetStatus => {
+        //                         ApiResponse::GetStatusResponse(node_data_copy.status.clone())
+        //                     }
+        //                 };
+        //                 api_responder_tx.send(api_response).unwrap();
+        //             } else {
+        //                 break; // Exit the loop if receiving from `api_requester_rx` fails
+        //             }
+        //         }
+        //     }
+        //     }
+        // });
+
         Self {
-            //node_data,
             session,
             cluster_name: cluster_name.to_string(),
             zid,
-            //subscription: None,
             api_requester_tx,
             api_responder_rx,
         }
@@ -262,58 +309,79 @@ impl Node {
     }
     ///Get node status
     pub fn get_status(&self) -> NodeStatus {
-        self.api_requester_tx.send(API_MESSAGE::GetStatus).unwrap();
-
-        if let API_RESPONSE::GetStatusResponse(status) = self.api_responder_rx.recv().unwrap() {
+        self.api_requester_tx.send(ApiMessage::GetStatus).unwrap();
+        if let ApiResponse::GetStatusResponse(status) = self.api_responder_rx.recv().unwrap() {
             status
         } else {
             panic!("Wrong response type");
         }
     }
 
-    // /// Get the neighbours of the node
-    // pub fn get_neighbours(&self) -> Vec<(String, (f64, f64))> {
-    //     self.node_data
-    //         .lock()
-    //         .neighbours
-    //         .clone()
-    //         .into_iter()
-    //         .collect()
-    // }
-    // /// Check if the node is a neighbour
-    // pub fn is_neighbour(&self, zid: &str) -> bool {
-    //     self.node_data.lock().neighbours.contains_key(zid)
-    // }
-    // /// Get the polygon of the node
-    // pub fn get_polygon(&self) -> Vec<(f64, f64)> {
-    //     self.node_data.lock().polygon.clone()
-    // }
-    //
-    // ///Check if the point site is in the polygon. Ray casting algorithm.
-    // pub fn is_in_polygon(&self, point: (f64, f64)) -> bool {
-    //     let guard = self.node_data.lock();
-    //     if guard.polygon.is_empty() {
-    //         false
-    //     } else {
-    //         let mut i = 0;
-    //         let mut j = guard.polygon.len() - 1;
-    //         let mut c = false;
-    //         while i < guard.polygon.len() {
-    //             if ((guard.polygon[i].1 > point.1) != (guard.polygon[j].1 > point.1))
-    //                 && (point.0
-    //                     < (guard.polygon[j].0 - guard.polygon[i].0)
-    //                         * (point.1 - guard.polygon[i].1)
-    //                         / (guard.polygon[j].1 - guard.polygon[i].1)
-    //                         + guard.polygon[i].0)
-    //             {
-    //                 c = !c;
-    //             }
-    //             j = i;
-    //             i += 1;
-    //         }
-    //         c
-    //     }
-    // }
+    /// Get the neighbours of the node
+    pub fn get_neighbours(&self) -> Vec<(String, (f64, f64))> {
+        self.api_requester_tx
+            .send(ApiMessage::GetNeighbours)
+            .unwrap();
+        if let ApiResponse::GetNeighboursResponse(neighbours) =
+            self.api_responder_rx.recv().unwrap()
+        {
+            neighbours
+        } else {
+            panic!("Wrong response type");
+        }
+    }
+    /// Check if the node is a neighbour
+    pub fn is_neighbour(&self, zid: &str) -> bool {
+        self.api_requester_tx
+            .send(ApiMessage::IsNeighbour(zid.to_string()))
+            .unwrap();
+        if let ApiResponse::IsNeighbourResponse(bool) = self.api_responder_rx.recv().unwrap() {
+            bool
+        } else {
+            panic!("Wrong response type");
+        }
+    }
+    /// Get the polygon of the node
+    pub fn get_polygon(&self) -> Vec<(f64, f64)> {
+        self.api_requester_tx.send(ApiMessage::GetPolygon).unwrap();
+        if let ApiResponse::GetPolygonResponse(polygon) = self.api_responder_rx.recv().unwrap() {
+            polygon
+        } else {
+            panic!("Wrong response type");
+        }
+    }
+
+    ///Check if the point site is in the polygon. Ray casting algorithm.
+    pub fn is_in_polygon(&self, point: (f64, f64)) -> bool {
+        let polygon;
+        self.api_requester_tx.send(ApiMessage::GetPolygon).unwrap();
+        if let ApiResponse::GetPolygonResponse(polygon_msg) = self.api_responder_rx.recv().unwrap()
+        {
+            polygon = polygon_msg;
+        } else {
+            panic!("Wrong response type");
+        }
+        if polygon.is_empty() {
+            false
+        } else {
+            let mut i = 0;
+            let mut j = polygon.len() - 1;
+            let mut c = false;
+            while i < polygon.len() {
+                if ((polygon[i].1 > point.1) != (polygon[j].1 > point.1))
+                    && (point.0
+                        < (polygon[j].0 - polygon[i].0) * (point.1 - polygon[i].1)
+                            / (polygon[j].1 - polygon[i].1)
+                            + polygon[i].0)
+                {
+                    c = !c;
+                }
+                j = i;
+                i += 1;
+            }
+            c
+        }
+    }
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -338,5 +406,11 @@ impl NodeData {
             expected_counter: -1,
             status: NodeStatus::Joining,
         }
+    }
+}
+
+impl Default for NodeData {
+    fn default() -> Self {
+        Self::new()
     }
 }

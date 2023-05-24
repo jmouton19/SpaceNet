@@ -14,7 +14,6 @@ pub fn handle_owner_response(
     zid: &str,
     cluster_name: &str,
 ) {
-    println!("IM NOT BEING USED");
     let data: OwnerResponse = deserialize(payload).unwrap();
     println!(
         "New node at site... {:?} from owner id... {:?}",

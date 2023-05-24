@@ -4,15 +4,17 @@ use crate::node::SyncResolve;
 use crate::types::{closest_point, point_within_distance};
 use bincode::{deserialize, serialize};
 use rand::Rng;
-use std::sync::{Arc, MutexGuard};
+use std::sync::Arc;
 use zenoh::Session;
 
 /// Handles a join request from a new node. Boot node assigns a point to the new node and states the closest node (`land_owner`) to the new point. Sends the new node to the 'land_owner' node.
 /// Adds new node to cluster and polygon list of boot node.
 pub fn handle_join_request(
     payload: &[u8],
-    mut boot_node_data: MutexGuard<BootNodeData>,
+    boot_node_data: &mut BootNodeData,
     session: Arc<Session>,
+    cluster_name: &str,
+    zid: &str,
 ) {
     let data: DefaultMessage = deserialize(payload).unwrap();
     //get random point to give to new node
@@ -80,16 +82,13 @@ pub fn handle_join_request(
     let json_message = serialize(&NewNodeResponse {
         new_site: point,
         new_id: data.sender_id,
-        sender_id: boot_node_data.zid.clone(),
+        sender_id: zid.to_string(),
     })
     .unwrap();
 
     session
         .put(
-            format!(
-                "{}/node/{}/owner_request",
-                boot_node_data.cluster_name, land_owner
-            ),
+            format!("{}/node/{}/owner_request", cluster_name, land_owner),
             json_message,
         )
         .res()
