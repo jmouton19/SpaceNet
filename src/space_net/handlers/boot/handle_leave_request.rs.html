@@ -25,29 +25,25 @@
 <a href="#24" id="24">24</a>
 <a href="#25" id="25">25</a>
 <a href="#26" id="26">26</a>
-<a href="#27" id="27">27</a>
-<a href="#28" id="28">28</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::boot_node::BootNodeData;
 <span class="kw">use </span><span class="kw">crate</span>::message::DefaultMessage;
 <span class="kw">use </span><span class="kw">crate</span>::node::SyncResolve;
 <span class="kw">use </span>bincode::{deserialize, serialize};
-<span class="kw">use </span>std::sync::{Arc, MutexGuard};
+<span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>zenoh::Session;
 
 <span class="doccomment">/// Handles a leave request from a node. Boot node removes the node from the cluster and polygon list.
 </span><span class="kw">pub fn </span>handle_leave_request(
     payload: <span class="kw-2">&amp;</span>[u8],
-    <span class="kw-2">mut </span>boot_node_data: MutexGuard&lt;BootNodeData&gt;,
+    boot_node_data: <span class="kw-2">&amp;mut </span>BootNodeData,
     session: Arc&lt;Session&gt;,
+    cluster_name: <span class="kw-2">&amp;</span>str,
 ) {
     <span class="kw">let </span>data: DefaultMessage = deserialize(payload).unwrap();
     <span class="macro">println!</span>(<span class="string">&quot;Node... {} wants to leave....&quot;</span>, data.sender_id);
     session
         .put(
-            <span class="macro">format!</span>(
-                <span class="string">&quot;{}/node/{}/leave_reply&quot;</span>,
-                boot_node_data.cluster_name, data.sender_id
-            ),
+            <span class="macro">format!</span>(<span class="string">&quot;{}/node/{}/leave_reply&quot;</span>, cluster_name, data.sender_id),
             serialize(<span class="kw-2">&amp;</span><span class="bool-val">true</span>).unwrap(),
         )
         .res()
