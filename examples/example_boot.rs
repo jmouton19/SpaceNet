@@ -5,6 +5,5 @@ fn main() {
     println!("boot node online..... {:?}", boot_server.get_zid());
     loop {
         boot_server.get_draw_count();
-
     }
 }

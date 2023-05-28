@@ -10,7 +10,7 @@ typedef enum NodeStatus {
   Offline,
 } NodeStatus;
 
-void *new_node(const char *cluster_name);
+void *new_node(const char *cluster_name, double site_x, double site_y);
 
 void *new_boot(const char *cluster_name, bool centralized_voronoi);
 
@@ -28,6 +28,4 @@ int is_neighbour(void *node_ptr, const char *zid);
 
 int is_in_polygon(void *node_ptr, double x, double y);
 
-void run_boot(void *boot_ptr);
-
-void run(void *node_ptr);
+void join(void *node_ptr);

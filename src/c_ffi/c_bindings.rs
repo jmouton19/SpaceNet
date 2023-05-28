@@ -1,122 +1,122 @@
-// use crate::boot_node::BootNode;
-// use crate::node::{Node, NodeStatus};
-// use libc::{c_char, c_int};
-// use std::ffi::{c_void, CStr, CString};
-//
-// //new node from C
+use crate::boot_node::BootNode;
+use crate::node::{Node, NodeStatus};
+use libc::{c_char, c_int};
+use std::ffi::{c_void, CStr, CString};
+
+//new node from C
+#[no_mangle]
+pub extern "C" fn new_node(cluster_name: *const c_char,site_x:f64,site_y:f64) -> *mut c_void {
+    let c_str = unsafe { CStr::from_ptr(cluster_name) };
+    let cluster_name = c_str.to_str().unwrap();
+    let node = Box::new(Node::new(cluster_name,(site_x,site_y)));
+    Box::into_raw(node) as *mut c_void
+}
+
+//new boot node from C
+#[no_mangle]
+pub extern "C" fn new_boot(cluster_name: *const c_char, centralized_voronoi: bool) -> *mut c_void {
+    let c_str = unsafe { CStr::from_ptr(cluster_name) };
+    let cluster_name = c_str.to_str().unwrap();
+    let boot_node = Box::new(BootNode::new(cluster_name, centralized_voronoi));
+    Box::into_raw(boot_node) as *mut c_void
+}
+// leave node when key is pressed from C
+#[no_mangle]
+pub extern "C" fn leave_on_key(node_ptr: *mut c_void, key: c_char) {
+    let node = unsafe { &*(node_ptr as *mut Node) };
+    let key = key as u8 as char;
+    node.leave_on_pressed(key);
+}
+
+// leave node from C
+#[no_mangle]
+pub extern "C" fn leave(node_ptr: *mut c_void) {
+    let node = unsafe { &mut *(node_ptr as *mut Node) };
+    node.leave();
+}
+
+// get zid from C
+#[no_mangle]
+pub extern "C" fn get_zid_node(node_ptr: *mut c_void) -> *const c_char {
+    let node = unsafe { &*(node_ptr as *mut Node) };
+    let zid_str = node.get_zid();
+    let c_string = CString::new(zid_str).unwrap();
+    c_string.into_raw()
+}
+
+//get node status from C
+#[no_mangle]
+pub extern "C" fn get_status(node_ptr: *mut c_void) -> NodeStatus {
+    let node = unsafe { &*(node_ptr as *mut Node) };
+    node.get_status()
+}
+
+// get zid boot from C
+#[no_mangle]
+pub extern "C" fn get_zid_boot(boot_ptr: *mut c_void) -> *const c_char {
+    let boot = unsafe { &*(boot_ptr as *mut BootNode) };
+    let zid_str = boot.get_zid();
+    let c_string = CString::new(zid_str).unwrap();
+    c_string.into_raw()
+}
+
+// //get neighbours from C
 // #[no_mangle]
-// pub extern "C" fn new_node(cluster_name: *const c_char) -> *mut c_void {
-//     let c_str = unsafe { CStr::from_ptr(cluster_name) };
-//     let cluster_name = c_str.to_str().unwrap();
-//     let node = Box::new(Node::new(cluster_name));
-//     Box::into_raw(node) as *mut c_void
-// }
-//
-// //new boot node from C
-// #[no_mangle]
-// pub extern "C" fn new_boot(cluster_name: *const c_char, centralized_voronoi: bool) -> *mut c_void {
-//     let c_str = unsafe { CStr::from_ptr(cluster_name) };
-//     let cluster_name = c_str.to_str().unwrap();
-//     let boot_node = Box::new(BootNode::new(cluster_name, centralized_voronoi));
-//     Box::into_raw(boot_node) as *mut c_void
-// }
-// // leave node when key is pressed from C
-// #[no_mangle]
-// pub extern "C" fn leave_on_key(node_ptr: *mut c_void, key: c_char) {
+// pub extern "C" fn get_neighbours(node_ptr: *mut c_void) -> *const c_char {
 //     let node = unsafe { &*(node_ptr as *mut Node) };
-//     let key = key as u8 as char;
-//     node.leave_on_pressed(key);
 // }
-//
-// // leave node from C
+
+// Check if the node is a neighbour from c
+#[no_mangle]
+pub extern "C" fn is_neighbour(node_ptr: *mut c_void, zid: *const c_char) -> c_int {
+    let c_str = unsafe { CStr::from_ptr(zid) };
+    let zid = c_str.to_str().unwrap();
+    let node = unsafe { &*(node_ptr as *mut Node) };
+    if node.is_neighbour(zid) {
+        1
+    } else {
+        0
+    }
+}
+
+// /// Get the polygon of the node
+// pub fn get_polygon(&self) -> Vec<(f64, f64)> {
+//     self.polygon.clone()
+// }
+
+// Check if the point site is in the polygon from c
+#[no_mangle]
+pub extern "C" fn is_in_polygon(node_ptr: *mut c_void, x: f64, y: f64) -> c_int {
+    let node = unsafe { &*(node_ptr as *mut Node) };
+    let point = (x, y);
+    if node.is_in_polygon(point) {
+        1
+    } else {
+        0
+    }
+}
+
+// // free zid from C
 // #[no_mangle]
-// pub extern "C" fn leave(node_ptr: *mut c_void) {
-//     let node = unsafe { &mut *(node_ptr as *mut Node) };
-//     node.leave();
+// pub extern "C" fn free_zid(s: *mut c_char) {
+//     unsafe {
+//         if s.is_null() {
+//             return;
+//         }
+//         CString::from_raw(s)
+//     };
 // }
-//
-// // get zid from C
-// #[no_mangle]
-// pub extern "C" fn get_zid_node(node_ptr: *mut c_void) -> *const c_char {
-//     let node = unsafe { &*(node_ptr as *mut Node) };
-//     let zid_str = node.get_zid();
-//     let c_string = CString::new(zid_str).unwrap();
-//     c_string.into_raw()
-// }
-//
-// //get node status from C
-// #[no_mangle]
-// pub extern "C" fn get_status(node_ptr: *mut c_void) -> NodeStatus {
-//     let node = unsafe { &*(node_ptr as *mut Node) };
-//     node.get_status()
-// }
-//
-// // get zid boot from C
-// #[no_mangle]
-// pub extern "C" fn get_zid_boot(boot_ptr: *mut c_void) -> *const c_char {
-//     let boot = unsafe { &*(boot_ptr as *mut BootNode) };
-//     let zid_str = boot.get_zid();
-//     let c_string = CString::new(zid_str).unwrap();
-//     c_string.into_raw()
-// }
-//
-// // //get neighbours from C
-// // #[no_mangle]
-// // pub extern "C" fn get_neighbours(node_ptr: *mut c_void) -> *const c_char {
-// //     let node = unsafe { &*(node_ptr as *mut Node) };
-// // }
-//
-// // Check if the node is a neighbour from c
-// #[no_mangle]
-// pub extern "C" fn is_neighbour(node_ptr: *mut c_void, zid: *const c_char) -> c_int {
-//     let c_str = unsafe { CStr::from_ptr(zid) };
-//     let zid = c_str.to_str().unwrap();
-//     let node = unsafe { &*(node_ptr as *mut Node) };
-//     if node.is_neighbour(zid) {
-//         1
-//     } else {
-//         0
-//     }
-// }
-//
-// // /// Get the polygon of the node
-// // pub fn get_polygon(&self) -> Vec<(f64, f64)> {
-// //     self.polygon.clone()
-// // }
-//
-// // Check if the point site is in the polygon from c
-// #[no_mangle]
-// pub extern "C" fn is_in_polygon(node_ptr: *mut c_void, x: f64, y: f64) -> c_int {
-//     let node = unsafe { &*(node_ptr as *mut Node) };
-//     let point = (x, y);
-//     if node.is_in_polygon(point) {
-//         1
-//     } else {
-//         0
-//     }
-// }
-//
-// // // free zid from C
-// // #[no_mangle]
-// // pub extern "C" fn free_zid(s: *mut c_char) {
-// //     unsafe {
-// //         if s.is_null() {
-// //             return;
-// //         }
-// //         CString::from_raw(s)
-// //     };
-// // }
-//
+
 // //run boot node from C
 // #[no_mangle]
 // pub extern "C" fn run_boot(boot_ptr: *mut c_void) {
 //     let boot = unsafe { &mut *(boot_ptr as *mut BootNode) };
 //     boot.run();
 // }
-//
-// // run node from C
-// #[no_mangle]
-// pub extern "C" fn run(node_ptr: *mut c_void) {
-//     let node = unsafe { &mut *(node_ptr as *mut Node) };
-//     node.run();
-// }
+
+// run node from C
+#[no_mangle]
+pub extern "C" fn join(node_ptr: *mut c_void) {
+    let node = unsafe { &mut *(node_ptr as *mut Node) };
+    node.join();
+}

@@ -1,7 +1,10 @@
+use rand::Rng;
 use space_net::node::*;
 
 fn main() {
-    let mut node = Node::new("network_1");
+    let mut rng = rand::thread_rng();
+    let point = (rng.gen_range(1.0..=99.0), rng.gen_range(1.0..=99.0));
+    let mut node = Node::new("network_1",point);
     node.leave_on_pressed('q');
     node.join();
     loop {

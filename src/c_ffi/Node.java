@@ -11,16 +11,16 @@ public class Node {
     }
     private final long nativePtr;
 
-    public Node(String clusterName) {
-        nativePtr = newNode(clusterName);
+    public Node(String clusterName,double x, double y) {
+        nativePtr = newNode(clusterName,x,y);
     }
 
     public String getZid() {
         return getZid(nativePtr);
     }
 
-     public void run() {
-                 run(nativePtr);
+     public void join() {
+                 join(nativePtr);
             }
 
      public void leave() {
@@ -46,13 +46,13 @@ public class Node {
 
     private native String getZid(long nodePtr);
 
-    private native void run(long nodePtr);
+    private native void join(long nodePtr);
 
     private native void leave(long nodePtr);
 
     private native void leaveOnKey(long nodePtr, char key);
 
-    private static native long newNode(String clusterName);
+    private static native long newNode(String clusterName,double x, double y);
 
     private native int getStatus(long nodePtr);
 

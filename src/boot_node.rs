@@ -5,14 +5,11 @@ use crate::handlers::boot::set_expected_counter::set_expected_counter;
 use crate::node::SyncResolve;
 use crate::types::{OrderedMapPairs, OrderedMapPolygon};
 use crate::utils::{draw_voronoi_full, Voronoi};
-
+use rand::Rng;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-use rand::Rng;
-
 use zenoh::prelude::r#async::AsyncResolve;
-
 pub use zenoh::prelude::sync::*;
 
 /// A boot node in a network acts as the entry point for new nodes to join the cluster. It also acts as a central point for nodes to leave the cluster. Stores the site and polygon information of all nodes in the network. Constructs the distributed voronoi diagram from received polygons as well as a centralized voronoi diagram.
@@ -113,9 +110,6 @@ impl BootNode {
                     let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
                     let session_clone = session_clone.clone();
                     let cluster_name = cluster_name_clone.as_str();
-                    // let mut rng = rand::thread_rng();
-                    // let delay = rng.gen_range(1..=10);
-                    // thread::sleep(Duration::from_millis(delay));
                     match topic {
                         "new" => {
                             handle_join_request(
@@ -193,16 +187,23 @@ impl BootNode {
             }
         });
 
-        let (api_requester_tx, api_requester_rx) = flume::bounded(32);
-        let (api_responder_tx, api_responder_rx) = flume::bounded(32);
-        async_std::task::spawn_blocking(move || {
+        let (api_requester_tx, api_requester_rx) = flume::unbounded();
+        let (api_responder_tx, api_responder_rx) = flume::unbounded();
+
+        async_std::task::spawn(async move {
             let mut boot_node_data_copy = BootNodeData::new(centralized_voronoi);
             loop {
-                while let Ok(updated_boot_node_data) = node_update_rx.try_recv() {
-                    boot_node_data_copy = updated_boot_node_data.clone();
-                }
-                while let Ok(api_message) = api_requester_rx.try_recv() {
-                    let api_response = match api_message {
+                futures::select! {
+                    updated_boot_node_data = node_update_rx.recv_async() => {
+                        if let Ok(updated_boot_node_data) = updated_boot_node_data {
+                            boot_node_data_copy = updated_boot_node_data.clone();
+                        } else {
+                            break; // Exit the loop if receiving from `node_update_rx` fails
+                        }
+                    }
+                    api_message = api_requester_rx.recv_async() => {
+                        if let Ok(api_message) = api_message {
+                            let api_response = match api_message {
                         BootApiMessage::GetCluster => BootApiResponse::GetCluster(
                             boot_node_data_copy.cluster.clone().into_iter().collect(),
                         ),
@@ -227,9 +228,49 @@ impl BootNode {
                         }
                     };
                     api_responder_tx.send(api_response).unwrap();
+                        } else {
+                            break; // Exit the loop if receiving from `api_requester_rx` fails
+                        }
+                    }
                 }
             }
         });
+
+        // async_std::task::spawn(async move {
+        //     let mut boot_node_data_copy = BootNodeData::new(centralized_voronoi);
+        //     loop {
+        //         while let Ok(updated_boot_node_data) = node_update_rx.try_recv() {
+        //             boot_node_data_copy = updated_boot_node_data.clone();
+        //         }
+        //         while let Ok(api_message) = api_requester_rx.try_recv() {
+        //             let api_response = match api_message {
+        //                 BootApiMessage::GetCluster => BootApiResponse::GetCluster(
+        //                     boot_node_data_copy.cluster.clone().into_iter().collect(),
+        //                 ),
+        //                 BootApiMessage::GetPolygonList => BootApiResponse::GetPolygonList(
+        //                     boot_node_data_copy
+        //                         .polygon_list
+        //                         .clone()
+        //                         .into_iter()
+        //                         .collect(),
+        //                 ),
+        //                 BootApiMessage::GetCorrectPolygonList => {
+        //                     BootApiResponse::GetCorrectPolygonList(
+        //                         boot_node_data_copy
+        //                             .correct_polygon_list
+        //                             .clone()
+        //                             .into_iter()
+        //                             .collect(),
+        //                     )
+        //                 }
+        //                 BootApiMessage::GetDrawCount => {
+        //                     BootApiResponse::GetDrawCount(boot_node_data_copy.draw_count)
+        //                 }
+        //             };
+        //             api_responder_tx.send(api_response).unwrap();
+        //         }
+        //     }
+        // });
 
         Self {
             session,

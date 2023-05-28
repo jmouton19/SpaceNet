@@ -13,27 +13,29 @@
 //! use space_net::boot_node::*;
 //!
 //! fn main() {
-//!     let mut boot_server = BootNode::new("network_1");
+//!     let mut boot_server = BootNode::new("network_1",true);
 //!     println!("boot node online..... {:?}", boot_server.get_zid());
 //!     loop {
-//!         boot_server.run();
+//!         //boot_server.run();
 //!     }
 //! }
 //!```
 //!### Node
 //! Starts a [node](node/struct.Node.html) listening on cluster `network_1` which leaves the cluster on pressing `q`.
-//! ```rust,no_run
+//!```rust,no_run
 //! use space_net::node::*;
 //!
 //! fn main() {
-//!     let mut node = Node::new("network_1");
+//!  use rand::Rng;let mut rng = rand::thread_rng();
+//!     let point = (rng.gen_range(1.0..=99.0), rng.gen_range(1.0..=99.0));
+//!     let mut node = Node::new("network_1",point);
 //!     node.leave_on_pressed('q');
 //!     println!("node online..... {:?}", node.get_zid());
+//!     node.join();
 //!     loop {
 //!         if node.get_status() == NodeStatus::Offline {
 //!            break;
 //!         }
-//!         node.run();
 //!     }
 //! }
 //! ```

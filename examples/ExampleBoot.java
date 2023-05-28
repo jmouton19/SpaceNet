@@ -5,7 +5,7 @@ public class ExampleBoot {
          System.out.println("Boot node zid: " + zid);
 
          while (true) {
-            boot_node.run();
+            //boot_node.run();
          }
     }
 }

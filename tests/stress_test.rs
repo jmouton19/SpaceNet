@@ -6,6 +6,7 @@ mod stress_test {
     use std::io::Write;
     use std::time::Instant;
     use std::{fs, thread};
+    use rand::Rng;
 
     //check if distributed polygons is correct in an X(expected_len) node cluster
     #[test]
@@ -25,14 +26,19 @@ mod stress_test {
                 let cluster: Vec<(String, (f64, f64))> = boot_server.get_cluster();
                 let correct_polygon_list: Vec<(String, Vec<(f64, f64)>)> =
                     boot_server.get_correct_polygon_list();
-                assert_eq!(polygon_list.len() as i32, expected_len );
+                assert_eq!(polygon_list.len() as i32, expected_len);
                 assert_eq!(polygon_list.len() as i32, correct_polygon_list.len() as i32);
 
                 let tolerance = 0.001;
                 for i in 0..(expected_len) {
                     let n_zid = cluster.get(i as usize).unwrap().0.clone();
                     let actual = polygon_list.get(i as usize).unwrap().1.clone();
-                    let expected = polygon_list.iter().find(|(zid, _)| zid == &n_zid).unwrap().1.clone();
+                    let expected = polygon_list
+                        .iter()
+                        .find(|(zid, _)| zid == &n_zid)
+                        .unwrap()
+                        .1
+                        .clone();
                     // if actual.len() != expected.len() {
                     //     println!("Actual: {:?}", actual);
                     //     println!("Expected: {:?}", expected);
@@ -76,7 +82,9 @@ mod stress_test {
         });
 
         for _i in 0..(expected_len) {
-            let mut node = Node::new(file_name2.clone().as_str());
+            let mut rng = rand::thread_rng();
+            let point = (rng.gen_range(1.0..=99.0), rng.gen_range(1.0..=99.0));
+            let mut node = Node::new("test1",point);
             node.join();
         }
         handle1.join().unwrap();

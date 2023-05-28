@@ -6,6 +6,7 @@ mod test {
     use space_net::node::Node;
     use std::thread;
     use std::time::Instant;
+    use rand::Rng;
 
     //check if distributed polygons is correct in an X(expected_len) node cluster
     #[test]
@@ -28,7 +29,12 @@ mod test {
                     let n_zid = cluster.get(i as usize).unwrap().0.clone();
                     let actual = polygon_list.get(i as usize).unwrap().1.clone();
 
-                    let expected = polygon_list.iter().find(|(zid, _)| zid == &n_zid).unwrap().1.clone();
+                    let expected = polygon_list
+                        .iter()
+                        .find(|(zid, _)| zid == &n_zid)
+                        .unwrap()
+                        .1
+                        .clone();
 
                     //let expected = correct_polygon_list.get(i as usize).unwrap().1.clone();
                     if actual.len() != expected.len() {
@@ -57,7 +63,9 @@ mod test {
         });
 
         for _i in 0..(expected_len - 1) {
-            let mut node = Node::new("test1");
+            let mut rng = rand::thread_rng();
+            let point = (rng.gen_range(1.0..=99.0), rng.gen_range(1.0..=99.0));
+            let mut node = Node::new("test1",point);
             node.join();
         }
         handle1.join().unwrap();

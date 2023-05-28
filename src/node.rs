@@ -5,19 +5,16 @@ use crate::handlers::node::handle_neighbours_neighbours_response::handle_neighbo
 use crate::handlers::node::handle_new_voronoi_request::handle_new_voronoi_request;
 use crate::handlers::node::handle_owner_request::handle_owner_request;
 use crate::handlers::node::handle_owner_response::handle_owner_response;
-use crate::message::DefaultMessage;
+use crate::message::{DefaultMessage, NewVoronoiRequest};
 use crate::types::OrderedMapPairs;
 use async_std::io::ReadExt;
 use async_std::{io, task};
 use bincode::serialize;
-
+use rand::Rng;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-use rand::Rng;
-
 use zenoh::prelude::r#async::AsyncResolve;
-
 pub use zenoh::prelude::sync::*;
 
 /// A node in a network that has a point site which is used in the calculation of the voronoi diagram of a cluster. Computes its own voronoi polygon from its list of neighbours. Does not store information on entire cluster.
@@ -38,8 +35,11 @@ pub struct Node {
     pub(crate) zid: String,
     pub(crate) api_requester_tx: flume::Sender<ApiMessage>,
     pub(crate) api_responder_rx: flume::Receiver<ApiResponse>,
-    // subscription: Option<Subscriber<'a, ()>>,
+    //pub(crate) node_setter_tx: flume::Sender<ApiMessage>,
 }
+
+#[derive(PartialEq, Clone, Debug)]
+pub enum ApiSetterMessage {}
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum ApiMessage {
@@ -47,17 +47,19 @@ pub enum ApiMessage {
     GetNeighbours,
     GetPolygon,
     IsNeighbour(String),
+    GetSite,
 }
 #[derive(PartialEq, Clone, Debug)]
 pub enum ApiResponse {
     GetStatusResponse(NodeStatus),
     GetNeighboursResponse(Vec<(String, (f64, f64))>),
+    GetSiteResponse((f64,f64)),
     GetPolygonResponse(Vec<(f64, f64)>),
     IsNeighbourResponse(bool),
 }
 
 impl Node {
-    pub fn new(cluster_name: &str) -> Self {
+    pub fn new(cluster_name: &str,site:(f64,f64)) -> Self {
         let session = zenoh::open(config::default())
             .res_sync()
             .unwrap()
@@ -85,12 +87,20 @@ impl Node {
         //Processor task, handles messages from zenoh. Update node_data copy in API task
         let session_clone = Arc::clone(&session);
         let (node_update_tx, node_update_rx) = flume::unbounded();
+        //let (node_setter_tx, node_setter_rx) = flume::unbounded();
         let cluster_name_clone = cluster_name.to_string();
         let zid_clone = zid.to_string();
 
         async_std::task::spawn_blocking(move || {
-            let mut node_data = NodeData::new();
+            let mut node_data = NodeData::new(site);
             loop {
+                // while let Ok(setter_message) = node_setter_rx.try_recv() {
+                //     match setter_message {
+                //         ApiSetterMessage::GetStatus => {}
+                //     };
+                //     node_update_tx.send(node_data.clone()).unwrap();
+                // }
+
                 while let Ok(sample) = zenoh_rx.try_recv() {
                     let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
                     println!("Received message on topic... {:?}", topic);
@@ -98,9 +108,6 @@ impl Node {
                     let session_clone = session_clone.clone();
                     let cluster_name = cluster_name_clone.as_str();
                     let zid = zid_clone.as_str();
-                    // let mut rng = rand::thread_rng();
-                    // let delay = rng.gen_range(1..=10);
-                    // thread::sleep(Duration::from_millis(delay));
                     match topic {
                         "new_reply" => {
                             handle_owner_request(
@@ -182,18 +189,50 @@ impl Node {
             }
         });
 
-        let (api_requester_tx, api_requester_rx) = flume::bounded(32);
-        let (api_responder_tx, api_responder_rx) = flume::bounded(32);
+        let (api_requester_tx, api_requester_rx) = flume::unbounded();
+        let (api_responder_tx, api_responder_rx) = flume::unbounded();
 
-        async_std::task::spawn_blocking(move || {
-            let mut node_data_copy = NodeData::new();
+        // async_std::task::spawn_blocking(move || {
+        //     let mut node_data_copy = NodeData::new();
+        //     loop {
+        //         while let Ok(updated_node_data) = node_update_rx.try_recv() {
+        //             node_data_copy = updated_node_data.clone();
+        //         }
+        //         while let Ok(api_message) = api_requester_rx.try_recv() {
+        //             let api_response = match api_message {
+        //                 ApiMessage::GetStatus => {
+        //                     ApiResponse::GetStatusResponse(node_data_copy.status.clone())
+        //                 }
+        //                 ApiMessage::GetNeighbours => ApiResponse::GetNeighboursResponse(
+        //                     node_data_copy.neighbours.clone().into_iter().collect(),
+        //                 ),
+        //                 ApiMessage::GetPolygon => {
+        //                     ApiResponse::GetPolygonResponse(node_data_copy.polygon.clone())
+        //                 }
+        //                 ApiMessage::IsNeighbour(zid) => ApiResponse::IsNeighbourResponse(
+        //                     node_data_copy.neighbours.contains_key(zid.as_str()),
+        //                 ),
+        //             };
+        //             api_responder_tx.send(api_response).unwrap();
+        //         }
+        //     }
+        // });
+
+        async_std::task::spawn(async move {
+            let mut node_data_copy = NodeData::new(site);
             loop {
-                while let Ok(updated_node_data) = node_update_rx.try_recv() {
-                    node_data_copy = updated_node_data.clone();
-                }
-                while let Ok(api_message) = api_requester_rx.try_recv() {
-                    let api_response = match api_message {
-                        ApiMessage::GetStatus => {
+                futures::select! {
+                    updated_node_data = node_update_rx.recv_async() => {
+                        if let Ok(updated_node_data) = updated_node_data {
+                            node_data_copy = updated_node_data.clone();
+                        } else {
+                            break; // Exit the loop if receiving from `node_update_rx` fails
+                        }
+                    }
+                    api_message = api_requester_rx.recv_async() => {
+                        if let Ok(api_message) = api_message {
+                            let api_response = match api_message {
+                                                    ApiMessage::GetStatus => {
                             ApiResponse::GetStatusResponse(node_data_copy.status.clone())
                         }
                         ApiMessage::GetNeighbours => ApiResponse::GetNeighboursResponse(
@@ -205,38 +244,18 @@ impl Node {
                         ApiMessage::IsNeighbour(zid) => ApiResponse::IsNeighbourResponse(
                             node_data_copy.neighbours.contains_key(zid.as_str()),
                         ),
+                                ApiMessage::GetSite => ApiResponse::GetSiteResponse(
+                            node_data_copy.site.clone(),
+                        ),
                     };
                     api_responder_tx.send(api_response).unwrap();
+                        } else {
+                            break; // Exit the loop if receiving from `api_requester_rx` fails
+                        }
+                    }
                 }
             }
         });
-
-        // async_std::task::spawn(async move {
-        //     let mut node_data_copy = NodeData::new();
-        //     loop {
-        //         futures::select! {
-        //         updated_node_data = node_update_rx.recv_async() => {
-        //             if let Ok(updated_node_data) = updated_node_data {
-        //                 node_data_copy = updated_node_data.clone();
-        //             } else {
-        //                 break; // Exit the loop if receiving from `node_update_rx` fails
-        //             }
-        //         }
-        //         api_message = api_requester_rx.recv_async() => {
-        //             if let Ok(api_message) = api_message {
-        //                 let api_response = match api_message {
-        //                     ApiMessage::GetStatus => {
-        //                         ApiResponse::GetStatusResponse(node_data_copy.status.clone())
-        //                     }
-        //                 };
-        //                 api_responder_tx.send(api_response).unwrap();
-        //             } else {
-        //                 break; // Exit the loop if receiving from `api_requester_rx` fails
-        //             }
-        //         }
-        //     }
-        //     }
-        // });
 
         Self {
             session,
@@ -244,13 +263,15 @@ impl Node {
             zid,
             api_requester_tx,
             api_responder_rx,
+            //node_setter_tx,
         }
     }
 
     // Process the current messages that are in the subscription channel queue one at a time. Handles each topic with a different [handler](crate::handlers::node).
     pub fn join(&mut self) {
-        let message = serialize(&DefaultMessage {
+        let message = serialize(&NewVoronoiRequest {
             sender_id: self.zid.clone(),
+            site:self.get_site()
         })
         .unwrap();
         self.session
@@ -312,6 +333,15 @@ impl Node {
         self.api_requester_tx.send(ApiMessage::GetStatus).unwrap();
         if let ApiResponse::GetStatusResponse(status) = self.api_responder_rx.recv().unwrap() {
             status
+        } else {
+            panic!("Wrong response type");
+        }
+    }
+
+    pub fn get_site(&self) -> (f64,f64) {
+        self.api_requester_tx.send(ApiMessage::GetSite).unwrap();
+        if let ApiResponse::GetSiteResponse(site) = self.api_responder_rx.recv().unwrap() {
+            site
         } else {
             panic!("Wrong response type");
         }
@@ -396,21 +426,15 @@ pub enum NodeStatus {
 impl NodeData {
     // Creates a new node instance with a [session](https://docs.rs/zenoh/0.7.0-rc/zenoh/struct.Session.html). Joins the cluster by messaging a boot node on that cluster.
     // Opens a subscription on topic `{cluster}/node/{zid}/*` to receive incoming messages.
-    pub fn new() -> Self {
+    pub fn new(site:(f64,f64)) -> Self {
         Self {
-            site: (-1., -1.),
+            site,
             neighbours: OrderedMapPairs::new(),
             k_hop_neighbours: OrderedMapPairs::new(),
             polygon: vec![],
             received_counter: 0,
             expected_counter: -1,
-            status: NodeStatus::Joining,
+            status: NodeStatus::Offline,
         }
-    }
-}
-
-impl Default for NodeData {
-    fn default() -> Self {
-        Self::new()
     }
 }

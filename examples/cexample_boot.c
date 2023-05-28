@@ -8,7 +8,7 @@ int main() {
     printf("Boot node online... %s\n", zid_str);
 
     while(1) {
-        run_boot(boot_node_ptr);
+       // run_boot(boot_node_ptr);
     }
 
     return 0;
