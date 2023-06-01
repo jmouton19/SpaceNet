@@ -1,11 +1,13 @@
+package com.example;
+
 public class BootNode {
     static {
         System.loadLibrary("java_wrapper");
     }
     private final long nativePtr;
 
-    public BootNode(String clusterName) {
-        nativePtr = newBoot(clusterName);
+    public BootNode(String clusterName,boolean centralized_voronoi) {
+        nativePtr = newBoot(clusterName,centralized_voronoi);
     }
 
     public String getZid() {
@@ -20,7 +22,7 @@ public class BootNode {
 
 //     private native void run(long nodePtr);
 
-    private static native long newBoot(String clusterName);
+    private static native long newBoot(String clusterName,boolean centralized_voronoi);
 
 
 }

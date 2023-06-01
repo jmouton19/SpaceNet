@@ -1,3 +1,4 @@
+import com.example.Node;
 
 public class ExampleNode {
     public static void main(String[] args) {
@@ -7,7 +8,7 @@ public class ExampleNode {
          node.leaveOnKey('q');
          node.join();
 
-         while (node.getStatus()!=Node.NodeStatus.Offline) {
+         while (true) {
 
          }
     }

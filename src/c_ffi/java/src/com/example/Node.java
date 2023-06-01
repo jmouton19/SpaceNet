@@ -1,3 +1,5 @@
+package com.example;
+
 public class Node {
     static {
         System.loadLibrary("java_wrapper");
