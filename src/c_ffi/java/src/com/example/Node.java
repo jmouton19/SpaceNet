@@ -2,6 +2,7 @@ package com.example;
 
 public class Node {
     static {
+        System.loadLibrary("space_net");
         System.loadLibrary("java_wrapper");
     }
 

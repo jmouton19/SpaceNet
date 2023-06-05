@@ -2,6 +2,7 @@ package com.example;
 
 public class BootNode {
     static {
+        System.loadLibrary("space_net");
         System.loadLibrary("java_wrapper");
     }
     private final long nativePtr;
