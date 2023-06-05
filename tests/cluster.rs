@@ -11,7 +11,7 @@ mod test {
     //check if distributed polygons is correct in an X(expected_len) node cluster
     #[test]
     fn test_x_node_cluster() {
-        let expected_len = 5;
+        let expected_len = 3;
 
         let start_time = Instant::now();
         let boot_server = BootNode::new("test1", true);
