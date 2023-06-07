@@ -9,16 +9,13 @@ mkdir src/c_ffi/java/bin/
 javac -h src/c_ffi -d src/c_ffi/java/bin/ src/c_ffi/java/src/com/example/*.java
 javac -cp src/c_ffi/java/bin examples/*.java
 
-Fedora
+Fedora-deprecated
 gcc -shared -fPIC -I${JAVA_HOME}/include -I${JAVA_HOME}/include/linux -Ltarget/release -lspace_net -o target/release/libjava_wrapper.so src/c_ffi/java_wrapper.c
 
 ubuntu &fedora?
-gcc -shared -fPIC -I${JAVA_HOME}/include -I${JAVA_HOME}/include/linux src/c_ffi/java_wrapper.c -Ltarget/release -lspace_net -o target/release/libjava_wrapper.so
-
+gcc -shared -fPIC -I${JAVA_HOME}/include -I${JAVA_HOME}/include/linux src/c_ffi/java_wrapper.c -Wl,-rpath,'$ORIGIN' -Ltarget/release -lspace_net -o target/release/libjava_wrapper.so
 
 java -cp examples:src/c_ffi/java/bin -Djava.library.path=target/release/ ExampleNode
 java -cp examples:src/c_ffi/java/bin -Djava.library.path=target/release/ ExampleBoot
-
-
 
 jar cf spacenet.jar -C src/c_ffi/java/bin .
