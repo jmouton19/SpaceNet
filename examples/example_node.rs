@@ -1,3 +1,4 @@
+use std::thread;
 use rand::Rng;
 use space_net::node::*;
 
@@ -7,6 +8,7 @@ fn main() {
     let mut node = Node::new("network_1",point);
     node.leave_on_pressed('q');
     node.join();
+    println!("Node online..... {:?}", node.get_zid());
     loop {
         if node.get_status() == NodeStatus::Offline {
             break;

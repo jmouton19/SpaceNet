@@ -84,7 +84,7 @@ mod stress_test {
         for _i in 0..(expected_len) {
             let mut rng = rand::thread_rng();
             let point = (rng.gen_range(1.0..=99.0), rng.gen_range(1.0..=99.0));
-            let mut node = Node::new("test1",point);
+            let mut node = Node::new("test2",point);
             node.join();
         }
         handle1.join().unwrap();

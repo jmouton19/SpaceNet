@@ -54,7 +54,6 @@ impl BootNode {
             .unwrap()
             .into_arc();
         let zid = session.zid().to_string();
-
         let cluster_name_clone = cluster_name.to_string();
         let session_clone = Arc::clone(&session);
         let (tx, rx) = flume::unbounded();
@@ -97,8 +96,8 @@ impl BootNode {
         let cluster_name_clone = cluster_name.to_string();
         let zid_clone = cluster_name.to_string();
         let session_clone = Arc::clone(&session);
-        let (node_update_tx, node_update_rx) = flume::unbounded();
-
+        let (api_requester_tx, api_requester_rx) = flume::unbounded();
+        let (api_responder_tx, api_responder_rx) = flume::unbounded();
         async_std::task::spawn_blocking(move || {
             let mut boot_node_data = BootNodeData::new(centralized_voronoi);
             loop {
@@ -181,34 +180,15 @@ impl BootNode {
                             );
                         }
                         boot_node_data.draw_count += 1;
-                        node_update_tx.send(boot_node_data.clone()).unwrap();
                     };
                 }
-            }
-        });
-
-        let (api_requester_tx, api_requester_rx) = flume::unbounded();
-        let (api_responder_tx, api_responder_rx) = flume::unbounded();
-
-        async_std::task::spawn(async move {
-            let mut boot_node_data_copy = BootNodeData::new(centralized_voronoi);
-            loop {
-                futures::select! {
-                    updated_boot_node_data = node_update_rx.recv_async() => {
-                        if let Ok(updated_boot_node_data) = updated_boot_node_data {
-                            boot_node_data_copy = updated_boot_node_data.clone();
-                        } else {
-                            break; // Exit the loop if receiving from `node_update_rx` fails
-                        }
-                    }
-                    api_message = api_requester_rx.recv_async() => {
-                        if let Ok(api_message) = api_message {
-                            let api_response = match api_message {
+                if let Ok(api_message) = api_requester_rx.try_recv() {
+                    let api_response = match api_message {
                         BootApiMessage::GetCluster => BootApiResponse::GetCluster(
-                            boot_node_data_copy.cluster.clone().into_iter().collect(),
+                            boot_node_data.cluster.clone().into_iter().collect(),
                         ),
                         BootApiMessage::GetPolygonList => BootApiResponse::GetPolygonList(
-                            boot_node_data_copy
+                            boot_node_data
                                 .polygon_list
                                 .clone()
                                 .into_iter()
@@ -216,7 +196,7 @@ impl BootNode {
                         ),
                         BootApiMessage::GetCorrectPolygonList => {
                             BootApiResponse::GetCorrectPolygonList(
-                                boot_node_data_copy
+                                boot_node_data
                                     .correct_polygon_list
                                     .clone()
                                     .into_iter()
@@ -224,53 +204,13 @@ impl BootNode {
                             )
                         }
                         BootApiMessage::GetDrawCount => {
-                            BootApiResponse::GetDrawCount(boot_node_data_copy.draw_count)
+                            BootApiResponse::GetDrawCount(boot_node_data.draw_count)
                         }
                     };
                     api_responder_tx.send(api_response).unwrap();
-                        } else {
-                            break; // Exit the loop if receiving from `api_requester_rx` fails
-                        }
-                    }
                 }
             }
         });
-
-        // async_std::task::spawn(async move {
-        //     let mut boot_node_data_copy = BootNodeData::new(centralized_voronoi);
-        //     loop {
-        //         while let Ok(updated_boot_node_data) = node_update_rx.try_recv() {
-        //             boot_node_data_copy = updated_boot_node_data.clone();
-        //         }
-        //         while let Ok(api_message) = api_requester_rx.try_recv() {
-        //             let api_response = match api_message {
-        //                 BootApiMessage::GetCluster => BootApiResponse::GetCluster(
-        //                     boot_node_data_copy.cluster.clone().into_iter().collect(),
-        //                 ),
-        //                 BootApiMessage::GetPolygonList => BootApiResponse::GetPolygonList(
-        //                     boot_node_data_copy
-        //                         .polygon_list
-        //                         .clone()
-        //                         .into_iter()
-        //                         .collect(),
-        //                 ),
-        //                 BootApiMessage::GetCorrectPolygonList => {
-        //                     BootApiResponse::GetCorrectPolygonList(
-        //                         boot_node_data_copy
-        //                             .correct_polygon_list
-        //                             .clone()
-        //                             .into_iter()
-        //                             .collect(),
-        //                     )
-        //                 }
-        //                 BootApiMessage::GetDrawCount => {
-        //                     BootApiResponse::GetDrawCount(boot_node_data_copy.draw_count)
-        //                 }
-        //             };
-        //             api_responder_tx.send(api_response).unwrap();
-        //         }
-        //     }
-        // });
 
         Self {
             session,

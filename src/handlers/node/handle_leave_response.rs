@@ -3,6 +3,8 @@ use crate::node::{NodeData, NodeStatus, SyncResolve};
 use bincode::serialize;
 
 use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 use zenoh::Session;
 
 /// Handles leave response, if no neighbours, shut down, else tell neighbours to recalculate voronoi without me but with my neighbours.
@@ -67,7 +69,7 @@ pub fn handle_leave_response(
         // let message = serialize(&DefaultMessage{
         // sender_id:node.zid.clone()});
         // node.session.put("counter/leaving", message.clone()).res().unwrap();
+        thread::sleep(Duration::from_millis(10));
         node_data.status = NodeStatus::Offline;
-        //let _ = node;
     }
 }
