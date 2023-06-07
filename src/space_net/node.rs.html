@@ -409,36 +409,6 @@
 <a href="#408" id="408">408</a>
 <a href="#409" id="409">409</a>
 <a href="#410" id="410">410</a>
-<a href="#411" id="411">411</a>
-<a href="#412" id="412">412</a>
-<a href="#413" id="413">413</a>
-<a href="#414" id="414">414</a>
-<a href="#415" id="415">415</a>
-<a href="#416" id="416">416</a>
-<a href="#417" id="417">417</a>
-<a href="#418" id="418">418</a>
-<a href="#419" id="419">419</a>
-<a href="#420" id="420">420</a>
-<a href="#421" id="421">421</a>
-<a href="#422" id="422">422</a>
-<a href="#423" id="423">423</a>
-<a href="#424" id="424">424</a>
-<a href="#425" id="425">425</a>
-<a href="#426" id="426">426</a>
-<a href="#427" id="427">427</a>
-<a href="#428" id="428">428</a>
-<a href="#429" id="429">429</a>
-<a href="#430" id="430">430</a>
-<a href="#431" id="431">431</a>
-<a href="#432" id="432">432</a>
-<a href="#433" id="433">433</a>
-<a href="#434" id="434">434</a>
-<a href="#435" id="435">435</a>
-<a href="#436" id="436">436</a>
-<a href="#437" id="437">437</a>
-<a href="#438" id="438">438</a>
-<a href="#439" id="439">439</a>
-<a href="#440" id="440">440</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_leave_response::handle_leave_response;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_leave_voronoi_request::handle_leave_voronoi_request;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_neighbours_neighbours_request::handle_neighbours_neighbours_request;
@@ -476,11 +446,13 @@
     <span class="kw">pub</span>(<span class="kw">crate</span>) zid: String,
     <span class="kw">pub</span>(<span class="kw">crate</span>) api_requester_tx: flume::Sender&lt;ApiMessage&gt;,
     <span class="kw">pub</span>(<span class="kw">crate</span>) api_responder_rx: flume::Receiver&lt;ApiResponse&gt;,
-    <span class="comment">//pub(crate) node_setter_tx: flume::Sender&lt;ApiMessage&gt;,
-</span>}
+    <span class="kw">pub</span>(<span class="kw">crate</span>) node_setter_tx: flume::Sender&lt;ApiSetterMessage&gt;,
+}
 
 <span class="attr">#[derive(PartialEq, Clone, Debug)]
-</span><span class="kw">pub enum </span>ApiSetterMessage {}
+</span><span class="kw">pub enum </span>ApiSetterMessage {
+    SetStatus(NodeStatus),
+}
 
 <span class="attr">#[derive(PartialEq, Clone, Debug)]
 </span><span class="kw">pub enum </span>ApiMessage {
@@ -506,11 +478,11 @@
             .unwrap()
             .into_arc();
         <span class="kw">let </span>zid = session.zid().to_string();
-
         <span class="kw">let </span>session_clone = Arc::clone(<span class="kw-2">&amp;</span>session);
         <span class="kw">let </span>(zenoh_tx, zenoh_rx) = flume::unbounded();
         <span class="kw">let </span>cluster_name_clone = cluster_name.to_string();
         <span class="kw">let </span>zid_clone = zid.to_string();
+
         <span class="comment">//task to listen for zenoh messages, sends message to processor task.
         </span>async_std::task::spawn(<span class="kw">async move </span>{
             <span class="kw">let </span>subscriber = session_clone
@@ -525,24 +497,31 @@
             }
         });
 
-        <span class="comment">//Processor task, handles messages from zenoh. Update node_data copy in API task
-        </span><span class="kw">let </span>session_clone = Arc::clone(<span class="kw-2">&amp;</span>session);
-        <span class="kw">let </span>(node_update_tx, node_update_rx) = flume::unbounded();
-        <span class="comment">//let (node_setter_tx, node_setter_rx) = flume::unbounded();
-        </span><span class="kw">let </span>cluster_name_clone = cluster_name.to_string();
-        <span class="kw">let </span>zid_clone = zid.to_string();
+        <span class="comment">// async_std::task::spawn_blocking(move ||{
+        //     let subscriber = session_clone
+        //         .declare_subscriber(format!(&quot;{}/node/{}/*&quot;, cluster_name_clone, zid_clone))
+        //         .with(flume::unbounded())
+        //         .reliable()
+        //         .res_sync()
+        //         .unwrap();
+        //     loop{
+        //     while let Ok(sample) = subscriber.try_recv() {
+        //         zenoh_tx.send(sample).unwrap();
+        //     }}
+        // });
 
+        //Processor task, handles messages from zenoh. Update node_data copy in API task
+        </span><span class="kw">let </span>session_clone = Arc::clone(<span class="kw-2">&amp;</span>session);
+        <span class="kw">let </span>(api_requester_tx, api_requester_rx) = flume::unbounded();
+        <span class="kw">let </span>(api_responder_tx, api_responder_rx) = flume::unbounded();
+        <span class="kw">let </span>(node_setter_tx, node_setter_rx) = flume::unbounded();
+
+        <span class="kw">let </span>cluster_name_clone = cluster_name.to_string();
+        <span class="kw">let </span>zid_clone = zid.to_string();
         async_std::task::spawn_blocking(<span class="kw">move </span>|| {
             <span class="kw">let </span><span class="kw-2">mut </span>node_data = NodeData::new(site);
             <span class="kw">loop </span>{
-                <span class="comment">// while let Ok(setter_message) = node_setter_rx.try_recv() {
-                //     match setter_message {
-                //         ApiSetterMessage::GetStatus =&gt; {}
-                //     };
-                //     node_update_tx.send(node_data.clone()).unwrap();
-                // }
-
-                </span><span class="kw">while let </span><span class="prelude-val">Ok</span>(sample) = zenoh_rx.try_recv() {
+                <span class="kw">while let </span><span class="prelude-val">Ok</span>(sample) = zenoh_rx.try_recv() {
                     <span class="kw">let </span>topic = sample.key_expr.split(<span class="string">&#39;/&#39;</span>).nth(<span class="number">3</span>).unwrap_or(<span class="string">&quot;&quot;</span>);
                     <span class="macro">println!</span>(<span class="string">&quot;Received message on topic... {:?}&quot;</span>, topic);
                     <span class="kw">let </span>payload = sample.value.payload.get_zslice(<span class="number">0</span>).unwrap().as_ref();
@@ -624,92 +603,49 @@
                         }
                         <span class="kw">_ </span>=&gt; <span class="macro">println!</span>(<span class="string">&quot;UNKNOWN NODE TOPIC&quot;</span>),
                     }
-                    <span class="comment">//ok ive updated node data send to API task
-                    </span>node_update_tx.send(node_data.clone()).unwrap();
-                }
-            }
-        });
-
-        <span class="kw">let </span>(api_requester_tx, api_requester_rx) = flume::unbounded();
-        <span class="kw">let </span>(api_responder_tx, api_responder_rx) = flume::unbounded();
-
-        <span class="comment">// async_std::task::spawn_blocking(move || {
-        //     let mut node_data_copy = NodeData::new();
-        //     loop {
-        //         while let Ok(updated_node_data) = node_update_rx.try_recv() {
-        //             node_data_copy = updated_node_data.clone();
-        //         }
-        //         while let Ok(api_message) = api_requester_rx.try_recv() {
-        //             let api_response = match api_message {
-        //                 ApiMessage::GetStatus =&gt; {
-        //                     ApiResponse::GetStatusResponse(node_data_copy.status.clone())
-        //                 }
-        //                 ApiMessage::GetNeighbours =&gt; ApiResponse::GetNeighboursResponse(
-        //                     node_data_copy.neighbours.clone().into_iter().collect(),
-        //                 ),
-        //                 ApiMessage::GetPolygon =&gt; {
-        //                     ApiResponse::GetPolygonResponse(node_data_copy.polygon.clone())
-        //                 }
-        //                 ApiMessage::IsNeighbour(zid) =&gt; ApiResponse::IsNeighbourResponse(
-        //                     node_data_copy.neighbours.contains_key(zid.as_str()),
-        //                 ),
-        //             };
-        //             api_responder_tx.send(api_response).unwrap();
-        //         }
-        //     }
-        // });
-
-        </span>async_std::task::spawn(<span class="kw">async move </span>{
-            <span class="kw">let </span><span class="kw-2">mut </span>node_data_copy = NodeData::new(site);
-            <span class="kw">loop </span>{
-                <span class="macro">futures::select! </span>{
-                    updated_node_data = node_update_rx.recv_async() =&gt; {
-                        <span class="kw">if let </span><span class="prelude-val">Ok</span>(updated_node_data) = updated_node_data {
-                            node_data_copy = updated_node_data.clone();
-                        } <span class="kw">else </span>{
-                            <span class="kw">break</span>; <span class="comment">// Exit the loop if receiving from `node_update_rx` fails
-                        </span>}
-                    }
-                    api_message = api_requester_rx.recv_async() =&gt; {
-                        <span class="kw">if let </span><span class="prelude-val">Ok</span>(api_message) = api_message {
-                            <span class="kw">let </span>api_response = <span class="kw">match </span>api_message {
-                                                    ApiMessage::GetStatus =&gt; {
-                            ApiResponse::GetStatusResponse(node_data_copy.status.clone())
+                };
+                <span class="kw">if let </span><span class="prelude-val">Ok</span>(api_setter_message) = node_setter_rx.try_recv() {
+                    <span class="kw">match </span>api_setter_message {
+                        ApiSetterMessage::SetStatus(status) =&gt; {
+                            node_data.status=status;
+                        }
+                    };
+                };
+                <span class="kw">if let </span><span class="prelude-val">Ok</span>(api_message) = api_requester_rx.try_recv() {
+                    <span class="kw">let </span>api_response = <span class="kw">match </span>api_message {
+                        ApiMessage::GetStatus =&gt; {
+                            ApiResponse::GetStatusResponse(node_data.status.clone())
                         }
                         ApiMessage::GetNeighbours =&gt; ApiResponse::GetNeighboursResponse(
-                            node_data_copy.neighbours.clone().into_iter().collect(),
+                            node_data.neighbours.clone().into_iter().collect(),
                         ),
                         ApiMessage::GetPolygon =&gt; {
-                            ApiResponse::GetPolygonResponse(node_data_copy.polygon.clone())
+                            ApiResponse::GetPolygonResponse(node_data.polygon.clone())
                         }
                         ApiMessage::IsNeighbour(zid) =&gt; ApiResponse::IsNeighbourResponse(
-                            node_data_copy.neighbours.contains_key(zid.as_str()),
+                            node_data.neighbours.contains_key(zid.as_str()),
                         ),
-                                ApiMessage::GetSite =&gt; ApiResponse::GetSiteResponse(
-                            node_data_copy.site.clone(),
+                        ApiMessage::GetSite =&gt; ApiResponse::GetSiteResponse(
+                            node_data.site.clone(),
                         ),
                     };
                     api_responder_tx.send(api_response).unwrap();
-                        } <span class="kw">else </span>{
-                            <span class="kw">break</span>; <span class="comment">// Exit the loop if receiving from `api_requester_rx` fails
-                        </span>}
-                    }
                 }
             }
         });
-
         <span class="self">Self </span>{
             session,
             cluster_name: cluster_name.to_string(),
             zid,
             api_requester_tx,
             api_responder_rx,
-            <span class="comment">//node_setter_tx,
-        </span>}
+            node_setter_tx,
+        }
     }
 
     <span class="comment">// Process the current messages that are in the subscription channel queue one at a time. Handles each topic with a different [handler](crate::handlers::node).
     </span><span class="kw">pub fn </span>join(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+        <span class="self">self</span>.set_status(NodeStatus::Joining);
         <span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>NewVoronoiRequest {
             sender_id: <span class="self">self</span>.zid.clone(),
             site:<span class="self">self</span>.get_site()
@@ -777,6 +713,10 @@
         } <span class="kw">else </span>{
             <span class="macro">panic!</span>(<span class="string">&quot;Wrong response type&quot;</span>);
         }
+    }
+
+     <span class="kw">fn </span>set_status(<span class="kw-2">&amp;</span><span class="self">self</span>,status:NodeStatus) {
+        <span class="self">self</span>.node_setter_tx.send(ApiSetterMessage::SetStatus(status)).unwrap();
     }
 
     <span class="kw">pub fn </span>get_site(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (f64,f64) {
