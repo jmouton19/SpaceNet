@@ -41,6 +41,7 @@ pub struct Node {
 #[derive(PartialEq, Clone, Debug)]
 pub enum ApiSetterMessage {
     SetStatus(NodeStatus),
+    SetSite((f64,f64)),
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -61,7 +62,7 @@ pub enum ApiResponse {
 }
 
 impl Node {
-    pub fn new(cluster_name: &str,site:(f64,f64)) -> Self {
+    pub fn new(cluster_name: &str) -> Self {
         let session = zenoh::open(config::default())
             .res_sync()
             .unwrap()
@@ -108,8 +109,18 @@ impl Node {
         let cluster_name_clone = cluster_name.to_string();
         let zid_clone = zid.to_string();
         async_std::task::spawn_blocking(move || {
-            let mut node_data = NodeData::new(site);
+            let mut node_data = NodeData::new();
             loop {
+                if let Ok(api_setter_message) = node_setter_rx.try_recv() {
+                    match api_setter_message {
+                        ApiSetterMessage::SetStatus(status) => {
+                            node_data.status=status;
+                        },
+                        ApiSetterMessage::SetSite(site)=>{
+                            node_data.site=site;
+                        },
+                    };
+                };
                 while let Ok(sample) = zenoh_rx.try_recv() {
                     let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
                     println!("Received message on topic... {:?}", topic);
@@ -193,13 +204,6 @@ impl Node {
                         _ => println!("UNKNOWN NODE TOPIC"),
                     }
                 };
-                if let Ok(api_setter_message) = node_setter_rx.try_recv() {
-                    match api_setter_message {
-                        ApiSetterMessage::SetStatus(status) => {
-                            node_data.status=status;
-                        }
-                    };
-                };
                 if let Ok(api_message) = api_requester_rx.try_recv() {
                     let api_response = match api_message {
                         ApiMessage::GetStatus => {
@@ -233,7 +237,8 @@ impl Node {
     }
 
     // Process the current messages that are in the subscription channel queue one at a time. Handles each topic with a different [handler](crate::handlers::node).
-    pub fn join(&mut self) {
+    pub fn join(&mut self,site:(f64,f64)) {
+        self.set_site(site);
         self.set_status(NodeStatus::Joining);
         let message = serialize(&NewVoronoiRequest {
             sender_id: self.zid.clone(),
@@ -306,6 +311,10 @@ impl Node {
 
      fn set_status(&self,status:NodeStatus) {
         self.node_setter_tx.send(ApiSetterMessage::SetStatus(status)).unwrap();
+    }
+
+    fn set_site(&self,site:(f64,f64)) {
+        self.node_setter_tx.send(ApiSetterMessage::SetSite(site)).unwrap();
     }
 
     pub fn get_site(&self) -> (f64,f64) {
@@ -396,9 +405,9 @@ pub enum NodeStatus {
 impl NodeData {
     // Creates a new node instance with a [session](https://docs.rs/zenoh/0.7.0-rc/zenoh/struct.Session.html). Joins the cluster by messaging a boot node on that cluster.
     // Opens a subscription on topic `{cluster}/node/{zid}/*` to receive incoming messages.
-    pub fn new(site:(f64,f64)) -> Self {
+    pub fn new() -> Self {
         Self {
-            site,
+            site:(-1.,-1.),
             neighbours: OrderedMapPairs::new(),
             k_hop_neighbours: OrderedMapPairs::new(),
             polygon: vec![],

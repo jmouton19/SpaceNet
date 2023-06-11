@@ -5,10 +5,10 @@ use std::ffi::{c_void, CStr, CString};
 
 //new node from C
 #[no_mangle]
-pub extern "C" fn new_node(cluster_name: *const c_char,site_x:f64,site_y:f64) -> *mut c_void {
+pub extern "C" fn new_node(cluster_name: *const c_char) -> *mut c_void {
     let c_str = unsafe { CStr::from_ptr(cluster_name) };
     let cluster_name = c_str.to_str().unwrap();
-    let node = Box::new(Node::new(cluster_name,(site_x,site_y)));
+    let node = Box::new(Node::new(cluster_name));
     Box::into_raw(node) as *mut c_void
 }
 
@@ -116,7 +116,7 @@ pub extern "C" fn is_in_polygon(node_ptr: *mut c_void, x: f64, y: f64) -> c_int 
 
 // run node from C
 #[no_mangle]
-pub extern "C" fn join(node_ptr: *mut c_void) {
+pub extern "C" fn join(node_ptr: *mut c_void,site_x:f64,site_y:f64) {
     let node = unsafe { &mut *(node_ptr as *mut Node) };
-    node.join();
+    node.join((site_x,site_y));
 }
