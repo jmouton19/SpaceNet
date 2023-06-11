@@ -409,6 +409,15 @@
 <a href="#408" id="408">408</a>
 <a href="#409" id="409">409</a>
 <a href="#410" id="410">410</a>
+<a href="#411" id="411">411</a>
+<a href="#412" id="412">412</a>
+<a href="#413" id="413">413</a>
+<a href="#414" id="414">414</a>
+<a href="#415" id="415">415</a>
+<a href="#416" id="416">416</a>
+<a href="#417" id="417">417</a>
+<a href="#418" id="418">418</a>
+<a href="#419" id="419">419</a>
 </pre><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_leave_response::handle_leave_response;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_leave_voronoi_request::handle_leave_voronoi_request;
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::handle_neighbours_neighbours_request::handle_neighbours_neighbours_request;
@@ -452,6 +461,7 @@
 <span class="attr">#[derive(PartialEq, Clone, Debug)]
 </span><span class="kw">pub enum </span>ApiSetterMessage {
     SetStatus(NodeStatus),
+    SetSite((f64,f64)),
 }
 
 <span class="attr">#[derive(PartialEq, Clone, Debug)]
@@ -472,7 +482,7 @@
 }
 
 <span class="kw">impl </span>Node {
-    <span class="kw">pub fn </span>new(cluster_name: <span class="kw-2">&amp;</span>str,site:(f64,f64)) -&gt; <span class="self">Self </span>{
+    <span class="kw">pub fn </span>new(cluster_name: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>session = zenoh::open(config::default())
             .res_sync()
             .unwrap()
@@ -519,8 +529,18 @@
         <span class="kw">let </span>cluster_name_clone = cluster_name.to_string();
         <span class="kw">let </span>zid_clone = zid.to_string();
         async_std::task::spawn_blocking(<span class="kw">move </span>|| {
-            <span class="kw">let </span><span class="kw-2">mut </span>node_data = NodeData::new(site);
+            <span class="kw">let </span><span class="kw-2">mut </span>node_data = NodeData::new();
             <span class="kw">loop </span>{
+                <span class="kw">if let </span><span class="prelude-val">Ok</span>(api_setter_message) = node_setter_rx.try_recv() {
+                    <span class="kw">match </span>api_setter_message {
+                        ApiSetterMessage::SetStatus(status) =&gt; {
+                            node_data.status=status;
+                        },
+                        ApiSetterMessage::SetSite(site)=&gt;{
+                            node_data.site=site;
+                        },
+                    };
+                };
                 <span class="kw">while let </span><span class="prelude-val">Ok</span>(sample) = zenoh_rx.try_recv() {
                     <span class="kw">let </span>topic = sample.key_expr.split(<span class="string">&#39;/&#39;</span>).nth(<span class="number">3</span>).unwrap_or(<span class="string">&quot;&quot;</span>);
                     <span class="macro">println!</span>(<span class="string">&quot;Received message on topic... {:?}&quot;</span>, topic);
@@ -604,13 +624,6 @@
                         <span class="kw">_ </span>=&gt; <span class="macro">println!</span>(<span class="string">&quot;UNKNOWN NODE TOPIC&quot;</span>),
                     }
                 };
-                <span class="kw">if let </span><span class="prelude-val">Ok</span>(api_setter_message) = node_setter_rx.try_recv() {
-                    <span class="kw">match </span>api_setter_message {
-                        ApiSetterMessage::SetStatus(status) =&gt; {
-                            node_data.status=status;
-                        }
-                    };
-                };
                 <span class="kw">if let </span><span class="prelude-val">Ok</span>(api_message) = api_requester_rx.try_recv() {
                     <span class="kw">let </span>api_response = <span class="kw">match </span>api_message {
                         ApiMessage::GetStatus =&gt; {
@@ -644,7 +657,8 @@
     }
 
     <span class="comment">// Process the current messages that are in the subscription channel queue one at a time. Handles each topic with a different [handler](crate::handlers::node).
-    </span><span class="kw">pub fn </span>join(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+    </span><span class="kw">pub fn </span>join(<span class="kw-2">&amp;mut </span><span class="self">self</span>,site:(f64,f64)) {
+        <span class="self">self</span>.set_site(site);
         <span class="self">self</span>.set_status(NodeStatus::Joining);
         <span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>NewVoronoiRequest {
             sender_id: <span class="self">self</span>.zid.clone(),
@@ -717,6 +731,10 @@
 
      <span class="kw">fn </span>set_status(<span class="kw-2">&amp;</span><span class="self">self</span>,status:NodeStatus) {
         <span class="self">self</span>.node_setter_tx.send(ApiSetterMessage::SetStatus(status)).unwrap();
+    }
+
+    <span class="kw">fn </span>set_site(<span class="kw-2">&amp;</span><span class="self">self</span>,site:(f64,f64)) {
+        <span class="self">self</span>.node_setter_tx.send(ApiSetterMessage::SetSite(site)).unwrap();
     }
 
     <span class="kw">pub fn </span>get_site(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; (f64,f64) {
@@ -807,9 +825,9 @@
 <span class="kw">impl </span>NodeData {
     <span class="comment">// Creates a new node instance with a [session](https://docs.rs/zenoh/0.7.0-rc/zenoh/struct.Session.html). Joins the cluster by messaging a boot node on that cluster.
     // Opens a subscription on topic `{cluster}/node/{zid}/*` to receive incoming messages.
-    </span><span class="kw">pub fn </span>new(site:(f64,f64)) -&gt; <span class="self">Self </span>{
+    </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
         <span class="self">Self </span>{
-            site,
+            site:(-<span class="number">1.</span>,-<span class="number">1.</span>),
             neighbours: OrderedMapPairs::new(),
             k_hop_neighbours: OrderedMapPairs::new(),
             polygon: <span class="macro">vec!</span>[],
