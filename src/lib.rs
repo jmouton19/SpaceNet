@@ -28,10 +28,10 @@
 //! fn main() {
 //!  use rand::Rng;let mut rng = rand::thread_rng();
 //!     let point = (rng.gen_range(1.0..=99.0), rng.gen_range(1.0..=99.0));
-//!     let mut node = Node::new("network_1",point);
+//!     let mut node = Node::new("network_1");
 //!     node.leave_on_pressed('q');
 //!     println!("node online..... {:?}", node.get_zid());
-//!     node.join();
+//!     node.join(point);
 //!     loop {
 //!         if node.get_status() == NodeStatus::Offline {
 //!            break;
@@ -43,9 +43,9 @@
 //!
 
 pub mod boot_node;
-pub mod node;
 pub(crate) mod c_ffi;
 pub(crate) mod handlers;
 pub(crate) mod message;
+pub mod node;
 pub mod types;
 pub mod utils;

@@ -1,12 +1,12 @@
 #[cfg(test)]
 mod stress_test {
     use nalgebra::Point2;
+    use rand::Rng;
     use space_net::boot_node::BootNode;
     use space_net::node::Node;
     use std::io::Write;
     use std::time::Instant;
     use std::{fs, thread};
-    use rand::Rng;
 
     //check if distributed polygons is correct in an X(expected_len) node cluster
     #[test]
@@ -84,8 +84,8 @@ mod stress_test {
         for _i in 0..(expected_len) {
             let mut rng = rand::thread_rng();
             let point = (rng.gen_range(1.0..=99.0), rng.gen_range(1.0..=99.0));
-            let mut node = Node::new("test2",point);
-            node.join();
+            let mut node = Node::new("test2");
+            node.join(point);
         }
         handle1.join().unwrap();
     }

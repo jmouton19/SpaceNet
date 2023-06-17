@@ -14,12 +14,7 @@ static IMAGE_SCALE: f64 = 20.;
 /// Draws a voronoi (containing all polygons) onto canvas and saves to png
 pub fn draw_voronoi_full(map_pairs: &OrderedMapPairs, map_polygon: &OrderedMapPolygon, name: &str) {
     let images_path = dirs::document_dir()
-        .unwrap_or_else(|| {
-            // Handle the case where the document directory is not available
-            // For example, you could use a fallback directory.
-            // In this example, we use the current working directory.
-            std::env::current_dir().unwrap()
-        })
+        .unwrap_or_else(|| std::env::current_dir().unwrap())
         .join("SpaceNet")
         .join("images");
     if !images_path.exists() {
@@ -61,12 +56,7 @@ pub fn draw_voronoi_full(map_pairs: &OrderedMapPairs, map_polygon: &OrderedMapPo
 /// Draws a voronoi (containing one polygon) onto canvas and saves to png
 pub fn draw_voronoi(diagram: &VoronoiDiagram<Point>, name: &str) {
     let images_path = dirs::document_dir()
-        .unwrap_or_else(|| {
-            // Handle the case where the document directory is not available
-            // For example, you could use a fallback directory.
-            // In this example, we use the current working directory.
-            std::env::current_dir().unwrap()
-        })
+        .unwrap_or_else(|| std::env::current_dir().unwrap())
         .join("SpaceNet")
         .join("images");
     if !images_path.exists() {

@@ -116,7 +116,7 @@ pub extern "C" fn is_in_polygon(node_ptr: *mut c_void, x: f64, y: f64) -> c_int 
 
 // run node from C
 #[no_mangle]
-pub extern "C" fn join(node_ptr: *mut c_void,site_x:f64,site_y:f64) {
+pub extern "C" fn join(node_ptr: *mut c_void, site_x: f64, site_y: f64) {
     let node = unsafe { &mut *(node_ptr as *mut Node) };
-    node.join((site_x,site_y));
+    node.join((site_x, site_y));
 }

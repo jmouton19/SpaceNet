@@ -1,19 +1,11 @@
-use crate::handlers::node::handle_leave_response::handle_leave_response;
-use crate::handlers::node::handle_leave_voronoi_request::handle_leave_voronoi_request;
-use crate::handlers::node::handle_neighbours_neighbours_request::handle_neighbours_neighbours_request;
-use crate::handlers::node::handle_neighbours_neighbours_response::handle_neighbours_neighbours_response;
-use crate::handlers::node::handle_new_voronoi_request::handle_new_voronoi_request;
-use crate::handlers::node::handle_owner_request::handle_owner_request;
-use crate::handlers::node::handle_owner_response::handle_owner_response;
+use crate::handlers::node::node_api_matcher::{node_api_matcher, ApiMessage, ApiResponse};
+use crate::handlers::node::node_topic_matcher::node_topic_matcher;
 use crate::message::{DefaultMessage, NewVoronoiRequest};
 use crate::types::OrderedMapPairs;
 use async_std::io::ReadExt;
 use async_std::{io, task};
 use bincode::serialize;
-use rand::Rng;
 use std::sync::Arc;
-use std::thread;
-use std::time::Duration;
 use zenoh::prelude::r#async::AsyncResolve;
 pub use zenoh::prelude::sync::*;
 
@@ -35,30 +27,6 @@ pub struct Node {
     pub(crate) zid: String,
     pub(crate) api_requester_tx: flume::Sender<ApiMessage>,
     pub(crate) api_responder_rx: flume::Receiver<ApiResponse>,
-    pub(crate) node_setter_tx: flume::Sender<ApiSetterMessage>,
-}
-
-#[derive(PartialEq, Clone, Debug)]
-pub enum ApiSetterMessage {
-    SetStatus(NodeStatus),
-    SetSite((f64,f64)),
-}
-
-#[derive(PartialEq, Clone, Debug)]
-pub enum ApiMessage {
-    GetStatus,
-    GetNeighbours,
-    GetPolygon,
-    IsNeighbour(String),
-    GetSite,
-}
-#[derive(PartialEq, Clone, Debug)]
-pub enum ApiResponse {
-    GetStatusResponse(NodeStatus),
-    GetNeighboursResponse(Vec<(String, (f64, f64))>),
-    GetSiteResponse((f64,f64)),
-    GetPolygonResponse(Vec<(f64, f64)>),
-    IsNeighbourResponse(bool),
 }
 
 impl Node {
@@ -68,11 +36,11 @@ impl Node {
             .unwrap()
             .into_arc();
         let zid = session.zid().to_string();
+
         let session_clone = Arc::clone(&session);
-        let (zenoh_tx, zenoh_rx) = flume::unbounded();
         let cluster_name_clone = cluster_name.to_string();
         let zid_clone = zid.to_string();
-
+        let (zenoh_tx, zenoh_rx) = flume::unbounded();
         //task to listen for zenoh messages, sends message to processor task.
         async_std::task::spawn(async move {
             let subscriber = session_clone
@@ -87,142 +55,30 @@ impl Node {
             }
         });
 
-        // async_std::task::spawn_blocking(move ||{
-        //     let subscriber = session_clone
-        //         .declare_subscriber(format!("{}/node/{}/*", cluster_name_clone, zid_clone))
-        //         .with(flume::unbounded())
-        //         .reliable()
-        //         .res_sync()
-        //         .unwrap();
-        //     loop{
-        //     while let Ok(sample) = subscriber.try_recv() {
-        //         zenoh_tx.send(sample).unwrap();
-        //     }}
-        // });
-
         //Processor task, handles messages from zenoh. Update node_data copy in API task
         let session_clone = Arc::clone(&session);
-        let (api_requester_tx, api_requester_rx) = flume::unbounded();
-        let (api_responder_tx, api_responder_rx) = flume::unbounded();
-        let (node_setter_tx, node_setter_rx) = flume::unbounded();
-
         let cluster_name_clone = cluster_name.to_string();
         let zid_clone = zid.to_string();
+        let (api_requester_tx, api_requester_rx) = flume::unbounded();
+        let (api_responder_tx, api_responder_rx) = flume::unbounded();
         async_std::task::spawn_blocking(move || {
             let mut node_data = NodeData::new();
             loop {
-                if let Ok(api_setter_message) = node_setter_rx.try_recv() {
-                    match api_setter_message {
-                        ApiSetterMessage::SetStatus(status) => {
-                            node_data.status=status;
-                        },
-                        ApiSetterMessage::SetSite(site)=>{
-                            node_data.site=site;
-                        },
-                    };
-                };
                 while let Ok(sample) = zenoh_rx.try_recv() {
                     let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
                     println!("Received message on topic... {:?}", topic);
                     let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
-                    let session_clone = session_clone.clone();
-                    let cluster_name = cluster_name_clone.as_str();
-                    let zid = zid_clone.as_str();
-                    match topic {
-                        "new_reply" => {
-                            handle_owner_request(
-                                payload,
-                                &mut node_data,
-                                session_clone,
-                                zid,
-                                cluster_name,
-                            );
-                        }
-                        "owner_request" => {
-                            handle_owner_request(
-                                payload,
-                                &mut node_data,
-                                session_clone,
-                                zid,
-                                cluster_name,
-                            );
-                        }
-                        "owner_response" => {
-                            handle_owner_response(
-                                payload,
-                                &mut node_data,
-                                session_clone,
-                                zid,
-                                cluster_name,
-                            );
-                        }
-                        "neighbours_neighbours" => {
-                            handle_neighbours_neighbours_request(
-                                payload,
-                                &mut node_data,
-                                session_clone,
-                                zid,
-                                cluster_name,
-                            );
-                        }
-                        "neighbours_neighbours_reply" => {
-                            handle_neighbours_neighbours_response(
-                                payload,
-                                &mut node_data,
-                                session_clone,
-                                zid,
-                                cluster_name,
-                            );
-                        }
-                        "new_voronoi" => {
-                            handle_new_voronoi_request(
-                                payload,
-                                &mut node_data,
-                                session_clone,
-                                zid,
-                                cluster_name,
-                            );
-                        }
-                        "leave_voronoi" => {
-                            handle_leave_voronoi_request(
-                                payload,
-                                &mut node_data,
-                                session_clone,
-                                zid,
-                                cluster_name,
-                            );
-                        }
-                        "leave_reply" => {
-                            handle_leave_response(
-                                payload,
-                                &mut node_data,
-                                session_clone,
-                                zid,
-                                cluster_name,
-                            );
-                        }
-                        _ => println!("UNKNOWN NODE TOPIC"),
-                    }
-                };
+                    node_topic_matcher(
+                        topic,
+                        payload,
+                        &mut node_data,
+                        session_clone.clone(),
+                        zid_clone.as_str(),
+                        cluster_name_clone.as_str(),
+                    );
+                }
                 if let Ok(api_message) = api_requester_rx.try_recv() {
-                    let api_response = match api_message {
-                        ApiMessage::GetStatus => {
-                            ApiResponse::GetStatusResponse(node_data.status.clone())
-                        }
-                        ApiMessage::GetNeighbours => ApiResponse::GetNeighboursResponse(
-                            node_data.neighbours.clone().into_iter().collect(),
-                        ),
-                        ApiMessage::GetPolygon => {
-                            ApiResponse::GetPolygonResponse(node_data.polygon.clone())
-                        }
-                        ApiMessage::IsNeighbour(zid) => ApiResponse::IsNeighbourResponse(
-                            node_data.neighbours.contains_key(zid.as_str()),
-                        ),
-                        ApiMessage::GetSite => ApiResponse::GetSiteResponse(
-                            node_data.site.clone(),
-                        ),
-                    };
-                    api_responder_tx.send(api_response).unwrap();
+                    node_api_matcher(api_message, &mut node_data, &api_responder_tx);
                 }
             }
         });
@@ -232,17 +88,16 @@ impl Node {
             zid,
             api_requester_tx,
             api_responder_rx,
-            node_setter_tx,
         }
     }
 
     // Process the current messages that are in the subscription channel queue one at a time. Handles each topic with a different [handler](crate::handlers::node).
-    pub fn join(&mut self,site:(f64,f64)) {
+    pub fn join(&mut self, site: (f64, f64)) {
         self.set_site(site);
         self.set_status(NodeStatus::Joining);
         let message = serialize(&NewVoronoiRequest {
             sender_id: self.zid.clone(),
-            site:self.get_site()
+            site: self.get_site(),
         })
         .unwrap();
         self.session
@@ -309,21 +164,29 @@ impl Node {
         }
     }
 
-     fn set_status(&self,status:NodeStatus) {
-        self.node_setter_tx.send(ApiSetterMessage::SetStatus(status)).unwrap();
+    fn set_status(&self, status: NodeStatus) {
+        self.api_requester_tx
+            .send(ApiMessage::SetStatus(status))
+            .unwrap();
     }
 
-    fn set_site(&self,site:(f64,f64)) {
-        self.node_setter_tx.send(ApiSetterMessage::SetSite(site)).unwrap();
+    fn set_site(&self, site: (f64, f64)) {
+        self.api_requester_tx
+            .send(ApiMessage::SetSite(site))
+            .unwrap();
     }
 
-    pub fn get_site(&self) -> (f64,f64) {
+    pub fn get_site(&self) -> (f64, f64) {
         self.api_requester_tx.send(ApiMessage::GetSite).unwrap();
         if let ApiResponse::GetSiteResponse(site) = self.api_responder_rx.recv().unwrap() {
             site
         } else {
             panic!("Wrong response type");
         }
+    }
+
+    fn send_message(&self, api_message: ApiMessage) {
+        self.api_requester_tx.send(api_message).unwrap();
     }
 
     /// Get the neighbours of the node
@@ -407,7 +270,7 @@ impl NodeData {
     // Opens a subscription on topic `{cluster}/node/{zid}/*` to receive incoming messages.
     pub fn new() -> Self {
         Self {
-            site:(-1.,-1.),
+            site: (-1., -1.),
             neighbours: OrderedMapPairs::new(),
             k_hop_neighbours: OrderedMapPairs::new(),
             polygon: vec![],
