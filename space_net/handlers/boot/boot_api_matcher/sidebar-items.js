@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["BootApiMessage","BootApiResponse"],"fn":["boot_api_matcher"]};

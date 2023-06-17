@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["handle_leave_response","handle_leave_voronoi_request","handle_neighbours_neighbours_request","handle_neighbours_neighbours_response","handle_new_voronoi_request","handle_owner_request","handle_owner_response"]};
+window.SIDEBAR_ITEMS = {"mod":["handle_leave_response","handle_leave_voronoi_request","handle_neighbours_neighbours_request","handle_neighbours_neighbours_response","handle_new_voronoi_request","handle_owner_request","handle_owner_response","node_api_matcher","node_topic_matcher"]};
