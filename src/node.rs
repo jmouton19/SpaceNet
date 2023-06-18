@@ -1,6 +1,7 @@
+use crate::c_ffi::c_bindings::{EventType, ExternalEvent};
 use crate::handlers::node::node_api_matcher::{node_api_matcher, ApiMessage, ApiResponse};
 use crate::handlers::node::node_topic_matcher::node_topic_matcher;
-use crate::message::{DefaultMessage, NewVoronoiRequest};
+use crate::message::{DefaultMessage, NewVoronoiRequest, PlayerMoveEventMessage};
 use crate::types::OrderedMapPairs;
 use async_std::io::ReadExt;
 use async_std::{io, task};
@@ -185,8 +186,31 @@ impl Node {
         }
     }
 
-    fn send_message(&self, api_message: ApiMessage) {
-        self.api_requester_tx.send(api_message).unwrap();
+    pub fn send_message(&self, event: &ExternalEvent, receiving_node: &str) {
+        let message: Vec<u8>;
+        let topic;
+        match event.event {
+            EventType::PlayerMove => {
+                let data = &event.data.player_move_data;
+                let event_message = PlayerMoveEventMessage {
+                    start: (data.start[0], data.start[1]),
+                    end: (data.end[0], data.end[1]),
+                    sender_id: self.get_zid(),
+                };
+                message = serialize(&event_message).unwrap();
+                topic = format!(
+                    "{}/node/{}/player_move_event",
+                    self.cluster_name, receiving_node
+                );
+            }
+        };
+        self.session
+            .put(
+                format!("{}/node/{}/event", self.cluster_name, receiving_node),
+                message,
+            )
+            .res_sync()
+            .unwrap();
     }
 
     /// Get the neighbours of the node

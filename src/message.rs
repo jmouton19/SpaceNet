@@ -2,6 +2,13 @@ use crate::types::OrderedMapPairs;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
+pub struct PlayerMoveEventMessage {
+    pub(crate) start: (f64, f64),
+    pub(crate) end: (f64, f64),
+    pub(crate) sender_id: String,
+}
+
+#[derive(Deserialize, Serialize)]
 pub struct DefaultMessage {
     pub sender_id: String,
 }
