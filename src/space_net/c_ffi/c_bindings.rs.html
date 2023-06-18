@@ -120,10 +120,58 @@
 <a href="#120" id="120">120</a>
 <a href="#121" id="121">121</a>
 <a href="#122" id="122">122</a>
+<a href="#123" id="123">123</a>
+<a href="#124" id="124">124</a>
+<a href="#125" id="125">125</a>
+<a href="#126" id="126">126</a>
+<a href="#127" id="127">127</a>
+<a href="#128" id="128">128</a>
+<a href="#129" id="129">129</a>
+<a href="#130" id="130">130</a>
+<a href="#131" id="131">131</a>
+<a href="#132" id="132">132</a>
+<a href="#133" id="133">133</a>
+<a href="#134" id="134">134</a>
+<a href="#135" id="135">135</a>
+<a href="#136" id="136">136</a>
+<a href="#137" id="137">137</a>
+<a href="#138" id="138">138</a>
+<a href="#139" id="139">139</a>
+<a href="#140" id="140">140</a>
+<a href="#141" id="141">141</a>
+<a href="#142" id="142">142</a>
+<a href="#143" id="143">143</a>
+<a href="#144" id="144">144</a>
+<a href="#145" id="145">145</a>
+<a href="#146" id="146">146</a>
+<a href="#147" id="147">147</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::boot_node::BootNode;
+
 <span class="kw">use </span><span class="kw">crate</span>::node::{Node, NodeStatus};
 <span class="kw">use </span>libc::{c_char, c_int};
 <span class="kw">use </span>std::ffi::{c_void, CStr, CString};
+
+<span class="attr">#[repr(C)]
+</span><span class="kw">pub enum </span>EventType {
+    PlayerMove,
+}
+
+<span class="attr">#[repr(C)]
+</span><span class="kw">pub struct </span>PlayerMoveData {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) start: [f64; <span class="number">2</span>],
+    <span class="kw">pub</span>(<span class="kw">crate</span>) end: [f64; <span class="number">2</span>],
+}
+
+<span class="attr">#[repr(C)]
+</span><span class="kw">pub struct </span>ExternalEvent {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) event: EventType,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) data: EventData,
+}
+
+<span class="attr">#[repr(C)]
+</span><span class="kw">pub struct </span>EventData {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) player_move_data: PlayerMoveData,
+}
 
 <span class="comment">//new node from C
 </span><span class="attr">#[no_mangle]
@@ -218,18 +266,7 @@
     </span>}
 }
 
-<span class="comment">// // free zid from C
-// #[no_mangle]
-// pub extern &quot;C&quot; fn free_zid(s: *mut c_char) {
-//     unsafe {
-//         if s.is_null() {
-//             return;
-//         }
-//         CString::from_raw(s)
-//     };
-// }
-
-// //run boot node from C
+<span class="comment">// //run boot node from C
 // #[no_mangle]
 // pub extern &quot;C&quot; fn run_boot(boot_ptr: *mut c_void) {
 //     let boot = unsafe { &amp;mut *(boot_ptr as *mut BootNode) };
@@ -241,5 +278,18 @@
 </span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>join(node_ptr: <span class="kw-2">*mut </span>c_void, site_x: f64, site_y: f64) {
     <span class="kw">let </span>node = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(node_ptr <span class="kw">as </span><span class="kw-2">*mut </span>Node) };
     node.join((site_x, site_y));
+}
+
+<span class="attr">#[no_mangle]
+</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>send_message(
+    node_ptr: <span class="kw-2">*mut </span>c_void,
+    external_event: <span class="kw-2">*const </span>ExternalEvent,
+    receiver_node: <span class="kw-2">*const </span>c_char,
+) {
+    <span class="kw">let </span>node = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(node_ptr <span class="kw">as </span><span class="kw-2">*mut </span>Node) };
+    <span class="kw">let </span>external_event = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>external_event };
+    <span class="kw">let </span>c_str = <span class="kw">unsafe </span>{ CStr::from_ptr(receiver_node) };
+    <span class="kw">let </span>receiver = c_str.to_str().unwrap();
+    node.send_message(external_event, receiver);
 }
 </code></pre></div></section></main></body></html>

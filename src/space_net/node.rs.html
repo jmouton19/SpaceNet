@@ -280,9 +280,34 @@
 <a href="#280" id="280">280</a>
 <a href="#281" id="281">281</a>
 <a href="#282" id="282">282</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::handlers::node::node_api_matcher::{node_api_matcher, ApiMessage, ApiResponse};
+<a href="#283" id="283">283</a>
+<a href="#284" id="284">284</a>
+<a href="#285" id="285">285</a>
+<a href="#286" id="286">286</a>
+<a href="#287" id="287">287</a>
+<a href="#288" id="288">288</a>
+<a href="#289" id="289">289</a>
+<a href="#290" id="290">290</a>
+<a href="#291" id="291">291</a>
+<a href="#292" id="292">292</a>
+<a href="#293" id="293">293</a>
+<a href="#294" id="294">294</a>
+<a href="#295" id="295">295</a>
+<a href="#296" id="296">296</a>
+<a href="#297" id="297">297</a>
+<a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
+<a href="#300" id="300">300</a>
+<a href="#301" id="301">301</a>
+<a href="#302" id="302">302</a>
+<a href="#303" id="303">303</a>
+<a href="#304" id="304">304</a>
+<a href="#305" id="305">305</a>
+<a href="#306" id="306">306</a>
+</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::c_ffi::c_bindings::{EventType, ExternalEvent};
+<span class="kw">use </span><span class="kw">crate</span>::handlers::node::node_api_matcher::{node_api_matcher, ApiMessage, ApiResponse};
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::node_topic_matcher::node_topic_matcher;
-<span class="kw">use </span><span class="kw">crate</span>::message::{DefaultMessage, NewVoronoiRequest};
+<span class="kw">use </span><span class="kw">crate</span>::message::{DefaultMessage, NewVoronoiRequest, PlayerMoveEventMessage};
 <span class="kw">use </span><span class="kw">crate</span>::types::OrderedMapPairs;
 <span class="kw">use </span>async_std::io::ReadExt;
 <span class="kw">use </span>async_std::{io, task};
@@ -467,8 +492,31 @@
         }
     }
 
-    <span class="kw">fn </span>send_message(<span class="kw-2">&amp;</span><span class="self">self</span>, api_message: ApiMessage) {
-        <span class="self">self</span>.api_requester_tx.send(api_message).unwrap();
+    <span class="kw">pub fn </span>send_message(<span class="kw-2">&amp;</span><span class="self">self</span>, event: <span class="kw-2">&amp;</span>ExternalEvent, receiving_node: <span class="kw-2">&amp;</span>str) {
+        <span class="kw">let </span>message: Vec&lt;u8&gt;;
+        <span class="kw">let </span>topic;
+        <span class="kw">match </span>event.event {
+            EventType::PlayerMove =&gt; {
+                <span class="kw">let </span>data = <span class="kw-2">&amp;</span>event.data.player_move_data;
+                <span class="kw">let </span>event_message = PlayerMoveEventMessage {
+                    start: (data.start[<span class="number">0</span>], data.start[<span class="number">1</span>]),
+                    end: (data.end[<span class="number">0</span>], data.end[<span class="number">1</span>]),
+                    sender_id: <span class="self">self</span>.get_zid(),
+                };
+                message = serialize(<span class="kw-2">&amp;</span>event_message).unwrap();
+                topic = <span class="macro">format!</span>(
+                    <span class="string">&quot;{}/node/{}/player_move_event&quot;</span>,
+                    <span class="self">self</span>.cluster_name, receiving_node
+                );
+            }
+        };
+        <span class="self">self</span>.session
+            .put(
+                <span class="macro">format!</span>(<span class="string">&quot;{}/node/{}/event&quot;</span>, <span class="self">self</span>.cluster_name, receiving_node),
+                message,
+            )
+            .res_sync()
+            .unwrap();
     }
 
     <span class="doccomment">/// Get the neighbours of the node
