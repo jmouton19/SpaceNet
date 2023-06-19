@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod node {
-    
+
     use space_net::node::{Node, NodeStatus};
 
     //test get_zid

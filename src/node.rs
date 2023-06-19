@@ -1,12 +1,12 @@
-use crate::c_ffi::c_bindings::{EventType, ExternalEvent};
 use crate::handlers::node::node_api_matcher::{node_api_matcher, ApiMessage, ApiResponse};
 use crate::handlers::node::node_topic_matcher::node_topic_matcher;
-use crate::message::{DefaultMessage, NewVoronoiRequest, PlayerMoveEventMessage};
+use crate::message::{DefaultMessage, NewVoronoiRequest, PlayerMigrateMessage};
 use crate::types::OrderedMapPairs;
 use async_std::io::ReadExt;
 use async_std::{io, task};
 use bincode::serialize;
 use std::sync::Arc;
+
 use zenoh::prelude::r#async::AsyncResolve;
 pub use zenoh::prelude::sync::*;
 
@@ -186,27 +186,61 @@ impl Node {
         }
     }
 
-    pub fn send_message(&self, event: &ExternalEvent, receiving_node: &str) {
-        let message: Vec<u8>;
-        let topic;
-        match event.event {
-            EventType::PlayerMove => {
-                let data = &event.data.player_move_data;
-                let event_message = PlayerMoveEventMessage {
-                    start: (data.start[0], data.start[1]),
-                    end: (data.end[0], data.end[1]),
-                    sender_id: self.get_zid(),
-                };
-                message = serialize(&event_message).unwrap();
-                topic = format!(
-                    "{}/node/{}/player_move_event",
-                    self.cluster_name, receiving_node
-                );
+    pub fn closest_neighbour(&self, point: (f64, f64)) -> String {
+        let neighbours = self.get_neighbours();
+        let mut min_distance = f64::MAX;
+        let mut min_neighbour = "";
+        for (neighbour, site) in neighbours.iter() {
+            let dx = site.0 - point.0;
+            let dy = site.1 - point.1;
+            let distance = (dx * dx + dy * dy).sqrt();
+            if distance < min_distance {
+                min_distance = distance;
+                min_neighbour = neighbour;
             }
-        };
+        }
+        min_neighbour.to_string()
+    }
+
+    // pub fn send_message(&self, event: &ExternalEvent, receiving_node: &str) {
+    //     let message: Vec<u8>;
+    //     let topic;
+    //     match event.event {
+    //         EventType::PlayerMove => {
+    //             let data = &event.data.player_move_data;
+    //             let event_message = PlayerMoveEventMessage {
+    //                 start: (data.start[0], data.start[1]),
+    //                 end: (data.end[0], data.end[1]),
+    //                 sender_id: self.get_zid(),
+    //             };
+    //             message = serialize(&event_message).unwrap();
+    //             topic = format!(
+    //                 "{}/node/{}/player_move_event",
+    //                 self.cluster_name, receiving_node
+    //             );
+    //         }
+    //     };
+    //     self.session
+    //         .put(
+    //             format!("{}/node/{}/event", self.cluster_name, receiving_node),
+    //             message,
+    //         )
+    //         .res_sync()
+    //         .unwrap();
+    // }
+
+    pub fn player_migrate(&self, new_location: (f64, f64), receiving_node: &str) {
+        let message = serialize(&PlayerMigrateMessage {
+            new_location,
+            sender_id: self.get_zid(),
+        })
+        .unwrap();
         self.session
             .put(
-                format!("{}/node/{}/event", self.cluster_name, receiving_node),
+                format!(
+                    "{}/node/{}/player_migrate",
+                    self.cluster_name, receiving_node
+                ),
                 message,
             )
             .res_sync()

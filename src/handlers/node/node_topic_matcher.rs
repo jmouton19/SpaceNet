@@ -1,4 +1,3 @@
-
 use crate::handlers::node::handle_leave_response::handle_leave_response;
 use crate::handlers::node::handle_leave_voronoi_request::handle_leave_voronoi_request;
 use crate::handlers::node::handle_neighbours_neighbours_request::handle_neighbours_neighbours_request;
@@ -6,8 +5,10 @@ use crate::handlers::node::handle_neighbours_neighbours_response::handle_neighbo
 use crate::handlers::node::handle_new_voronoi_request::handle_new_voronoi_request;
 use crate::handlers::node::handle_owner_request::handle_owner_request;
 use crate::handlers::node::handle_owner_response::handle_owner_response;
-use crate::message::PlayerMoveEventMessage;
+
 use crate::node::NodeData;
+
+use crate::message::PlayerMigrateMessage;
 use bincode::deserialize;
 use std::sync::Arc;
 use zenoh::Session;
@@ -45,12 +46,13 @@ pub fn node_topic_matcher(
         "leave_reply" => {
             handle_leave_response(payload, node_data, session, zid, cluster_name);
         }
-        "player_move_event" => {
-            let data: PlayerMoveEventMessage = deserialize(payload).unwrap();
+        "player_migrate" => {
+            let data: PlayerMigrateMessage = deserialize(payload).unwrap();
             println!(
-                "Player moved from {:?} (in server {:?}) to location {:?}",
-                data.start, data.sender_id, data.sender_id
+                "Player moved from server {:?} to location {:?}",
+                data.sender_id, data.new_location
             );
+            //check if in me.
         }
         _ => println!("UNKNOWN NODE TOPIC"),
     }

@@ -14,16 +14,20 @@ public class Node {
     }
     private final long nativePtr;
 
-    public Node(String clusterName,double x, double y) {
-        nativePtr = newNode(clusterName,x,y);
+    public Node(String clusterName) {
+        nativePtr = newNode(clusterName);
     }
 
     public String getZid() {
         return getZid(nativePtr);
     }
 
-     public void join() {
-                 join(nativePtr);
+     public String closestNeighbour(double x, double y) {
+            return closestNeighbour(nativePtr,x,y);
+        }
+
+     public void join(double x,double y) {
+                 join(nativePtr,x,y);
             }
 
      public void leave() {
@@ -47,21 +51,31 @@ public class Node {
             return isInPolygon(nativePtr,x,y);
      }
 
+      public void playerMigrate(double newX, double newY,String receivingNode) {
+                 playerMigrate(nativePtr,newX,newY,receivingNode);
+          }
+
     private native String getZid(long nodePtr);
 
-    private native void join(long nodePtr);
+    private native void join(long nodePtr,double x, double y);
 
     private native void leave(long nodePtr);
 
+//     private native void send_message(long nodePtr);
+
     private native void leaveOnKey(long nodePtr, char key);
 
-    private static native long newNode(String clusterName,double x, double y);
+    private native void playerMigrate(long nodePtr,double newX, double newY,String receivingNode);
+
+    private static native long newNode(String clusterName);
 
     private native int getStatus(long nodePtr);
 
     private native int isNeighbour(long nodePtr, String zid);
 
     private native int isInPolygon(long nodePtr,double x, double y);
+
+    private native String closestNeighbour(long nodePtr,double x, double y);
 
 
 }
