@@ -57,14 +57,12 @@
 <a href="#57" id="57">57</a>
 <a href="#58" id="58">58</a>
 <a href="#59" id="59">59</a>
-<a href="#60" id="60">60</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::types::OrderedMapPairs;
 <span class="kw">use </span>serde::{Deserialize, Serialize};
 
 <span class="attr">#[derive(Deserialize, Serialize)]
-</span><span class="kw">pub struct </span>PlayerMoveEventMessage {
-    <span class="kw">pub</span>(<span class="kw">crate</span>) start: (f64, f64),
-    <span class="kw">pub</span>(<span class="kw">crate</span>) end: (f64, f64),
+</span><span class="kw">pub struct </span>PlayerMigrateMessage {
+    <span class="kw">pub</span>(<span class="kw">crate</span>) new_location: (f64, f64),
     <span class="kw">pub</span>(<span class="kw">crate</span>) sender_id: String,
 }
 
