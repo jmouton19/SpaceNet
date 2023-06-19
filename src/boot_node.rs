@@ -1,14 +1,9 @@
-use crate::handlers::boot::handle_join_request::handle_join_request;
-use crate::handlers::boot::handle_leave_request::handle_leave_request;
-use crate::handlers::boot::handle_task_completed::handle_task_completed;
-use crate::handlers::boot::set_expected_counter::set_expected_counter;
+use crate::handlers::boot::boot_api_matcher::{boot_api_matcher, BootApiMessage, BootApiResponse};
+use crate::handlers::boot::boot_topic_matcher::{boot_counter_topic_matcher, boot_topic_matcher};
+use crate::handlers::boot::generate_output::generate_output;
 use crate::node::SyncResolve;
 use crate::types::{OrderedMapPairs, OrderedMapPolygon};
-use crate::utils::{draw_voronoi_full, Voronoi};
-use rand::Rng;
 use std::sync::Arc;
-use std::thread;
-use std::time::Duration;
 use zenoh::prelude::r#async::AsyncResolve;
 pub use zenoh::prelude::sync::*;
 
@@ -32,21 +27,6 @@ pub struct BootNodeData {
     pub(crate) centralized_voronoi: bool,
 }
 
-#[derive(PartialEq, Clone, Debug)]
-pub enum BootApiMessage {
-    GetDrawCount,
-    GetPolygonList,
-    GetCorrectPolygonList,
-    GetCluster,
-}
-#[derive(PartialEq, Clone, Debug)]
-pub enum BootApiResponse {
-    GetDrawCount(i32),
-    GetPolygonList(Vec<(String, Vec<(f64, f64)>)>),
-    GetCorrectPolygonList(Vec<(String, Vec<(f64, f64)>)>),
-    GetCluster(Vec<(String, (f64, f64))>),
-}
-
 impl BootNode {
     pub fn new(cluster_name: &str, centralized_voronoi: bool) -> Self {
         let session = zenoh::open(Config::default())
@@ -54,6 +34,7 @@ impl BootNode {
             .unwrap()
             .into_arc();
         let zid = session.zid().to_string();
+
         let cluster_name_clone = cluster_name.to_string();
         let session_clone = Arc::clone(&session);
         let (tx, rx) = flume::unbounded();
@@ -94,7 +75,7 @@ impl BootNode {
         });
 
         let cluster_name_clone = cluster_name.to_string();
-        let zid_clone = cluster_name.to_string();
+        let zid_clone = session.zid().to_string();
         let session_clone = Arc::clone(&session);
         let (api_requester_tx, api_requester_rx) = flume::unbounded();
         let (api_responder_tx, api_responder_rx) = flume::unbounded();
@@ -104,110 +85,35 @@ impl BootNode {
                 if let Ok(sample) = rx.try_recv() {
                     boot_node_data.expected_counter = -1;
                     boot_node_data.received_counter = 0;
+
                     let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
                     println!("Message received on topic... {:?}", topic);
                     let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
-                    let session_clone = session_clone.clone();
-                    let cluster_name = cluster_name_clone.as_str();
-                    match topic {
-                        "new" => {
-                            handle_join_request(
-                                payload,
-                                &mut boot_node_data,
-                                session_clone,
-                                cluster_name,
-                                zid_clone.as_str(),
-                            );
-                        }
-                        "leave_request" => {
-                            handle_leave_request(
-                                payload,
-                                &mut boot_node_data,
-                                session_clone,
-                                cluster_name,
-                            );
-                        }
-                        _ => println!("UNKNOWN BOOT TOPIC"),
-                    }
+
+                    boot_topic_matcher(
+                        topic,
+                        payload,
+                        &mut boot_node_data,
+                        session_clone.clone(),
+                        zid_clone.as_str(),
+                        cluster_name_clone.as_str(),
+                    );
+
                     while boot_node_data.expected_counter != boot_node_data.received_counter {
                         while let Ok(sample) = rx2.try_recv() {
                             let topic = sample.key_expr.split('/').nth(2).unwrap_or("");
                             println!("Message received on topic... {:?}", topic);
                             let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
-                            match topic {
-                                "expected_wait" => {
-                                    set_expected_counter(
-                                        payload,
-                                        &mut boot_node_data.expected_counter,
-                                    );
-                                }
-                                "complete" => {
-                                    handle_task_completed(payload, &mut boot_node_data);
-                                }
-                                _ => println!("UNKNOWN COUNTER TOPIC"),
-                            }
+
+                            boot_counter_topic_matcher(topic, payload, &mut boot_node_data);
                         }
                     }
                     if !boot_node_data.cluster.is_empty() {
-                        //redraw distributed voronoi
-                        draw_voronoi_full(
-                            &boot_node_data.cluster,
-                            &boot_node_data.polygon_list,
-                            format!("{}voronoi", boot_node_data.draw_count).as_str(),
-                        );
-                        if boot_node_data.centralized_voronoi {
-                            //correct voronoi
-                            let mut hash_map = boot_node_data.cluster.clone();
-                            boot_node_data.correct_polygon_list = OrderedMapPolygon::new();
-                            let (first_zid, first_site) = hash_map
-                                .iter()
-                                .next()
-                                .map(|(k, v)| (k.clone(), *v))
-                                .unwrap();
-                            hash_map.swap_remove_index(0);
-                            let diagram = Voronoi::new((first_zid, first_site), &hash_map);
-                            for (i, cell) in diagram.diagram.cells().iter().enumerate() {
-                                let polygon = cell.points().iter().map(|x| (x.x, x.y)).collect();
-                                let site_id = diagram.input.keys().nth(i).unwrap();
-                                boot_node_data
-                                    .correct_polygon_list
-                                    .insert(site_id.to_string(), polygon);
-                            }
-                            draw_voronoi_full(
-                                &boot_node_data.cluster,
-                                &boot_node_data.correct_polygon_list,
-                                format!("{}confirm", boot_node_data.draw_count).as_str(),
-                            );
-                        }
-                        boot_node_data.draw_count += 1;
+                        generate_output(&mut boot_node_data)
                     };
                 }
                 if let Ok(api_message) = api_requester_rx.try_recv() {
-                    let api_response = match api_message {
-                        BootApiMessage::GetCluster => BootApiResponse::GetCluster(
-                            boot_node_data.cluster.clone().into_iter().collect(),
-                        ),
-                        BootApiMessage::GetPolygonList => BootApiResponse::GetPolygonList(
-                            boot_node_data
-                                .polygon_list
-                                .clone()
-                                .into_iter()
-                                .collect(),
-                        ),
-                        BootApiMessage::GetCorrectPolygonList => {
-                            BootApiResponse::GetCorrectPolygonList(
-                                boot_node_data
-                                    .correct_polygon_list
-                                    .clone()
-                                    .into_iter()
-                                    .collect(),
-                            )
-                        }
-                        BootApiMessage::GetDrawCount => {
-                            BootApiResponse::GetDrawCount(boot_node_data.draw_count)
-                        }
-                    };
-                    api_responder_tx.send(api_response).unwrap();
+                    boot_api_matcher(api_message, &mut boot_node_data, &api_responder_tx);
                 }
             }
         });

@@ -1,12 +1,12 @@
 #[cfg(test)]
 mod stress_test {
     use nalgebra::Point2;
+    use rand::Rng;
     use space_net::boot_node::BootNode;
     use space_net::node::Node;
     use std::io::Write;
     use std::time::Instant;
     use std::{fs, thread};
-    use rand::Rng;
 
     //check if distributed polygons is correct in an X(expected_len) node cluster
     #[test]
@@ -16,10 +16,10 @@ mod stress_test {
         // let current_time = SystemTime::now();
         // let file_name = format!("{}.log", current_time.format("%H__%M__%S").as_str());
         let file_name = "test2".to_string();
-        let file_name2 = file_name.clone();
+        let _file_name2 = file_name.clone();
 
         let start_time = Instant::now();
-        let mut boot_server = BootNode::new(file_name.as_str(), true);
+        let boot_server = BootNode::new(file_name.as_str(), true);
         let handle1 = thread::spawn(move || loop {
             if boot_server.get_draw_count() == expected_len {
                 let polygon_list: Vec<(String, Vec<(f64, f64)>)> = boot_server.get_polygon_list();
@@ -60,7 +60,7 @@ mod stress_test {
                             let mut images_path =
                                 dirs::document_dir().unwrap().join("SpaceNet").join("logs");
                             fs::create_dir_all(&images_path).unwrap();
-                            images_path.push(format!("{}.log", file_name.clone()));
+                            images_path.push(format!("{}.log", file_name));
                             let mut file = fs::File::create(images_path).unwrap();
                             for (_, site) in boot_server.get_cluster() {
                                 let _ = writeln!(file, "{:?}", site);
@@ -84,8 +84,8 @@ mod stress_test {
         for _i in 0..(expected_len) {
             let mut rng = rand::thread_rng();
             let point = (rng.gen_range(1.0..=99.0), rng.gen_range(1.0..=99.0));
-            let mut node = Node::new("test2",point);
-            node.join();
+            let mut node = Node::new("test2");
+            node.join(point);
         }
         handle1.join().unwrap();
     }

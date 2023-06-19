@@ -63,3 +63,17 @@ JNIEXPORT jstring JNICALL Java_com_example_BootNode_getZid(JNIEnv *env, jobject 
     const char* zid = get_zid_boot((void*) nodePtr);
     return (*env)->NewStringUTF(env, zid);
 }
+
+JNIEXPORT jstring JNICALL Java_com_example_Node_closestNeighbour(JNIEnv *env, jobject obj, jlong nodePtr,jdouble x, jdouble y) {
+    const char* zid = closest_neighbour((void*) nodePtr,x,y);
+    return (*env)->NewStringUTF(env, zid);
+}
+
+//JNIEXPORT void JNICALL Java_com_example_Node_sendMessage(JNIEnv *env, jobject obj, jlong nodePtr,) {
+//   send_message((void*) nodePtr);
+//}
+
+JNIEXPORT void JNICALL Java_com_example_Node_playerMigrate(JNIEnv *env, jobject obj, jlong nodePtr,jdouble newX, jdouble newY,jstring receiving_node) {
+     const char *native_receiving_node = (*env)->GetStringUTFChars(env, receiving_node, 0);
+    player_migrate((void*) nodePtr,newX,newY,native_receiving_node);
+}

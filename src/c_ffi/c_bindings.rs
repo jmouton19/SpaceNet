@@ -1,7 +1,30 @@
 use crate::boot_node::BootNode;
+
 use crate::node::{Node, NodeStatus};
 use libc::{c_char, c_int};
 use std::ffi::{c_void, CStr, CString};
+//
+// #[repr(C)]
+// pub enum EventType {
+//     PlayerMove,
+// }
+//
+// #[repr(C)]
+// pub struct PlayerMoveData {
+//     pub(crate) start: [f64; 2],
+//     pub(crate) end: [f64; 2],
+// }
+//
+// #[repr(C)]
+// pub struct ExternalEvent {
+//     pub(crate) event: EventType,
+//     pub(crate) data: EventData,
+// }
+//
+// #[repr(C)]
+// pub struct EventData {
+//     pub(crate) player_move_data: PlayerMoveData,
+// }
 
 //new node from C
 #[no_mangle]
@@ -96,17 +119,6 @@ pub extern "C" fn is_in_polygon(node_ptr: *mut c_void, x: f64, y: f64) -> c_int 
     }
 }
 
-// // free zid from C
-// #[no_mangle]
-// pub extern "C" fn free_zid(s: *mut c_char) {
-//     unsafe {
-//         if s.is_null() {
-//             return;
-//         }
-//         CString::from_raw(s)
-//     };
-// }
-
 // //run boot node from C
 // #[no_mangle]
 // pub extern "C" fn run_boot(boot_ptr: *mut c_void) {
@@ -116,7 +128,46 @@ pub extern "C" fn is_in_polygon(node_ptr: *mut c_void, x: f64, y: f64) -> c_int 
 
 // run node from C
 #[no_mangle]
-pub extern "C" fn join(node_ptr: *mut c_void,site_x:f64,site_y:f64) {
+pub extern "C" fn join(node_ptr: *mut c_void, site_x: f64, site_y: f64) {
     let node = unsafe { &mut *(node_ptr as *mut Node) };
-    node.join((site_x,site_y));
+    node.join((site_x, site_y));
+}
+
+// #[no_mangle]
+// pub extern "C" fn send_message(
+//     node_ptr: *mut c_void,
+//     external_event: *const ExternalEvent,
+//     receiver_node: *const c_char,
+// ) {
+//     let node = unsafe { &mut *(node_ptr as *mut Node) };
+//     let external_event = unsafe { &*external_event };
+//     let c_str = unsafe { CStr::from_ptr(receiver_node) };
+//     let receiver = c_str.to_str().unwrap();
+//     node.send_message(external_event, receiver);
+// }
+
+// run node from C
+#[no_mangle]
+pub extern "C" fn closest_neighbour(
+    node_ptr: *mut c_void,
+    site_x: f64,
+    site_y: f64,
+) -> *const c_char {
+    let node = unsafe { &mut *(node_ptr as *mut Node) };
+    let zid = node.closest_neighbour((site_x, site_y));
+    let c_string = CString::new(zid).unwrap();
+    c_string.into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn player_migrate(
+    node_ptr: *mut c_void,
+    new_x: f64,
+    new_y: f64,
+    receiving_node: *const c_char,
+) {
+    let node = unsafe { &mut *(node_ptr as *mut Node) };
+    let c_str = unsafe { CStr::from_ptr(receiving_node) };
+    let zid = c_str.to_str().unwrap();
+    node.player_migrate((new_x, new_y), zid);
 }

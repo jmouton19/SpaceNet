@@ -2,6 +2,12 @@ use crate::types::OrderedMapPairs;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
+pub struct PlayerMigrateMessage {
+    pub(crate) new_location: (f64, f64),
+    pub(crate) sender_id: String,
+}
+
+#[derive(Deserialize, Serialize)]
 pub struct DefaultMessage {
     pub sender_id: String,
 }
