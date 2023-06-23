@@ -10,6 +10,11 @@ typedef enum NodeStatus {
   Offline,
 } NodeStatus;
 
+typedef struct Buffer {
+  uint8_t *data;
+  uintptr_t len;
+} Buffer;
+
 void *new_node(const char *cluster_name);
 
 void *new_boot(const char *cluster_name, bool centralized_voronoi);
@@ -32,4 +37,13 @@ void join(void *node_ptr, double site_x, double site_y);
 
 const char *closest_neighbour(void *node_ptr, double site_x, double site_y);
 
-void player_migrate(void *node_ptr, double new_x, double new_y, const char *receiving_node);
+void send_message(void *node_ptr,
+                  struct Buffer buffer,
+                  const char *receiver_node,
+                  const char *topic);
+
+const void *new_subscriber(const void *node_ptr);
+
+void subscribe(const void *subscriber_ptr, const char *topic);
+
+struct Buffer receive(const void *subscriber_ptr);

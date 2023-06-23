@@ -22,6 +22,10 @@ public class Node {
         return getZid(nativePtr);
     }
 
+     public long getPointer() {
+            return nativePtr;
+     }
+
      public String closestNeighbour(double x, double y) {
             return closestNeighbour(nativePtr,x,y);
         }

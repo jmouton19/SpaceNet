@@ -13,26 +13,6 @@ fn main() {
     node.join(point);
     println!("Node online..... {:?}", node.get_zid());
 
-    let sub = NodeSubscriber::new(&node);
-    let subclone=sub.clone();
-    async_std::task::spawn_blocking(move || {
-        sub.subscribe("pog".to_string());
-        loop {
-            thread::sleep(Duration::from_secs(1));
-            let output = sub.receive();
-            println!("Output: {:?}", output);
-        }
-    });
-
-    async_std::task::spawn_blocking(move || {
-        subclone.subscribe("pog2".to_string());
-        loop {
-            thread::sleep(Duration::from_secs(1));
-            let output = subclone.receive();
-            println!("Output: {:?}", output);
-        }
-    });
-
 
     loop {
         if node.get_status() == NodeStatus::Offline {

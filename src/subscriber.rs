@@ -32,10 +32,11 @@ impl NodeSubscriber {
         })
     }
 
-    pub fn subscribe(&self, topic: String) {
+    pub fn subscribe(&self, topic: &str) {
         let cluster_name = self.cluster_name.clone();
         let zid = self.zid.clone();
         let zid="node1".to_string();
+        let topic=topic.to_string();
 
         let tx = self.tx.clone();
         let session = self.session.clone();

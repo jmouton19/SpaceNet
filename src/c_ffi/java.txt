@@ -16,6 +16,9 @@ ubuntu &fedora?
 gcc -shared -fPIC -I${JAVA_HOME}/include -I${JAVA_HOME}/include/linux src/c_ffi/java_wrapper.c -Wl,-rpath,'$ORIGIN' -Ltarget/release -lspace_net -o target/release/libjava_wrapper.so
 
 java -cp examples:src/c_ffi/java/bin -Djava.library.path=target/release/ ExampleNode
+java -cp examples:src/c_ffi/java/bin -Djava.library.path=target/release/ ExampleNode2
+java -cp examples:src/c_ffi/java/bin -Djava.library.path=target/release/ ExampleNode3
+
 java -cp examples:src/c_ffi/java/bin -Djava.library.path=target/release/ ExampleBoot
 
 jar cf spacenet.jar -C src/c_ffi/java/bin .

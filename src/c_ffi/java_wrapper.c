@@ -69,7 +69,12 @@ JNIEXPORT jstring JNICALL Java_com_example_Node_closestNeighbour(JNIEnv *env, jo
     return (*env)->NewStringUTF(env, zid);
 }
 
-//JNIEXPORT void JNICALL Java_com_example_Node_sendMessage(JNIEnv *env, jobject obj, jlong nodePtr,) {
-//   send_message((void*) nodePtr);
-//}
+JNIEXPORT void JNICALL Java_com_example_Node_sendMessage(JNIEnv *env, jobject obj, jlong nodePtr,) {
+   send_message((void*) nodePtr);
+}
 
+//subscriber
+JNIEXPORT jlong JNICALL Java_com_example_NodeSubscriber_newNodeSubscriber(JNIEnv *env, jobject obj, jlong nodePtr) {
+    jlong result = (jlong) new_subscriber((void*) nodePtr);
+    return result;
+}
