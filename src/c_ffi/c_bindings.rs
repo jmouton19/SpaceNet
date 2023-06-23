@@ -3,28 +3,6 @@ use crate::boot_node::BootNode;
 use crate::node::{Node, NodeStatus};
 use libc::{c_char, c_int};
 use std::ffi::{c_void, CStr, CString};
-//
-// #[repr(C)]
-// pub enum EventType {
-//     PlayerMove,
-// }
-//
-// #[repr(C)]
-// pub struct PlayerMoveData {
-//     pub(crate) start: [f64; 2],
-//     pub(crate) end: [f64; 2],
-// }
-//
-// #[repr(C)]
-// pub struct ExternalEvent {
-//     pub(crate) event: EventType,
-//     pub(crate) data: EventData,
-// }
-//
-// #[repr(C)]
-// pub struct EventData {
-//     pub(crate) player_move_data: PlayerMoveData,
-// }
 
 //new node from C
 #[no_mangle]
@@ -157,17 +135,4 @@ pub extern "C" fn closest_neighbour(
     let zid = node.closest_neighbour((site_x, site_y));
     let c_string = CString::new(zid).unwrap();
     c_string.into_raw()
-}
-
-#[no_mangle]
-pub extern "C" fn player_migrate(
-    node_ptr: *mut c_void,
-    new_x: f64,
-    new_y: f64,
-    receiving_node: *const c_char,
-) {
-    let node = unsafe { &mut *(node_ptr as *mut Node) };
-    let c_str = unsafe { CStr::from_ptr(receiving_node) };
-    let zid = c_str.to_str().unwrap();
-    node.player_migrate((new_x, new_y), zid);
 }

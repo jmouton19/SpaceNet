@@ -51,10 +51,6 @@ public class Node {
             return isInPolygon(nativePtr,x,y);
      }
 
-      public void playerMigrate(double newX, double newY,String receivingNode) {
-                 playerMigrate(nativePtr,newX,newY,receivingNode);
-          }
-
     private native String getZid(long nodePtr);
 
     private native void join(long nodePtr,double x, double y);
@@ -64,8 +60,6 @@ public class Node {
 //     private native void send_message(long nodePtr);
 
     private native void leaveOnKey(long nodePtr, char key);
-
-    private native void playerMigrate(long nodePtr,double newX, double newY,String receivingNode);
 
     private static native long newNode(String clusterName);
 

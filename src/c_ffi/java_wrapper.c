@@ -73,7 +73,3 @@ JNIEXPORT jstring JNICALL Java_com_example_Node_closestNeighbour(JNIEnv *env, jo
 //   send_message((void*) nodePtr);
 //}
 
-JNIEXPORT void JNICALL Java_com_example_Node_playerMigrate(JNIEnv *env, jobject obj, jlong nodePtr,jdouble newX, jdouble newY,jstring receiving_node) {
-     const char *native_receiving_node = (*env)->GetStringUTFChars(env, receiving_node, 0);
-    player_migrate((void*) nodePtr,newX,newY,native_receiving_node);
-}
