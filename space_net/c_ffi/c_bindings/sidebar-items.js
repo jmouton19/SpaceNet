@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["closest_neighbour","get_status","get_zid_boot","get_zid_node","is_in_polygon","is_neighbour","join","leave","leave_on_key","new_boot","new_node","player_migrate"]};
+window.SIDEBAR_ITEMS = {"fn":["closest_neighbour","get_status","get_zid_boot","get_zid_node","is_in_polygon","is_neighbour","join","leave","leave_on_key","new_boot","new_node"]};

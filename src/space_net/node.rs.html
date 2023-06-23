@@ -311,44 +311,19 @@
 <a href="#311" id="311">311</a>
 <a href="#312" id="312">312</a>
 <a href="#313" id="313">313</a>
-<a href="#314" id="314">314</a>
-<a href="#315" id="315">315</a>
-<a href="#316" id="316">316</a>
-<a href="#317" id="317">317</a>
-<a href="#318" id="318">318</a>
-<a href="#319" id="319">319</a>
-<a href="#320" id="320">320</a>
-<a href="#321" id="321">321</a>
-<a href="#322" id="322">322</a>
-<a href="#323" id="323">323</a>
-<a href="#324" id="324">324</a>
-<a href="#325" id="325">325</a>
-<a href="#326" id="326">326</a>
-<a href="#327" id="327">327</a>
-<a href="#328" id="328">328</a>
-<a href="#329" id="329">329</a>
-<a href="#330" id="330">330</a>
-<a href="#331" id="331">331</a>
-<a href="#332" id="332">332</a>
-<a href="#333" id="333">333</a>
-<a href="#334" id="334">334</a>
-<a href="#335" id="335">335</a>
-<a href="#336" id="336">336</a>
-<a href="#337" id="337">337</a>
-<a href="#338" id="338">338</a>
-<a href="#339" id="339">339</a>
-<a href="#340" id="340">340</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::handlers::node::node_api_matcher::{node_api_matcher, ApiMessage, ApiResponse};
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::node_topic_matcher::node_topic_matcher;
-<span class="kw">use </span><span class="kw">crate</span>::message::{DefaultMessage, NewVoronoiRequest, PlayerMigrateMessage};
+<span class="kw">use </span><span class="kw">crate</span>::message::{DefaultMessage, NewVoronoiRequest, PayloadMessage};
 <span class="kw">use </span><span class="kw">crate</span>::types::OrderedMapPairs;
 <span class="kw">use </span>async_std::io::ReadExt;
 <span class="kw">use </span>async_std::{io, task};
 <span class="kw">use </span>bincode::serialize;
+<span class="kw">use </span>flume::Receiver;
 <span class="kw">use </span>std::sync::Arc;
 
 <span class="kw">use </span>zenoh::prelude::r#async::AsyncResolve;
 <span class="kw">pub use </span>zenoh::prelude::sync::<span class="kw-2">*</span>;
+<span class="kw">use </span>zenoh::subscriber::Subscriber;
 
 <span class="doccomment">/// A node in a network that has a point site which is used in the calculation of the voronoi diagram of a cluster. Computes its own voronoi polygon from its list of neighbours. Does not store information on entire cluster.
 </span><span class="attr">#[derive(Clone)]
@@ -542,45 +517,16 @@
         min_neighbour.to_string()
     }
 
-    <span class="comment">// pub fn send_message(&amp;self, event: &amp;ExternalEvent, receiving_node: &amp;str) {
-    //     let message: Vec&lt;u8&gt;;
-    //     let topic;
-    //     match event.event {
-    //         EventType::PlayerMove =&gt; {
-    //             let data = &amp;event.data.player_move_data;
-    //             let event_message = PlayerMoveEventMessage {
-    //                 start: (data.start[0], data.start[1]),
-    //                 end: (data.end[0], data.end[1]),
-    //                 sender_id: self.get_zid(),
-    //             };
-    //             message = serialize(&amp;event_message).unwrap();
-    //             topic = format!(
-    //                 &quot;{}/node/{}/player_move_event&quot;,
-    //                 self.cluster_name, receiving_node
-    //             );
-    //         }
-    //     };
-    //     self.session
-    //         .put(
-    //             format!(&quot;{}/node/{}/event&quot;, self.cluster_name, receiving_node),
-    //             message,
-    //         )
-    //         .res_sync()
-    //         .unwrap();
-    // }
-
-    </span><span class="kw">pub fn </span>player_migrate(<span class="kw-2">&amp;</span><span class="self">self</span>, new_location: (f64, f64), receiving_node: <span class="kw-2">&amp;</span>str) {
-        <span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>PlayerMigrateMessage {
-            new_location,
-            sender_id: <span class="self">self</span>.get_zid(),
+    <span class="kw">pub fn </span>send_message(<span class="kw-2">&amp;</span><span class="self">self</span>, payload: Vec&lt;u8&gt;, topic: <span class="kw-2">&amp;</span>str, receiving_node: <span class="kw-2">&amp;</span>str) {
+        <span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>PayloadMessage {
+            payload,
+            sender_id: <span class="self">self</span>.zid.clone(),
+            topic:topic.to_string(),
         })
         .unwrap();
         <span class="self">self</span>.session
             .put(
-                <span class="macro">format!</span>(
-                    <span class="string">&quot;{}/node/{}/player_migrate&quot;</span>,
-                    <span class="self">self</span>.cluster_name, receiving_node
-                ),
+                <span class="macro">format!</span>(<span class="string">&quot;{}/{}/{}&quot;</span>, <span class="self">self</span>.cluster_name, receiving_node, topic),
                 message,
             )
             .res_sync()

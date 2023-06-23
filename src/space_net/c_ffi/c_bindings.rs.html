@@ -136,70 +136,13 @@
 <a href="#136" id="136">136</a>
 <a href="#137" id="137">137</a>
 <a href="#138" id="138">138</a>
-<a href="#139" id="139">139</a>
-<a href="#140" id="140">140</a>
-<a href="#141" id="141">141</a>
-<a href="#142" id="142">142</a>
-<a href="#143" id="143">143</a>
-<a href="#144" id="144">144</a>
-<a href="#145" id="145">145</a>
-<a href="#146" id="146">146</a>
-<a href="#147" id="147">147</a>
-<a href="#148" id="148">148</a>
-<a href="#149" id="149">149</a>
-<a href="#150" id="150">150</a>
-<a href="#151" id="151">151</a>
-<a href="#152" id="152">152</a>
-<a href="#153" id="153">153</a>
-<a href="#154" id="154">154</a>
-<a href="#155" id="155">155</a>
-<a href="#156" id="156">156</a>
-<a href="#157" id="157">157</a>
-<a href="#158" id="158">158</a>
-<a href="#159" id="159">159</a>
-<a href="#160" id="160">160</a>
-<a href="#161" id="161">161</a>
-<a href="#162" id="162">162</a>
-<a href="#163" id="163">163</a>
-<a href="#164" id="164">164</a>
-<a href="#165" id="165">165</a>
-<a href="#166" id="166">166</a>
-<a href="#167" id="167">167</a>
-<a href="#168" id="168">168</a>
-<a href="#169" id="169">169</a>
-<a href="#170" id="170">170</a>
-<a href="#171" id="171">171</a>
-<a href="#172" id="172">172</a>
-<a href="#173" id="173">173</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::boot_node::BootNode;
 
 <span class="kw">use </span><span class="kw">crate</span>::node::{Node, NodeStatus};
 <span class="kw">use </span>libc::{c_char, c_int};
 <span class="kw">use </span>std::ffi::{c_void, CStr, CString};
-<span class="comment">//
-// #[repr(C)]
-// pub enum EventType {
-//     PlayerMove,
-// }
-//
-// #[repr(C)]
-// pub struct PlayerMoveData {
-//     pub(crate) start: [f64; 2],
-//     pub(crate) end: [f64; 2],
-// }
-//
-// #[repr(C)]
-// pub struct ExternalEvent {
-//     pub(crate) event: EventType,
-//     pub(crate) data: EventData,
-// }
-//
-// #[repr(C)]
-// pub struct EventData {
-//     pub(crate) player_move_data: PlayerMoveData,
-// }
 
-//new node from C
+<span class="comment">//new node from C
 </span><span class="attr">#[no_mangle]
 </span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>new_node(cluster_name: <span class="kw-2">*const </span>c_char) -&gt; <span class="kw-2">*mut </span>c_void {
     <span class="kw">let </span>c_str = <span class="kw">unsafe </span>{ CStr::from_ptr(cluster_name) };
@@ -330,18 +273,5 @@
     <span class="kw">let </span>zid = node.closest_neighbour((site_x, site_y));
     <span class="kw">let </span>c_string = CString::new(zid).unwrap();
     c_string.into_raw()
-}
-
-<span class="attr">#[no_mangle]
-</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>player_migrate(
-    node_ptr: <span class="kw-2">*mut </span>c_void,
-    new_x: f64,
-    new_y: f64,
-    receiving_node: <span class="kw-2">*const </span>c_char,
-) {
-    <span class="kw">let </span>node = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(node_ptr <span class="kw">as </span><span class="kw-2">*mut </span>Node) };
-    <span class="kw">let </span>c_str = <span class="kw">unsafe </span>{ CStr::from_ptr(receiving_node) };
-    <span class="kw">let </span>zid = c_str.to_str().unwrap();
-    node.player_migrate((new_x, new_y), zid);
 }
 </code></pre></div></section></main></body></html>
