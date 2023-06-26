@@ -2,7 +2,7 @@ import com.example.Node;
 
 public class ExampleNode3 {
     public static void main(String[] args) {
-        Node node = new Node("test_cluster");
+        Node node = new Node("network_1");
          String zid = node.getZid();
          System.out.println("Node zid: " + zid);
          node.leaveOnKey('q');

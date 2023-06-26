@@ -1,8 +1,8 @@
-use std::thread;
-use std::time::Duration;
 use rand::Rng;
 use space_net::node::*;
 use space_net::subscriber::NodeSubscriber;
+use std::thread;
+use std::time::Duration;
 use zenoh::subscriber::Subscriber;
 
 fn main() {
@@ -12,7 +12,6 @@ fn main() {
     node.leave_on_pressed('q');
     node.join(point);
     println!("Node online..... {:?}", node.get_zid());
-
 
     loop {
         if node.get_status() == NodeStatus::Offline {

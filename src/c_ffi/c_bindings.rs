@@ -1,9 +1,9 @@
 use crate::boot_node::BootNode;
 
 use crate::node::{Node, NodeStatus};
+use crate::subscriber::NodeSubscriber;
 use libc::{c_char, c_int};
 use std::ffi::{c_void, CStr, CString};
-use crate::subscriber::NodeSubscriber;
 
 #[repr(C)]
 pub struct Buffer {
@@ -133,13 +133,12 @@ pub extern "C" fn closest_neighbour(
     c_string.into_raw()
 }
 
-
 #[no_mangle]
 pub extern "C" fn send_message(
     node_ptr: *mut c_void,
     buffer: Buffer,
     receiver_node: *const c_char,
-    topic:*const c_char,
+    topic: *const c_char,
 ) {
     let node = unsafe { &mut *(node_ptr as *mut Node) };
 
@@ -151,15 +150,15 @@ pub extern "C" fn send_message(
 
     let c_str = unsafe { CStr::from_ptr(receiver_node) };
     let receiver = c_str.to_str().unwrap();
+
     node.send_message(payload_vec, receiver, topic);
 }
-
 
 //subscriber struct
 #[no_mangle]
 pub extern "C" fn new_subscriber(node_ptr: *const c_void) -> *const c_void {
     let node = unsafe { &*(node_ptr as *const Node) };
-    let sub= Box::new(NodeSubscriber::new(node));
+    let sub = Box::new(NodeSubscriber::new(node));
     Box::into_raw(sub) as *mut c_void
 }
 
@@ -174,11 +173,14 @@ pub extern "C" fn subscribe(subscriber_ptr: *const c_void, topic: *const c_char)
 #[no_mangle]
 pub extern "C" fn receive(subscriber_ptr: *const c_void) -> Buffer {
     let sub = unsafe { &*(subscriber_ptr as *const NodeSubscriber) };
-    let mut payload =sub.receive();
+    let mut payload = sub.receive();
     let data_ptr = payload.as_mut_ptr();
     let len = payload.len();
     std::mem::forget(payload);
-    Buffer { data: data_ptr, len }
+    Buffer {
+        data: data_ptr,
+        len,
+    }
 }
 
 #[no_mangle]

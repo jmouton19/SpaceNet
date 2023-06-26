@@ -1,8 +1,8 @@
-use std::thread;
-use std::time::Duration;
 use rand::Rng;
 use space_net::node::*;
 use space_net::subscriber::NodeSubscriber;
+use std::thread;
+use std::time::Duration;
 use zenoh::subscriber::Subscriber;
 
 fn main() {
@@ -15,18 +15,17 @@ fn main() {
 
     thread::sleep(Duration::from_secs(1));
 
-    let mut i=1;
-    while i<=10 {
-        let payload:Vec<u8>=(0..10).map(|_| rand::thread_rng().gen::<u8>()).collect();
-        node.send_message(payload,"pog","node1");
-        println!("Payload {} sent!",i);
-        i+=1;
-        let payload:Vec<u8>=(0..10).map(|_| rand::thread_rng().gen::<u8>()).collect();
-        node.send_message(payload,"pog2","node1");
-        println!("Payload {} sent!",i);
-        i+=1;
+    let mut i = 1;
+    while i <= 10 {
+        let payload: Vec<u8> = (0..10).map(|_| rand::thread_rng().gen::<u8>()).collect();
+        node.send_message(payload, "pog", "node1");
+        println!("Payload {} sent!", i);
+        i += 1;
+        let payload: Vec<u8> = (0..10).map(|_| rand::thread_rng().gen::<u8>()).collect();
+        node.send_message(payload, "pog2", "node1");
+        println!("Payload {} sent!", i);
+        i += 1;
     }
-
 
     loop {
         if node.get_status() == NodeStatus::Offline {

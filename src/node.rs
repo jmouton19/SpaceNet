@@ -208,7 +208,7 @@ impl Node {
         let message = serialize(&PayloadMessage {
             payload,
             sender_id: self.zid.clone(),
-            topic:topic.to_string(),
+            topic: topic.to_string(),
         })
         .unwrap();
         self.session

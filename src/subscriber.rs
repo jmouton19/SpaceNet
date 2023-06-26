@@ -35,8 +35,8 @@ impl NodeSubscriber {
     pub fn subscribe(&self, topic: &str) {
         let cluster_name = self.cluster_name.clone();
         let zid = self.zid.clone();
-        let zid="node1".to_string();
-        let topic=topic.to_string();
+        let zid = "node1".to_string();
+        let topic = topic.to_string();
 
         let tx = self.tx.clone();
         let session = self.session.clone();
@@ -51,7 +51,10 @@ impl NodeSubscriber {
             while let Ok(sample) = subscriber.recv_async().await {
                 let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
                 let data: PayloadMessage = deserialize(payload).unwrap();
-                println!("Received message from {:?} on topic {:?}", data.sender_id,data.topic);
+                println!(
+                    "Received message from {:?} on topic {:?}",
+                    data.sender_id, data.topic
+                );
                 tx.send(data.payload).unwrap();
             }
         });

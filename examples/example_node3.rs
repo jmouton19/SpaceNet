@@ -1,8 +1,8 @@
-use std::thread;
-use std::time::Duration;
 use rand::Rng;
 use space_net::node::*;
 use space_net::subscriber::NodeSubscriber;
+use std::thread;
+use std::time::Duration;
 use zenoh::subscriber::Subscriber;
 
 fn main() {
@@ -14,7 +14,7 @@ fn main() {
     println!("Node online..... {:?}", node.get_zid());
 
     let sub = NodeSubscriber::new(&node);
-    let subclone=sub.clone();
+    let subclone = sub.clone();
     async_std::task::spawn_blocking(move || {
         sub.subscribe("pog");
         loop {
@@ -32,7 +32,6 @@ fn main() {
             println!("Output: {:?}", output);
         }
     });
-
 
     loop {
         if node.get_status() == NodeStatus::Offline {

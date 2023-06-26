@@ -3,7 +3,7 @@
 
 int main() {
     printf("CNode example...\n");
-    const char* cluster_name = "my-cluster";
+    const char* cluster_name = "network_1";
     void* node_ptr = new_node(cluster_name);
     leave_on_key(node_ptr,'q');
 

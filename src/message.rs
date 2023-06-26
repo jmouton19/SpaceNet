@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct PayloadMessage {
     pub(crate) payload: Vec<u8>,
     pub(crate) sender_id: String,
-    pub(crate) topic:String,
+    pub(crate) topic: String,
 }
 
 #[derive(Deserialize, Serialize)]
