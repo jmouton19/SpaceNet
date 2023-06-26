@@ -65,6 +65,9 @@
 <a href="#65" id="65">65</a>
 <a href="#66" id="66">66</a>
 <a href="#67" id="67">67</a>
+<a href="#68" id="68">68</a>
+<a href="#69" id="69">69</a>
+<a href="#70" id="70">70</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::message::PayloadMessage;
 <span class="kw">use </span><span class="kw">crate</span>::node::Node;
 <span class="kw">use </span>bincode::deserialize;
@@ -102,8 +105,8 @@
     <span class="kw">pub fn </span>subscribe(<span class="kw-2">&amp;</span><span class="self">self</span>, topic: <span class="kw-2">&amp;</span>str) {
         <span class="kw">let </span>cluster_name = <span class="self">self</span>.cluster_name.clone();
         <span class="kw">let </span>zid = <span class="self">self</span>.zid.clone();
-        <span class="kw">let </span>zid=<span class="string">&quot;node1&quot;</span>.to_string();
-        <span class="kw">let </span>topic=topic.to_string();
+        <span class="kw">let </span>zid = <span class="string">&quot;node1&quot;</span>.to_string();
+        <span class="kw">let </span>topic = topic.to_string();
 
         <span class="kw">let </span>tx = <span class="self">self</span>.tx.clone();
         <span class="kw">let </span>session = <span class="self">self</span>.session.clone();
@@ -118,7 +121,10 @@
             <span class="kw">while let </span><span class="prelude-val">Ok</span>(sample) = subscriber.recv_async().<span class="kw">await </span>{
                 <span class="kw">let </span>payload = sample.value.payload.get_zslice(<span class="number">0</span>).unwrap().as_ref();
                 <span class="kw">let </span>data: PayloadMessage = deserialize(payload).unwrap();
-                <span class="macro">println!</span>(<span class="string">&quot;Received message from {:?} on topic {:?}&quot;</span>, data.sender_id,data.topic);
+                <span class="macro">println!</span>(
+                    <span class="string">&quot;Received message from {:?} on topic {:?}&quot;</span>,
+                    data.sender_id, data.topic
+                );
                 tx.send(data.payload).unwrap();
             }
         });

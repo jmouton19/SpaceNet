@@ -521,7 +521,7 @@
         <span class="kw">let </span>message = serialize(<span class="kw-2">&amp;</span>PayloadMessage {
             payload,
             sender_id: <span class="self">self</span>.zid.clone(),
-            topic:topic.to_string(),
+            topic: topic.to_string(),
         })
         .unwrap();
         <span class="self">self</span>.session
