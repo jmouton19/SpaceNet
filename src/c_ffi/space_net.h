@@ -42,7 +42,7 @@ void send_message(void *node_ptr,
                   const char *receiver_node,
                   const char *topic);
 
-const void *new_subscriber(const void *node_ptr);
+void *new_subscriber(const void *node_ptr);
 
 void subscribe(const void *subscriber_ptr, const char *topic);
 

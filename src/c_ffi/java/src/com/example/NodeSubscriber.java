@@ -11,5 +11,18 @@ public class NodeSubscriber {
         nativePtr = newNodeSubscriber(node.getPointer());
     }
 
-     private static native long newNodeSubscriber(long nodePtr);
+    public void subscribe(String topic) {
+            System.out.println("INSIDE JAV CALL "+nativePtr);
+            subscribe(nativePtr,topic);
+        }
+
+    public byte[] receive() {
+             return receive(nativePtr);
+          }
+
+     private static native long newNodeSubscriber(long subPtr);
+
+     private static native void subscribe(long subPtr,String topic);
+
+     private static native byte[] receive(long subPtr);
 }

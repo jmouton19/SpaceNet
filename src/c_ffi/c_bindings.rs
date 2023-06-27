@@ -11,9 +11,6 @@ pub struct Buffer {
     len: usize,
 }
 
-//TODO FREE ALL INTO RAW FUNCTIONS!
-
-//new node from C
 #[no_mangle]
 pub extern "C" fn new_node(cluster_name: *const c_char) -> *mut c_void {
     let c_str = unsafe { CStr::from_ptr(cluster_name) };
@@ -21,6 +18,13 @@ pub extern "C" fn new_node(cluster_name: *const c_char) -> *mut c_void {
     let node = Box::new(Node::new(cluster_name));
     Box::into_raw(node) as *mut c_void
 }
+#[no_mangle]
+pub extern "C" fn free_node(node: *mut c_void) {
+    unsafe {
+        let _ = Box::from_raw(node as *mut Node);
+    }
+}
+
 
 //new boot node from C
 #[no_mangle]
@@ -30,6 +34,14 @@ pub extern "C" fn new_boot(cluster_name: *const c_char, centralized_voronoi: boo
     let boot_node = Box::new(BootNode::new(cluster_name, centralized_voronoi));
     Box::into_raw(boot_node) as *mut c_void
 }
+#[no_mangle]
+pub extern "C" fn free_boot_node(node: *mut c_void) {
+    unsafe {
+        let _ = Box::from_raw(node as *mut BootNode);
+    }
+}
+
+
 // leave node when key is pressed from C
 #[no_mangle]
 pub extern "C" fn leave_on_key(node_ptr: *mut c_void, key: c_char) {
@@ -53,6 +65,16 @@ pub extern "C" fn get_zid_node(node_ptr: *mut c_void) -> *const c_char {
     let c_string = CString::new(zid_str).unwrap();
     c_string.into_raw()
 }
+#[no_mangle]
+pub extern "C" fn free_c_string(s: *mut c_char) {
+    unsafe {
+        if s.is_null() {
+            return;
+        }
+        CString::from_raw(s)
+    };
+}
+
 
 //get node status from C
 #[no_mangle]
@@ -154,19 +176,28 @@ pub extern "C" fn send_message(
     node.send_message(payload_vec, receiver, topic);
 }
 
+
 //subscriber struct
 #[no_mangle]
-pub extern "C" fn new_subscriber(node_ptr: *const c_void) -> *const c_void {
+pub extern "C" fn new_subscriber(node_ptr: *const c_void) -> *mut c_void {
     let node = unsafe { &*(node_ptr as *const Node) };
     let sub = Box::new(NodeSubscriber::new(node));
     Box::into_raw(sub) as *mut c_void
 }
+#[no_mangle]
+pub extern "C" fn free_subscriber(node: *mut c_void) {
+    unsafe {
+        let _ = Box::from_raw(node as *mut NodeSubscriber);
+    }
+}
+
 
 #[no_mangle]
 pub extern "C" fn subscribe(subscriber_ptr: *const c_void, topic: *const c_char) {
     let c_str = unsafe { CStr::from_ptr(topic) };
     let topic = c_str.to_str().unwrap();
-    let sub = unsafe { &*(subscriber_ptr as *const NodeSubscriber) };
+    let sub = unsafe { &mut*(subscriber_ptr as *mut NodeSubscriber) };
+
     sub.subscribe(topic);
 }
 

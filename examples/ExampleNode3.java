@@ -1,4 +1,5 @@
 import com.example.Node;
+import com.example.NodeSubscriber;
 
 public class ExampleNode3 {
     public static void main(String[] args) {
@@ -8,8 +9,18 @@ public class ExampleNode3 {
          node.leaveOnKey('q');
          node.join(69.0,69.0);
 
-         while (true) {
+         NodeSubscriber sub= new NodeSubscriber(node);
 
+         sub.subscribe("pog");
+
+         while (true) {
+               try {
+                    Thread.sleep(1000);
+               } catch (InterruptedException e) {
+                    e.printStackTrace();
+               }
+               byte[] output = sub.receive();
+               System.out.println(output);
          }
     }
 }

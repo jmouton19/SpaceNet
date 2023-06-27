@@ -17,26 +17,26 @@ pub struct NodeSubscriber {
 }
 
 impl NodeSubscriber {
-    pub fn new(node: &Node) -> Arc<Self> {
+    pub fn new(node: &Node) -> Self {
         let (tx, rx) = flume::unbounded();
         let session = node.session.clone();
         let zid = node.get_zid();
         let cluster_name = node.cluster_name.clone();
-        Arc::new(Self {
+        Self {
             session,
             //message_queue: vec![],
             cluster_name,
             zid,
             tx,
             rx,
-        })
+        }
     }
 
     pub fn subscribe(&self, topic: &str) {
         let cluster_name = self.cluster_name.clone();
         let zid = self.zid.clone();
-        let zid = "node1".to_string();
         let topic = topic.to_string();
+
 
         let tx = self.tx.clone();
         let session = self.session.clone();
@@ -60,6 +60,7 @@ impl NodeSubscriber {
         });
     }
 
+    //maybe point make option, null if empty
     pub fn receive(&self) -> Vec<u8> {
         let mut payload: Vec<u8> = vec![];
         if let Ok(message) = self.rx.try_recv() {

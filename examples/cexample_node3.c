@@ -11,6 +11,16 @@ int main() {
     printf("Node online... %s\n", zid_str);
     join(node_ptr,69.0,69.0);
 
+    void* sub=new_subscriber(node_ptr);
+    subscribe(sub,"pog");
+
+//    while(1){
+//        Buffer buffer= receive(sub)
+//
+//
+//        printf(payload);
+//    }
+
 
 //    let sub = NodeSubscriber::new(&node);
 //    let subclone=sub.clone();
