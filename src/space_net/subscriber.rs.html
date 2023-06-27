@@ -68,6 +68,7 @@
 <a href="#68" id="68">68</a>
 <a href="#69" id="69">69</a>
 <a href="#70" id="70">70</a>
+<a href="#71" id="71">71</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::message::PayloadMessage;
 <span class="kw">use </span><span class="kw">crate</span>::node::Node;
 <span class="kw">use </span>bincode::deserialize;
@@ -87,26 +88,26 @@
 }
 
 <span class="kw">impl </span>NodeSubscriber {
-    <span class="kw">pub fn </span>new(node: <span class="kw-2">&amp;</span>Node) -&gt; Arc&lt;<span class="self">Self</span>&gt; {
+    <span class="kw">pub fn </span>new(node: <span class="kw-2">&amp;</span>Node) -&gt; <span class="self">Self </span>{
         <span class="kw">let </span>(tx, rx) = flume::unbounded();
         <span class="kw">let </span>session = node.session.clone();
         <span class="kw">let </span>zid = node.get_zid();
         <span class="kw">let </span>cluster_name = node.cluster_name.clone();
-        Arc::new(<span class="self">Self </span>{
+        <span class="self">Self </span>{
             session,
             <span class="comment">//message_queue: vec![],
             </span>cluster_name,
             zid,
             tx,
             rx,
-        })
+        }
     }
 
     <span class="kw">pub fn </span>subscribe(<span class="kw-2">&amp;</span><span class="self">self</span>, topic: <span class="kw-2">&amp;</span>str) {
         <span class="kw">let </span>cluster_name = <span class="self">self</span>.cluster_name.clone();
         <span class="kw">let </span>zid = <span class="self">self</span>.zid.clone();
-        <span class="kw">let </span>zid = <span class="string">&quot;node1&quot;</span>.to_string();
         <span class="kw">let </span>topic = topic.to_string();
+
 
         <span class="kw">let </span>tx = <span class="self">self</span>.tx.clone();
         <span class="kw">let </span>session = <span class="self">self</span>.session.clone();
@@ -130,7 +131,8 @@
         });
     }
 
-    <span class="kw">pub fn </span>receive(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
+    <span class="comment">//maybe point make option, null if empty
+    </span><span class="kw">pub fn </span>receive(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
         <span class="kw">let </span><span class="kw-2">mut </span>payload: Vec&lt;u8&gt; = <span class="macro">vec!</span>[];
         <span class="kw">if let </span><span class="prelude-val">Ok</span>(message) = <span class="self">self</span>.rx.try_recv() {
             payload = message;
