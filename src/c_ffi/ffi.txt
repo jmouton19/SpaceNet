@@ -12,11 +12,16 @@ cargo build --release
 - The -I flag tells the compiler where to find the header file
 - The -L flag tells the linker where to find the library
 - The -l flag tells the linker which library to link
+
 gcc examples/cexample_boot.c -o bin/cexample_boot -Ltarget/release -lspace_net -Isrc/c_ffi
+
 gcc examples/cexample_node.c -o bin/cexample_node -Ltarget/release -lspace_net -Isrc/c_ffi
+gcc examples/cexample_node2.c -o bin/cexample_node2 -Ltarget/release -lspace_net -Isrc/c_ffi
+gcc examples/cexample_node3.c -o bin/cexample_node3 -Ltarget/release -lspace_net -Isrc/c_ffi
 
 
 - The linker needs to know where to find the library.
 export LD_LIBRARY_PATH=target/release
 
-todo: make functions to free memory...no just use free()?
+todo: make functions to free memory...no just use free()? no -> unsafe, WRITE FREE FUNCTIONS
+Failure to call from_raw will lead to a memory leak.

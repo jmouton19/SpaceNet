@@ -1,4 +1,5 @@
 #include <jni.h>
+#include <stdio.h>
 #include <string.h>
 #include "com_example_BootNode.h"
 #include "com_example_Node.h"
@@ -69,11 +70,43 @@ JNIEXPORT jstring JNICALL Java_com_example_Node_closestNeighbour(JNIEnv *env, jo
     return (*env)->NewStringUTF(env, zid);
 }
 
-//JNIEXPORT void JNICALL Java_com_example_Node_sendMessage(JNIEnv *env, jobject obj, jlong nodePtr,) {
-//   send_message((void*) nodePtr);
-//}
+JNIEXPORT void JNICALL Java_com_example_Node_sendMessage(JNIEnv *env, jobject obj, jlong nodePtr,jbyteArray buffer,jstring recvNode,jstring topic) {
+    jsize len = (*env)->GetArrayLength(env, buffer);
+    jbyte* elements = (*env)->GetByteArrayElements(env, buffer, 0);
+    unsigned char* dataPtr = (unsigned char*)elements;
+    printf("Printing from native function SEND_MESSAGE\n");
 
-JNIEXPORT void JNICALL Java_com_example_Node_playerMigrate(JNIEnv *env, jobject obj, jlong nodePtr,jdouble newX, jdouble newY,jstring receiving_node) {
-     const char *native_receiving_node = (*env)->GetStringUTFChars(env, receiving_node, 0);
-    player_migrate((void*) nodePtr,newX,newY,native_receiving_node);
+    Buffer cbuffer;
+    cbuffer.data = dataPtr;
+    cbuffer.len = len;
+    printf("%02x\n", cbuffer.data[0]);
+    printf("%zu\n", cbuffer.len);
+
+
+    const char *cRecvNode = (*env)->GetStringUTFChars(env, recvNode, 0);
+    const char *ctopic = (*env)->GetStringUTFChars(env, topic, 0);
+    printf("Topic: %s\n", ctopic);
+
+    send_message((void*) nodePtr,cbuffer,cRecvNode,ctopic);
+}
+
+//subscriber
+JNIEXPORT jlong JNICALL Java_com_example_NodeSubscriber_newNodeSubscriber(JNIEnv *env, jobject obj, jlong nodePtr) {
+    jlong result = (jlong) new_subscriber((void*) nodePtr);
+    return result;
+}
+
+JNIEXPORT void JNICALL Java_com_example_NodeSubscriber_subscribe(JNIEnv *env, jobject obj, jlong subPtr,jstring topic) {
+    printf("INSIDE SUB CALL0");
+    const char *ctopic = (*env)->GetStringUTFChars(env, topic, 0);
+    printf("INSIDE SUB CALL1");
+    subscribe((void*) subPtr, ctopic);
+}
+
+JNIEXPORT jbyteArray JNICALL Java_com_example_NodeSubscriber_receive(JNIEnv *env, jobject obj, jlong subPtr) {
+    Buffer buffer=receive((void*) subPtr);
+    jbyteArray byteArray = (*env)->NewByteArray(env, buffer.len);
+
+    (*env)->SetByteArrayRegion(env, byteArray, 0, buffer.len, (jbyte*)buffer.data);
+    return byteArray;
 }

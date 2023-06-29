@@ -1,32 +1,16 @@
 use crate::boot_node::BootNode;
 
 use crate::node::{Node, NodeStatus};
+use crate::subscriber::NodeSubscriber;
 use libc::{c_char, c_int};
 use std::ffi::{c_void, CStr, CString};
-//
-// #[repr(C)]
-// pub enum EventType {
-//     PlayerMove,
-// }
-//
-// #[repr(C)]
-// pub struct PlayerMoveData {
-//     pub(crate) start: [f64; 2],
-//     pub(crate) end: [f64; 2],
-// }
-//
-// #[repr(C)]
-// pub struct ExternalEvent {
-//     pub(crate) event: EventType,
-//     pub(crate) data: EventData,
-// }
-//
-// #[repr(C)]
-// pub struct EventData {
-//     pub(crate) player_move_data: PlayerMoveData,
-// }
 
-//new node from C
+#[repr(C)]
+pub struct Buffer {
+    data: *mut u8,
+    len: usize,
+}
+
 #[no_mangle]
 pub extern "C" fn new_node(cluster_name: *const c_char) -> *mut c_void {
     let c_str = unsafe { CStr::from_ptr(cluster_name) };
@@ -34,6 +18,13 @@ pub extern "C" fn new_node(cluster_name: *const c_char) -> *mut c_void {
     let node = Box::new(Node::new(cluster_name));
     Box::into_raw(node) as *mut c_void
 }
+#[no_mangle]
+pub extern "C" fn free_node(node: *mut c_void) {
+    unsafe {
+        let _ = Box::from_raw(node as *mut Node);
+    }
+}
+
 
 //new boot node from C
 #[no_mangle]
@@ -43,6 +34,14 @@ pub extern "C" fn new_boot(cluster_name: *const c_char, centralized_voronoi: boo
     let boot_node = Box::new(BootNode::new(cluster_name, centralized_voronoi));
     Box::into_raw(boot_node) as *mut c_void
 }
+#[no_mangle]
+pub extern "C" fn free_boot_node(node: *mut c_void) {
+    unsafe {
+        let _ = Box::from_raw(node as *mut BootNode);
+    }
+}
+
+
 // leave node when key is pressed from C
 #[no_mangle]
 pub extern "C" fn leave_on_key(node_ptr: *mut c_void, key: c_char) {
@@ -66,6 +65,16 @@ pub extern "C" fn get_zid_node(node_ptr: *mut c_void) -> *const c_char {
     let c_string = CString::new(zid_str).unwrap();
     c_string.into_raw()
 }
+#[no_mangle]
+pub extern "C" fn free_c_string(s: *mut c_char) {
+    unsafe {
+        if s.is_null() {
+            return;
+        }
+        CString::from_raw(s)
+    };
+}
+
 
 //get node status from C
 #[no_mangle]
@@ -133,19 +142,6 @@ pub extern "C" fn join(node_ptr: *mut c_void, site_x: f64, site_y: f64) {
     node.join((site_x, site_y));
 }
 
-// #[no_mangle]
-// pub extern "C" fn send_message(
-//     node_ptr: *mut c_void,
-//     external_event: *const ExternalEvent,
-//     receiver_node: *const c_char,
-// ) {
-//     let node = unsafe { &mut *(node_ptr as *mut Node) };
-//     let external_event = unsafe { &*external_event };
-//     let c_str = unsafe { CStr::from_ptr(receiver_node) };
-//     let receiver = c_str.to_str().unwrap();
-//     node.send_message(external_event, receiver);
-// }
-
 // run node from C
 #[no_mangle]
 pub extern "C" fn closest_neighbour(
@@ -160,14 +156,71 @@ pub extern "C" fn closest_neighbour(
 }
 
 #[no_mangle]
-pub extern "C" fn player_migrate(
+pub extern "C" fn send_message(
     node_ptr: *mut c_void,
-    new_x: f64,
-    new_y: f64,
-    receiving_node: *const c_char,
+    buffer: Buffer,
+    receiver_node: *const c_char,
+    topic: *const c_char,
 ) {
     let node = unsafe { &mut *(node_ptr as *mut Node) };
-    let c_str = unsafe { CStr::from_ptr(receiving_node) };
-    let zid = c_str.to_str().unwrap();
-    node.player_migrate((new_x, new_y), zid);
+
+    let payload_slice = unsafe { std::slice::from_raw_parts(buffer.data, buffer.len) };
+    let payload_vec = payload_slice.to_vec();
+
+    let c_str = unsafe { CStr::from_ptr(topic) };
+    let topic = c_str.to_str().unwrap();
+
+    let c_str = unsafe { CStr::from_ptr(receiver_node) };
+    let receiver = c_str.to_str().unwrap();
+
+    node.send_message(payload_vec, receiver, topic);
 }
+
+
+//subscriber struct
+#[no_mangle]
+pub extern "C" fn new_subscriber(node_ptr: *const c_void) -> *mut c_void {
+    let node = unsafe { &*(node_ptr as *const Node) };
+    let sub = Box::new(NodeSubscriber::new(node));
+    Box::into_raw(sub) as *mut c_void
+}
+#[no_mangle]
+pub extern "C" fn free_subscriber(node: *mut c_void) {
+    unsafe {
+        let _ = Box::from_raw(node as *mut NodeSubscriber);
+    }
+}
+
+
+#[no_mangle]
+pub extern "C" fn subscribe(subscriber_ptr: *const c_void, topic: *const c_char) {
+    let c_str = unsafe { CStr::from_ptr(topic) };
+    let topic = c_str.to_str().unwrap();
+    let sub = unsafe { &mut*(subscriber_ptr as *mut NodeSubscriber) };
+
+    sub.subscribe(topic);
+}
+
+#[no_mangle]
+pub extern "C" fn receive(subscriber_ptr: *const c_void) -> Buffer {
+    let sub = unsafe { &*(subscriber_ptr as *const NodeSubscriber) };
+    let mut payload = sub.receive();
+    let data_ptr = payload.as_mut_ptr();
+    let len = payload.len();
+    std::mem::forget(payload);
+    Buffer {
+        data: data_ptr,
+        len,
+    }
+}
+
+#[no_mangle]
+extern "C" fn free_buf(buf: Buffer) {
+    let s = unsafe { std::slice::from_raw_parts_mut(buf.data, buf.len) };
+    let s = s.as_mut_ptr();
+    unsafe {
+        let _ = Box::from_raw(s);
+    }
+}
+
+//TODO FREE ALL INTO RAW FUNCTIONS!

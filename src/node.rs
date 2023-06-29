@@ -1,14 +1,16 @@
 use crate::handlers::node::node_api_matcher::{node_api_matcher, ApiMessage, ApiResponse};
 use crate::handlers::node::node_topic_matcher::node_topic_matcher;
-use crate::message::{DefaultMessage, NewVoronoiRequest, PlayerMigrateMessage};
+use crate::message::{DefaultMessage, NewVoronoiRequest, PayloadMessage};
 use crate::types::OrderedMapPairs;
 use async_std::io::ReadExt;
 use async_std::{io, task};
 use bincode::serialize;
+use flume::Receiver;
 use std::sync::Arc;
 
 use zenoh::prelude::r#async::AsyncResolve;
 pub use zenoh::prelude::sync::*;
+use zenoh::subscriber::Subscriber;
 
 /// A node in a network that has a point site which is used in the calculation of the voronoi diagram of a cluster. Computes its own voronoi polygon from its list of neighbours. Does not store information on entire cluster.
 #[derive(Clone)]
@@ -202,45 +204,16 @@ impl Node {
         min_neighbour.to_string()
     }
 
-    // pub fn send_message(&self, event: &ExternalEvent, receiving_node: &str) {
-    //     let message: Vec<u8>;
-    //     let topic;
-    //     match event.event {
-    //         EventType::PlayerMove => {
-    //             let data = &event.data.player_move_data;
-    //             let event_message = PlayerMoveEventMessage {
-    //                 start: (data.start[0], data.start[1]),
-    //                 end: (data.end[0], data.end[1]),
-    //                 sender_id: self.get_zid(),
-    //             };
-    //             message = serialize(&event_message).unwrap();
-    //             topic = format!(
-    //                 "{}/node/{}/player_move_event",
-    //                 self.cluster_name, receiving_node
-    //             );
-    //         }
-    //     };
-    //     self.session
-    //         .put(
-    //             format!("{}/node/{}/event", self.cluster_name, receiving_node),
-    //             message,
-    //         )
-    //         .res_sync()
-    //         .unwrap();
-    // }
-
-    pub fn player_migrate(&self, new_location: (f64, f64), receiving_node: &str) {
-        let message = serialize(&PlayerMigrateMessage {
-            new_location,
-            sender_id: self.get_zid(),
+    pub fn send_message(&self, payload: Vec<u8>, topic: &str, receiving_node: &str) {
+        let message = serialize(&PayloadMessage {
+            payload,
+            sender_id: self.zid.clone(),
+            topic: topic.to_string(),
         })
         .unwrap();
         self.session
             .put(
-                format!(
-                    "{}/node/{}/player_migrate",
-                    self.cluster_name, receiving_node
-                ),
+                format!("{}/{}/{}", self.cluster_name, receiving_node, topic),
                 message,
             )
             .res_sync()

@@ -1,4 +1,10 @@
 package com.example;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.io.ObjectInputStream;
+import java.io.Serializable;
+import java.io.ByteArrayInputStream;
 
 public class Node {
     static {
@@ -21,6 +27,10 @@ public class Node {
     public String getZid() {
         return getZid(nativePtr);
     }
+
+     public long getPointer() {
+            return nativePtr;
+     }
 
      public String closestNeighbour(double x, double y) {
             return closestNeighbour(nativePtr,x,y);
@@ -51,8 +61,8 @@ public class Node {
             return isInPolygon(nativePtr,x,y);
      }
 
-      public void playerMigrate(double newX, double newY,String receivingNode) {
-                 playerMigrate(nativePtr,newX,newY,receivingNode);
+     public void sendMessage(byte[] buffer,String recvNodePtr,String topic) {
+              sendMessage(nativePtr, buffer, recvNodePtr,topic);
           }
 
     private native String getZid(long nodePtr);
@@ -61,11 +71,9 @@ public class Node {
 
     private native void leave(long nodePtr);
 
-//     private native void send_message(long nodePtr);
+    private native void sendMessage(long nodePtr,byte[] buffer,String recvNodePtr,String topic);
 
     private native void leaveOnKey(long nodePtr, char key);
-
-    private native void playerMigrate(long nodePtr,double newX, double newY,String receivingNode);
 
     private static native long newNode(String clusterName);
 
