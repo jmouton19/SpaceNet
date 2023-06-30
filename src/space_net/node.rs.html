@@ -311,6 +311,13 @@
 <a href="#311" id="311">311</a>
 <a href="#312" id="312">312</a>
 <a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::handlers::node::node_api_matcher::{node_api_matcher, ApiMessage, ApiResponse};
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::node_topic_matcher::node_topic_matcher;
 <span class="kw">use </span><span class="kw">crate</span>::message::{DefaultMessage, NewVoronoiRequest, PayloadMessage};
@@ -524,9 +531,16 @@
             topic: topic.to_string(),
         })
         .unwrap();
+        <span class="kw">let </span>topic_string;
+        <span class="kw">if </span>receiving_node==<span class="string">&quot;&quot; </span>{
+            topic_string=<span class="macro">format!</span>(<span class="string">&quot;{}/{}&quot;</span>, <span class="self">self</span>.cluster_name, topic);
+        }<span class="kw">else</span>{
+            topic_string=<span class="macro">format!</span>(<span class="string">&quot;{}/{}/{}&quot;</span>, <span class="self">self</span>.cluster_name, receiving_node, topic);
+        }
+
         <span class="self">self</span>.session
             .put(
-                <span class="macro">format!</span>(<span class="string">&quot;{}/{}/{}&quot;</span>, <span class="self">self</span>.cluster_name, receiving_node, topic),
+                topic_string,
                 message,
             )
             .res_sync()

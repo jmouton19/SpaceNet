@@ -224,6 +224,7 @@
 <a href="#224" id="224">224</a>
 <a href="#225" id="225">225</a>
 <a href="#226" id="226">226</a>
+<a href="#227" id="227">227</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::boot_node::BootNode;
 
 <span class="kw">use </span><span class="kw">crate</span>::node::{Node, NodeStatus};
@@ -418,13 +419,14 @@
 }
 
 
-<span class="attr">#[no_mangle]
-</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>subscribe(subscriber_ptr: <span class="kw-2">*const </span>c_void, topic: <span class="kw-2">*const </span>c_char) {
+<span class="comment">//todo!safely convert c_int to i32?
+
+</span><span class="attr">#[no_mangle]
+</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>subscribe(subscriber_ptr: <span class="kw-2">*const </span>c_void, topic: <span class="kw-2">*const </span>c_char,global_sub:c_int) {
     <span class="kw">let </span>c_str = <span class="kw">unsafe </span>{ CStr::from_ptr(topic) };
     <span class="kw">let </span>topic = c_str.to_str().unwrap();
     <span class="kw">let </span>sub = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut*</span>(subscriber_ptr <span class="kw">as </span><span class="kw-2">*mut </span>NodeSubscriber) };
-
-    sub.subscribe(topic);
+    sub.subscribe(topic,global_sub);
 }
 
 <span class="attr">#[no_mangle]
