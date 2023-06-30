@@ -11,7 +11,7 @@ public class ExampleNode3 {
 
          NodeSubscriber sub= new NodeSubscriber(node);
 
-         sub.subscribe("pog");
+         sub.subscribe("pog",false);
 
          while (true) {
                try {

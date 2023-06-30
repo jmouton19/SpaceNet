@@ -12,7 +12,7 @@ int main() {
     join(node_ptr,69.0,69.0);
 
     void* sub=new_subscriber(node_ptr);
-    subscribe(sub,"pog");
+    subscribe(sub,"pog",0);
 
 //    while(1){
 //        Buffer buffer= receive(sub)

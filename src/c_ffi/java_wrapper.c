@@ -96,11 +96,11 @@ JNIEXPORT jlong JNICALL Java_com_example_NodeSubscriber_newNodeSubscriber(JNIEnv
     return result;
 }
 
-JNIEXPORT void JNICALL Java_com_example_NodeSubscriber_subscribe(JNIEnv *env, jobject obj, jlong subPtr,jstring topic) {
-    printf("INSIDE SUB CALL0");
+JNIEXPORT void JNICALL Java_com_example_NodeSubscriber_subscribe(JNIEnv *env, jobject obj, jlong subPtr,jstring topic,jboolean global_sub) {
     const char *ctopic = (*env)->GetStringUTFChars(env, topic, 0);
-    printf("INSIDE SUB CALL1");
-    subscribe((void*) subPtr, ctopic);
+
+    int global=(global_sub==JNI_TRUE);
+    subscribe((void*) subPtr, ctopic,global);
 }
 
 JNIEXPORT jbyteArray JNICALL Java_com_example_NodeSubscriber_receive(JNIEnv *env, jobject obj, jlong subPtr) {

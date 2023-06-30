@@ -211,9 +211,16 @@ impl Node {
             topic: topic.to_string(),
         })
         .unwrap();
+        let topic_string;
+        if receiving_node=="" {
+            topic_string=format!("{}/{}", self.cluster_name, topic);
+        }else{
+            topic_string=format!("{}/{}/{}", self.cluster_name, receiving_node, topic);
+        }
+
         self.session
             .put(
-                format!("{}/{}/{}", self.cluster_name, receiving_node, topic),
+                topic_string,
                 message,
             )
             .res_sync()

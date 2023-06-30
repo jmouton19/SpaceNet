@@ -192,13 +192,14 @@ pub extern "C" fn free_subscriber(node: *mut c_void) {
 }
 
 
+//todo!safely convert c_int to i32?
+
 #[no_mangle]
-pub extern "C" fn subscribe(subscriber_ptr: *const c_void, topic: *const c_char) {
+pub extern "C" fn subscribe(subscriber_ptr: *const c_void, topic: *const c_char,global_sub:c_int) {
     let c_str = unsafe { CStr::from_ptr(topic) };
     let topic = c_str.to_str().unwrap();
     let sub = unsafe { &mut*(subscriber_ptr as *mut NodeSubscriber) };
-
-    sub.subscribe(topic);
+    sub.subscribe(topic,global_sub);
 }
 
 #[no_mangle]

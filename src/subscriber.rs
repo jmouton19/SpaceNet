@@ -32,17 +32,30 @@ impl NodeSubscriber {
         }
     }
 
-    pub fn subscribe(&self, topic: &str) {
+    pub fn subscribe(&self, topic: &str, global_sub:i32) {
         let cluster_name = self.cluster_name.clone();
         let zid = self.zid.clone();
         let topic = topic.to_string();
+        let topic_string;
 
+        //todo!: CHECK FOR RESERVED TOPICS
+        //CHANGE START TO SPACENET/**
+        //cant be clustername/node/zid/*
+        //cant be clustername/bootnode/zid/*
+        //clustername/counter/*
+        //boot/join
+
+        if global_sub>=1 {
+            topic_string=format!("{}/{}", cluster_name, topic);
+        }else{
+            topic_string=format!("{}/{}/{}", cluster_name, zid,topic);
+        }
 
         let tx = self.tx.clone();
         let session = self.session.clone();
         async_std::task::spawn(async move {
             let subscriber = session
-                .declare_subscriber(format!("{}/{}/{}", cluster_name, zid, topic))
+                .declare_subscriber(topic_string) //removed zid,user must specify in topic
                 .with(flume::unbounded())
                 .reliable()
                 .res_async()
