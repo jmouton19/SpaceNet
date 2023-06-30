@@ -252,7 +252,6 @@
     }
 }
 
-
 <span class="comment">//new boot node from C
 </span><span class="attr">#[no_mangle]
 </span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>new_boot(cluster_name: <span class="kw-2">*const </span>c_char, centralized_voronoi: bool) -&gt; <span class="kw-2">*mut </span>c_void {
@@ -267,7 +266,6 @@
         <span class="kw">let _ </span>= Box::from_raw(node <span class="kw">as </span><span class="kw-2">*mut </span>BootNode);
     }
 }
-
 
 <span class="comment">// leave node when key is pressed from C
 </span><span class="attr">#[no_mangle]
@@ -301,7 +299,6 @@
         CString::from_raw(s)
     };
 }
-
 
 <span class="comment">//get node status from C
 </span><span class="attr">#[no_mangle]
@@ -386,8 +383,8 @@
 </span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>send_message(
     node_ptr: <span class="kw-2">*mut </span>c_void,
     buffer: Buffer,
-    receiver_node: <span class="kw-2">*const </span>c_char,
-    topic: <span class="kw-2">*const </span>c_char,
+    <span class="comment">//receiver_node: *const c_char,
+    </span>topic: <span class="kw-2">*const </span>c_char,
 ) {
     <span class="kw">let </span>node = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(node_ptr <span class="kw">as </span><span class="kw-2">*mut </span>Node) };
 
@@ -397,12 +394,11 @@
     <span class="kw">let </span>c_str = <span class="kw">unsafe </span>{ CStr::from_ptr(topic) };
     <span class="kw">let </span>topic = c_str.to_str().unwrap();
 
-    <span class="kw">let </span>c_str = <span class="kw">unsafe </span>{ CStr::from_ptr(receiver_node) };
-    <span class="kw">let </span>receiver = c_str.to_str().unwrap();
+    <span class="comment">// let c_str = unsafe { CStr::from_ptr(receiver_node) };
+    // let receiver = c_str.to_str().unwrap();
 
-    node.send_message(payload_vec, receiver, topic);
+    </span>node.send_message(payload_vec, topic);
 }
-
 
 <span class="comment">//subscriber struct
 </span><span class="attr">#[no_mangle]
@@ -418,15 +414,19 @@
     }
 }
 
-
 <span class="comment">//todo!safely convert c_int to i32?
 
 </span><span class="attr">#[no_mangle]
-</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>subscribe(subscriber_ptr: <span class="kw-2">*const </span>c_void, topic: <span class="kw-2">*const </span>c_char,global_sub:c_int) {
+</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>subscribe(
+    subscriber_ptr: <span class="kw-2">*const </span>c_void,
+    topic: <span class="kw-2">*const </span>c_char,
+    <span class="comment">//cglobal_sub: c_int,
+</span>) {
     <span class="kw">let </span>c_str = <span class="kw">unsafe </span>{ CStr::from_ptr(topic) };
     <span class="kw">let </span>topic = c_str.to_str().unwrap();
-    <span class="kw">let </span>sub = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut*</span>(subscriber_ptr <span class="kw">as </span><span class="kw-2">*mut </span>NodeSubscriber) };
-    sub.subscribe(topic,global_sub);
+    <span class="kw">let </span>sub = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;mut *</span>(subscriber_ptr <span class="kw">as </span><span class="kw-2">*mut </span>NodeSubscriber) };
+
+    sub.subscribe(topic);
 }
 
 <span class="attr">#[no_mangle]

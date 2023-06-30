@@ -74,20 +74,12 @@
 <a href="#74" id="74">74</a>
 <a href="#75" id="75">75</a>
 <a href="#76" id="76">76</a>
-<a href="#77" id="77">77</a>
-<a href="#78" id="78">78</a>
-<a href="#79" id="79">79</a>
-<a href="#80" id="80">80</a>
-<a href="#81" id="81">81</a>
-<a href="#82" id="82">82</a>
-<a href="#83" id="83">83</a>
-<a href="#84" id="84">84</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::message::PayloadMessage;
 <span class="kw">use </span><span class="kw">crate</span>::node::Node;
 <span class="kw">use </span>bincode::deserialize;
 <span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>zenoh::prelude::r#async::AsyncResolve;
-<span class="kw">use </span>zenoh::sample::Sample;
+
 <span class="kw">use </span>zenoh::Session;
 
 <span class="attr">#[derive(Clone)]
@@ -116,11 +108,9 @@
         }
     }
 
-    <span class="kw">pub fn </span>subscribe(<span class="kw-2">&amp;</span><span class="self">self</span>, topic: <span class="kw-2">&amp;</span>str, global_sub:i32) {
-        <span class="kw">let </span>cluster_name = <span class="self">self</span>.cluster_name.clone();
-        <span class="kw">let </span>zid = <span class="self">self</span>.zid.clone();
+    <span class="kw">pub fn </span>subscribe(<span class="kw-2">&amp;</span><span class="self">self</span>, topic: <span class="kw-2">&amp;</span>str) {
+        <span class="kw">let </span>_cluster_name = <span class="self">self</span>.cluster_name.clone();
         <span class="kw">let </span>topic = topic.to_string();
-        <span class="kw">let </span>topic_string;
 
         <span class="comment">//todo!: CHECK FOR RESERVED TOPICS
         //CHANGE START TO SPACENET/**
@@ -129,17 +119,11 @@
         //clustername/counter/*
         //boot/join
 
-        </span><span class="kw">if </span>global_sub&gt;=<span class="number">1 </span>{
-            topic_string=<span class="macro">format!</span>(<span class="string">&quot;{}/{}&quot;</span>, cluster_name, topic);
-        }<span class="kw">else</span>{
-            topic_string=<span class="macro">format!</span>(<span class="string">&quot;{}/{}/{}&quot;</span>, cluster_name, zid,topic);
-        }
-
-        <span class="kw">let </span>tx = <span class="self">self</span>.tx.clone();
+        </span><span class="kw">let </span>tx = <span class="self">self</span>.tx.clone();
         <span class="kw">let </span>session = <span class="self">self</span>.session.clone();
         async_std::task::spawn(<span class="kw">async move </span>{
             <span class="kw">let </span>subscriber = session
-                .declare_subscriber(topic_string) <span class="comment">//removed zid,user must specify in topic
+                .declare_subscriber(topic) <span class="comment">//removed zid,user must specify in topic
                 </span>.with(flume::unbounded())
                 .reliable()
                 .res_async()
