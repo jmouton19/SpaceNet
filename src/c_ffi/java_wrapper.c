@@ -70,24 +70,19 @@ JNIEXPORT jstring JNICALL Java_com_example_Node_closestNeighbour(JNIEnv *env, jo
     return (*env)->NewStringUTF(env, zid);
 }
 
-JNIEXPORT void JNICALL Java_com_example_Node_sendMessage(JNIEnv *env, jobject obj, jlong nodePtr,jbyteArray buffer,jstring recvNode,jstring topic) {
+JNIEXPORT void JNICALL Java_com_example_Node_sendMessage(JNIEnv *env, jobject obj, jlong nodePtr,jbyteArray buffer,jstring topic) {
     jsize len = (*env)->GetArrayLength(env, buffer);
     jbyte* elements = (*env)->GetByteArrayElements(env, buffer, 0);
     unsigned char* dataPtr = (unsigned char*)elements;
-    printf("Printing from native function SEND_MESSAGE\n");
 
     Buffer cbuffer;
     cbuffer.data = dataPtr;
     cbuffer.len = len;
-    printf("%02x\n", cbuffer.data[0]);
-    printf("%zu\n", cbuffer.len);
 
-
-    const char *cRecvNode = (*env)->GetStringUTFChars(env, recvNode, 0);
+   // const char *cRecvNode = (*env)->GetStringUTFChars(env, recvNode, 0);
     const char *ctopic = (*env)->GetStringUTFChars(env, topic, 0);
-    printf("Topic: %s\n", ctopic);
 
-    send_message((void*) nodePtr,cbuffer,cRecvNode,ctopic);
+    send_message((void*) nodePtr,cbuffer,ctopic);
 }
 
 //subscriber
@@ -96,11 +91,11 @@ JNIEXPORT jlong JNICALL Java_com_example_NodeSubscriber_newNodeSubscriber(JNIEnv
     return result;
 }
 
-JNIEXPORT void JNICALL Java_com_example_NodeSubscriber_subscribe(JNIEnv *env, jobject obj, jlong subPtr,jstring topic,jboolean global_sub) {
+JNIEXPORT void JNICALL Java_com_example_NodeSubscriber_subscribe(JNIEnv *env, jobject obj, jlong subPtr,jstring topic) {
     const char *ctopic = (*env)->GetStringUTFChars(env, topic, 0);
 
-    int global=(global_sub==JNI_TRUE);
-    subscribe((void*) subPtr, ctopic,global);
+    //int global=(global_sub==JNI_TRUE);
+    subscribe((void*) subPtr, ctopic);
 }
 
 JNIEXPORT jbyteArray JNICALL Java_com_example_NodeSubscriber_receive(JNIEnv *env, jobject obj, jlong subPtr) {

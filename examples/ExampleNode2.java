@@ -53,18 +53,14 @@ public class ExampleNode2 {
         Benny deserializedBen = deserializeObject(serializedBytes);
         System.out.println("Deserialized Benny object: " + deserializedBen.age + ", " + deserializedBen.gf);
 
-
-
-
-//          int i = 1;
-//             while (i <= 1){
-//                 byte[] rawData = new byte[10];
-//                 rawData[0]=(byte) 0x04;
-//                 node.sendMessage(rawData, "pog", "node1");
-//                 System.out.println(rawData[0]);
-//                 i += 1;
-//             }
-
+         int i = 1;
+            while (i <= 1){
+                byte[] rawData = new byte[10];
+                rawData[0]=(byte) 0x04;
+                node.sendMessage(rawData, "pog");
+                System.out.println(rawData[0]);
+                i += 1;
+            }
 
          while (true) {
 

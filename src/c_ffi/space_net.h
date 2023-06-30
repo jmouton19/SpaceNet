@@ -49,6 +49,6 @@ void *new_subscriber(const void *node_ptr);
 
 Buffer receive(const void *subscriber_ptr);
 
-void send_message(void *node_ptr, Buffer buffer, const char *receiver_node, const char *topic);
+void send_message(void *node_ptr, Buffer buffer, const char *topic);
 
-void subscribe(const void *subscriber_ptr, const char *topic, int global_sub);
+void subscribe(const void *subscriber_ptr, const char *topic);

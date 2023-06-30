@@ -5,12 +5,11 @@ use crate::types::OrderedMapPairs;
 use async_std::io::ReadExt;
 use async_std::{io, task};
 use bincode::serialize;
-use flume::Receiver;
+
 use std::sync::Arc;
 
 use zenoh::prelude::r#async::AsyncResolve;
 pub use zenoh::prelude::sync::*;
-use zenoh::subscriber::Subscriber;
 
 /// A node in a network that has a point site which is used in the calculation of the voronoi diagram of a cluster. Computes its own voronoi polygon from its list of neighbours. Does not store information on entire cluster.
 #[derive(Clone)]
@@ -204,27 +203,14 @@ impl Node {
         min_neighbour.to_string()
     }
 
-    pub fn send_message(&self, payload: Vec<u8>, topic: &str, receiving_node: &str) {
+    pub fn send_message(&self, payload: Vec<u8>, topic: &str) {
         let message = serialize(&PayloadMessage {
             payload,
             sender_id: self.zid.clone(),
             topic: topic.to_string(),
         })
         .unwrap();
-        let topic_string;
-        if receiving_node=="" {
-            topic_string=format!("{}/{}", self.cluster_name, topic);
-        }else{
-            topic_string=format!("{}/{}/{}", self.cluster_name, receiving_node, topic);
-        }
-
-        self.session
-            .put(
-                topic_string,
-                message,
-            )
-            .res_sync()
-            .unwrap();
+        self.session.put(topic, message).res_sync().unwrap();
     }
 
     /// Get the neighbours of the node

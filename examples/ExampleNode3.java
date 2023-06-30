@@ -10,8 +10,7 @@ public class ExampleNode3 {
          node.join(69.0,69.0);
 
          NodeSubscriber sub= new NodeSubscriber(node);
-
-         sub.subscribe("pog",false);
+         sub.subscribe("pog");
 
          while (true) {
                try {
@@ -20,7 +19,8 @@ public class ExampleNode3 {
                     e.printStackTrace();
                }
                byte[] output = sub.receive();
-               System.out.println(output);
+               if(output.length!=0)
+                System.out.println(output[0]+", length "+output.length);
          }
     }
 }

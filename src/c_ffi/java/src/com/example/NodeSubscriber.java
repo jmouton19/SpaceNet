@@ -11,8 +11,8 @@ public class NodeSubscriber {
         nativePtr = newNodeSubscriber(node.getPointer());
     }
 
-    public void subscribe(String topic,boolean globalSub) {
-            subscribe(nativePtr,topic,globalSub);
+    public void subscribe(String topic) {
+            subscribe(nativePtr,topic);
         }
 
     public byte[] receive() {
@@ -21,7 +21,7 @@ public class NodeSubscriber {
 
      private static native long newNodeSubscriber(long subPtr);
 
-     private static native void subscribe(long subPtr,String topic,boolean globalSub);
+     private static native void subscribe(long subPtr,String topic);
 
      private static native byte[] receive(long subPtr);
 }

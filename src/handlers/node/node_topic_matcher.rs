@@ -6,7 +6,7 @@ use crate::handlers::node::handle_new_voronoi_request::handle_new_voronoi_reques
 use crate::handlers::node::handle_owner_request::handle_owner_request;
 use crate::handlers::node::handle_owner_response::handle_owner_response;
 use crate::node::NodeData;
-use bincode::deserialize;
+
 use std::sync::Arc;
 use zenoh::Session;
 

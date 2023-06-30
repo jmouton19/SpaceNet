@@ -1,9 +1,8 @@
 use rand::Rng;
 use space_net::node::*;
-use space_net::subscriber::NodeSubscriber;
+
 use std::thread;
 use std::time::Duration;
-use zenoh::subscriber::Subscriber;
 
 fn main() {
     let mut rng = rand::thread_rng();
@@ -18,13 +17,13 @@ fn main() {
     let mut i = 1;
     while i <= 10 {
         let payload: Vec<u8> = (0..10).map(|_| rand::thread_rng().gen::<u8>()).collect();
-        node.send_message(payload, "pog", "node1");
+        node.send_message(payload, "pog");
         println!("Payload {} sent!", i);
         i += 1;
-        let payload: Vec<u8> = (0..10).map(|_| rand::thread_rng().gen::<u8>()).collect();
-        node.send_message(payload, "pog2", "node1");
-        println!("Payload {} sent!", i);
-        i += 1;
+        // let payload: Vec<u8> = (0..10).map(|_| rand::thread_rng().gen::<u8>()).collect();
+        // node.send_message(payload, "", "pog");
+        // println!("Payload {} sent!", i);
+        // i += 1;
     }
 
     loop {

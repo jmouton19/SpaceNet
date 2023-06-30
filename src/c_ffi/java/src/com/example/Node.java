@@ -61,8 +61,8 @@ public class Node {
             return isInPolygon(nativePtr,x,y);
      }
 
-     public void sendMessage(byte[] buffer,String recvNodePtr,String topic) {
-              sendMessage(nativePtr, buffer, recvNodePtr,topic);
+     public void sendMessage(byte[] buffer,String topic) {
+              sendMessage(nativePtr, buffer,topic);
           }
 
     private native String getZid(long nodePtr);
@@ -71,7 +71,7 @@ public class Node {
 
     private native void leave(long nodePtr);
 
-    private native void sendMessage(long nodePtr,byte[] buffer,String recvNodePtr,String topic);
+    private native void sendMessage(long nodePtr,byte[] buffer,String topic);
 
     private native void leaveOnKey(long nodePtr, char key);
 

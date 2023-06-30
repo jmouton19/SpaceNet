@@ -1,9 +1,5 @@
 use rand::Rng;
 use space_net::node::*;
-use space_net::subscriber::NodeSubscriber;
-use std::thread;
-use std::time::Duration;
-use zenoh::subscriber::Subscriber;
 
 fn main() {
     let mut rng = rand::thread_rng();

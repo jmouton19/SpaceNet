@@ -34,12 +34,12 @@ int main() {
         Buffer buffer;
         buffer.data=gen_rdm_bytestream(size);
         buffer.len=size;
-        send_message(node_ptr,buffer,"pog","node1");
+        send_message(node_ptr,buffer,"pog");
         printf("\nPayload %d sent!\n",i);
 
         i+=1;
         buffer.data=gen_rdm_bytestream(size);
-        send_message(node_ptr,buffer,"pog2","node1");
+        send_message(node_ptr,buffer,"pog2");
         printf("Payload %d sent!\n",i);
         i+=1;
     }

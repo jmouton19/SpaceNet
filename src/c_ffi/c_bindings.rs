@@ -25,7 +25,6 @@ pub extern "C" fn free_node(node: *mut c_void) {
     }
 }
 
-
 //new boot node from C
 #[no_mangle]
 pub extern "C" fn new_boot(cluster_name: *const c_char, centralized_voronoi: bool) -> *mut c_void {
@@ -40,7 +39,6 @@ pub extern "C" fn free_boot_node(node: *mut c_void) {
         let _ = Box::from_raw(node as *mut BootNode);
     }
 }
-
 
 // leave node when key is pressed from C
 #[no_mangle]
@@ -74,7 +72,6 @@ pub extern "C" fn free_c_string(s: *mut c_char) {
         CString::from_raw(s)
     };
 }
-
 
 //get node status from C
 #[no_mangle]
@@ -159,7 +156,7 @@ pub extern "C" fn closest_neighbour(
 pub extern "C" fn send_message(
     node_ptr: *mut c_void,
     buffer: Buffer,
-    receiver_node: *const c_char,
+    //receiver_node: *const c_char,
     topic: *const c_char,
 ) {
     let node = unsafe { &mut *(node_ptr as *mut Node) };
@@ -170,12 +167,11 @@ pub extern "C" fn send_message(
     let c_str = unsafe { CStr::from_ptr(topic) };
     let topic = c_str.to_str().unwrap();
 
-    let c_str = unsafe { CStr::from_ptr(receiver_node) };
-    let receiver = c_str.to_str().unwrap();
+    // let c_str = unsafe { CStr::from_ptr(receiver_node) };
+    // let receiver = c_str.to_str().unwrap();
 
-    node.send_message(payload_vec, receiver, topic);
+    node.send_message(payload_vec, topic);
 }
-
 
 //subscriber struct
 #[no_mangle]
@@ -191,15 +187,19 @@ pub extern "C" fn free_subscriber(node: *mut c_void) {
     }
 }
 
-
 //todo!safely convert c_int to i32?
 
 #[no_mangle]
-pub extern "C" fn subscribe(subscriber_ptr: *const c_void, topic: *const c_char,global_sub:c_int) {
+pub extern "C" fn subscribe(
+    subscriber_ptr: *const c_void,
+    topic: *const c_char,
+    //cglobal_sub: c_int,
+) {
     let c_str = unsafe { CStr::from_ptr(topic) };
     let topic = c_str.to_str().unwrap();
-    let sub = unsafe { &mut*(subscriber_ptr as *mut NodeSubscriber) };
-    sub.subscribe(topic,global_sub);
+    let sub = unsafe { &mut *(subscriber_ptr as *mut NodeSubscriber) };
+
+    sub.subscribe(topic);
 }
 
 #[no_mangle]
