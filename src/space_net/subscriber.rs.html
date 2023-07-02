@@ -74,12 +74,12 @@
 <a href="#74" id="74">74</a>
 <a href="#75" id="75">75</a>
 <a href="#76" id="76">76</a>
-</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::message::PayloadMessage;
-<span class="kw">use </span><span class="kw">crate</span>::node::Node;
+</pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::node::Node;
 <span class="kw">use </span>bincode::deserialize;
 <span class="kw">use </span>std::sync::Arc;
 <span class="kw">use </span>zenoh::prelude::r#async::AsyncResolve;
 
+<span class="kw">use </span><span class="kw">crate</span>::payload_message::PayloadMessage;
 <span class="kw">use </span>zenoh::Session;
 
 <span class="attr">#[derive(Clone)]
@@ -88,8 +88,8 @@
     <span class="comment">//pub(crate) message_queue: Vec&lt;Vec&lt;u8&gt;&gt;,
     </span><span class="kw">pub</span>(<span class="kw">crate</span>) cluster_name: String,
     <span class="kw">pub </span>zid: String,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) tx: flume::Sender&lt;Vec&lt;u8&gt;&gt;,
-    <span class="kw">pub</span>(<span class="kw">crate</span>) rx: flume::Receiver&lt;Vec&lt;u8&gt;&gt;,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) tx: flume::Sender&lt;PayloadMessage&gt;,
+    <span class="kw">pub</span>(<span class="kw">crate</span>) rx: flume::Receiver&lt;PayloadMessage&gt;,
 }
 
 <span class="kw">impl </span>NodeSubscriber {
@@ -136,14 +136,14 @@
                     <span class="string">&quot;Received message from {:?} on topic {:?}&quot;</span>,
                     data.sender_id, data.topic
                 );
-                tx.send(data.payload).unwrap();
+                tx.send(data).unwrap();
             }
         });
     }
 
     <span class="comment">//maybe point make option, null if empty
-    </span><span class="kw">pub fn </span>receive(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;u8&gt; {
-        <span class="kw">let </span><span class="kw-2">mut </span>payload: Vec&lt;u8&gt; = <span class="macro">vec!</span>[];
+    </span><span class="kw">pub fn </span>receive(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PayloadMessage {
+        <span class="kw">let </span><span class="kw-2">mut </span>payload = PayloadMessage::new();
         <span class="kw">if let </span><span class="prelude-val">Ok</span>(message) = <span class="self">self</span>.rx.try_recv() {
             payload = message;
         };
