@@ -15,7 +15,7 @@ public class NodeSubscriber {
             subscribe(nativePtr,topic);
         }
 
-    public byte[] receive() {
+    public long receive() {
              return receive(nativePtr);
           }
 
@@ -23,5 +23,5 @@ public class NodeSubscriber {
 
      private static native void subscribe(long subPtr,String topic);
 
-     private static native byte[] receive(long subPtr);
+     private static native long receive(long subPtr);
 }

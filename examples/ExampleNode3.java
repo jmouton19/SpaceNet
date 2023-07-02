@@ -1,5 +1,6 @@
 import com.example.Node;
 import com.example.NodeSubscriber;
+import com.example.PayloadMessage;
 
 public class ExampleNode3 {
     public static void main(String[] args) {
@@ -18,9 +19,10 @@ public class ExampleNode3 {
                } catch (InterruptedException e) {
                     e.printStackTrace();
                }
-               byte[] output = sub.receive();
-               if(output.length!=0)
-                System.out.println(output[0]+", length "+output.length);
+
+               PayloadMessage message = new PayloadMessage(sub.receive());
+               if(message.getPayload().length!=0)
+                System.out.println(message.getPayload()[0]+", length "+message.getPayload().length+" topic "+message.getTopic());
          }
     }
 }

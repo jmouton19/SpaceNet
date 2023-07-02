@@ -47,6 +47,7 @@ pub(crate) mod c_ffi;
 pub(crate) mod handlers;
 pub(crate) mod message;
 pub mod node;
+pub mod payload_message;
 pub mod subscriber;
 pub mod types;
 pub mod utils;

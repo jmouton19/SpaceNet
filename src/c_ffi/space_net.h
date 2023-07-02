@@ -23,9 +23,17 @@ void free_c_string(char *s);
 
 void free_node(void *node);
 
+void free_payload_message(void *payload_message);
+
 void free_subscriber(void *node);
 
+Buffer get_payload(void *payload_message_ptr);
+
+const char *get_sender_id(void *payload_message_ptr);
+
 NodeStatus get_status(void *node_ptr);
+
+const char *get_topic(void *payload_message_ptr);
 
 const char *get_zid_boot(void *boot_ptr);
 
@@ -47,7 +55,7 @@ void *new_node(const char *cluster_name);
 
 void *new_subscriber(const void *node_ptr);
 
-Buffer receive(const void *subscriber_ptr);
+void *receive(const void *subscriber_ptr);
 
 void send_message(void *node_ptr, Buffer buffer, const char *topic);
 

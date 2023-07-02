@@ -98,10 +98,26 @@ JNIEXPORT void JNICALL Java_com_example_NodeSubscriber_subscribe(JNIEnv *env, jo
     subscribe((void*) subPtr, ctopic);
 }
 
-JNIEXPORT jbyteArray JNICALL Java_com_example_NodeSubscriber_receive(JNIEnv *env, jobject obj, jlong subPtr) {
-    Buffer buffer=receive((void*) subPtr);
-    jbyteArray byteArray = (*env)->NewByteArray(env, buffer.len);
+JNIEXPORT jlong JNICALL Java_com_example_NodeSubscriber_receive(JNIEnv *env, jobject obj, jlong subPtr) {
+    jlong result = (jlong) receive((void*) subPtr);
+    return result;
+}
 
+////////
+JNIEXPORT jstring JNICALL Java_com_example_PayloadMessage_getTopic(JNIEnv *env, jobject obj, jlong payloadPtr) {
+    const char* topic = get_topic((void*) payloadPtr);
+    return (*env)->NewStringUTF(env, topic);
+}
+
+JNIEXPORT jstring JNICALL Java_com_example_PayloadMessage_getSenderId(JNIEnv *env, jobject obj, jlong payloadPtr) {
+    const char* sender_id = get_sender_id((void*) payloadPtr);
+    return (*env)->NewStringUTF(env, sender_id);
+}
+
+JNIEXPORT jbyteArray JNICALL Java_com_example_PayloadMessage_getPayload(JNIEnv *env, jobject obj, jlong payloadPtr) {
+    Buffer buffer=get_payload((void*) payloadPtr);
+    jbyteArray byteArray = (*env)->NewByteArray(env, buffer.len);
     (*env)->SetByteArrayRegion(env, byteArray, 0, buffer.len, (jbyte*)buffer.data);
     return byteArray;
 }
+

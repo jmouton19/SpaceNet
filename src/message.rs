@@ -2,13 +2,6 @@ use crate::types::OrderedMapPairs;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
-pub struct PayloadMessage {
-    pub(crate) payload: Vec<u8>,
-    pub(crate) sender_id: String,
-    pub(crate) topic: String,
-}
-
-#[derive(Deserialize, Serialize)]
 pub struct DefaultMessage {
     pub sender_id: String,
 }

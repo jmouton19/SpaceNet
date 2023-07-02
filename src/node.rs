@@ -1,6 +1,6 @@
 use crate::handlers::node::node_api_matcher::{node_api_matcher, ApiMessage, ApiResponse};
 use crate::handlers::node::node_topic_matcher::node_topic_matcher;
-use crate::message::{DefaultMessage, NewVoronoiRequest, PayloadMessage};
+use crate::message::{DefaultMessage, NewVoronoiRequest};
 use crate::types::OrderedMapPairs;
 use async_std::io::ReadExt;
 use async_std::{io, task};
@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use zenoh::prelude::r#async::AsyncResolve;
 pub use zenoh::prelude::sync::*;
+use crate::payload_message::PayloadMessage;
 
 /// A node in a network that has a point site which is used in the calculation of the voronoi diagram of a cluster. Computes its own voronoi polygon from its list of neighbours. Does not store information on entire cluster.
 #[derive(Clone)]

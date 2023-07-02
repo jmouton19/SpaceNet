@@ -1,9 +1,9 @@
-use crate::message::PayloadMessage;
 use crate::node::Node;
 use bincode::deserialize;
 use std::sync::Arc;
 use zenoh::prelude::r#async::AsyncResolve;
 
+use crate::payload_message::PayloadMessage;
 use zenoh::Session;
 
 #[derive(Clone)]
@@ -12,8 +12,8 @@ pub struct NodeSubscriber {
     //pub(crate) message_queue: Vec<Vec<u8>>,
     pub(crate) cluster_name: String,
     pub zid: String,
-    pub(crate) tx: flume::Sender<Vec<u8>>,
-    pub(crate) rx: flume::Receiver<Vec<u8>>,
+    pub(crate) tx: flume::Sender<PayloadMessage>,
+    pub(crate) rx: flume::Receiver<PayloadMessage>,
 }
 
 impl NodeSubscriber {
@@ -60,14 +60,14 @@ impl NodeSubscriber {
                     "Received message from {:?} on topic {:?}",
                     data.sender_id, data.topic
                 );
-                tx.send(data.payload).unwrap();
+                tx.send(data).unwrap();
             }
         });
     }
 
     //maybe point make option, null if empty
-    pub fn receive(&self) -> Vec<u8> {
-        let mut payload: Vec<u8> = vec![];
+    pub fn receive(&self) -> PayloadMessage {
+        let mut payload = PayloadMessage::new();
         if let Ok(message) = self.rx.try_recv() {
             payload = message;
         };

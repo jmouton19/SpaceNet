@@ -1,6 +1,7 @@
 use crate::boot_node::BootNode;
 
 use crate::node::{Node, NodeStatus};
+use crate::payload_message::PayloadMessage;
 use crate::subscriber::NodeSubscriber;
 use libc::{c_char, c_int};
 use std::ffi::{c_void, CStr, CString};
@@ -203,9 +204,48 @@ pub extern "C" fn subscribe(
 }
 
 #[no_mangle]
-pub extern "C" fn receive(subscriber_ptr: *const c_void) -> Buffer {
+pub extern "C" fn receive(subscriber_ptr: *const c_void) -> *mut c_void {
     let sub = unsafe { &*(subscriber_ptr as *const NodeSubscriber) };
-    let mut payload = sub.receive();
+    let payload_message = Box::new(sub.receive());
+    Box::into_raw(payload_message) as *mut c_void
+}
+
+//TODO FREE ALL INTO RAW FUNCTIONS!
+
+// //payload_message struct
+// #[no_mangle]
+// pub extern "C" fn new_payload_message() -> *mut c_void {
+//     let payload_message = Box::new(PayloadMessage::new());
+//     Box::into_raw(payload_message) as *mut c_void
+// }
+
+#[no_mangle]
+pub extern "C" fn free_payload_message(payload_message: *mut c_void) {
+    unsafe {
+        let _ = Box::from_raw(payload_message as *mut PayloadMessage);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn get_topic(payload_message_ptr: *mut c_void) -> *const c_char {
+    let payload_message = unsafe { &*(payload_message_ptr as *mut PayloadMessage) };
+    let topic = payload_message.get_topic();
+    let c_string = CString::new(topic).unwrap();
+    c_string.into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn get_sender_id(payload_message_ptr: *mut c_void) -> *const c_char {
+    let payload_message = unsafe { &*(payload_message_ptr as *mut PayloadMessage) };
+    let get_sender_id = payload_message.get_sender_id();
+    let c_string = CString::new(get_sender_id).unwrap();
+    c_string.into_raw()
+}
+
+#[no_mangle]
+pub extern "C" fn get_payload(payload_message_ptr: *mut c_void) -> Buffer {
+    let payload_message = unsafe { &*(payload_message_ptr as *const PayloadMessage) };
+    let mut payload = payload_message.get_payload();
     let data_ptr = payload.as_mut_ptr();
     let len = payload.len();
     std::mem::forget(payload);
@@ -223,5 +263,3 @@ extern "C" fn free_buf(buf: Buffer) {
         let _ = Box::from_raw(s);
     }
 }
-
-//TODO FREE ALL INTO RAW FUNCTIONS!
