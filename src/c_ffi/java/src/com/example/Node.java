@@ -32,6 +32,10 @@ public class Node {
             return nativePtr;
      }
 
+     public String[] getNeighbours() {
+                 return getNeighbours(nativePtr);
+      }
+
      public String closestNeighbour(double x, double y) {
             return closestNeighbour(nativePtr,x,y);
         }
@@ -84,6 +88,8 @@ public class Node {
     private native int isInPolygon(long nodePtr,double x, double y);
 
     private native String closestNeighbour(long nodePtr,double x, double y);
+
+    private native String[] getNeighbours(long nodePtr);
 
 
 }

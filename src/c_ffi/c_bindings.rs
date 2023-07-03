@@ -5,6 +5,7 @@ use crate::payload_message::PayloadMessage;
 use crate::subscriber::NodeSubscriber;
 use libc::{c_char, c_int};
 use std::ffi::{c_void, CStr, CString};
+use std::ptr;
 
 #[repr(C)]
 pub struct Buffer {
@@ -90,11 +91,43 @@ pub extern "C" fn get_zid_boot(boot_ptr: *mut c_void) -> *const c_char {
     c_string.into_raw()
 }
 
-// //get neighbours from C
-// #[no_mangle]
-// pub extern "C" fn get_neighbours(node_ptr: *mut c_void) -> *const c_char {
-//     let node = unsafe { &*(node_ptr as *mut Node) };
-// }
+#[no_mangle]
+pub extern "C" fn get_neighbours(node_ptr: *mut Node) -> *mut *mut c_char {
+    let node = unsafe { &*(node_ptr as *mut Node) };
+    // Call the Rust implementation of get_neighbours
+    let neighbours = node.get_neighbours();
+    // Convert the Vec<String> to a Vec<*mut c_char>
+    let c_strings: Vec<_> = neighbours
+        .iter()
+        .map(|s| CString::new(s.as_str()).unwrap().into_raw())
+        .collect();
+    // Create a new Vec<*mut c_char> on the heap
+    let mut c_pointers: Vec<_> = c_strings.into_iter().collect();
+
+    // Add a null pointer at the end of the Vec
+    c_pointers.push(ptr::null_mut());
+    // Convert the Vec<*mut c_char> to a *mut *mut c_char
+    let c_array = c_pointers.as_mut_ptr();
+    // Prevent the Vec from being deallocated
+    std::mem::forget(c_pointers);
+    c_array
+}
+
+// C function for freeing the memory allocated by get_neighbours
+#[no_mangle]
+pub extern "C" fn free_neighbours(neighbours: *mut *mut c_char) {
+    unsafe {
+        if neighbours.is_null() {
+            return;
+        }
+        let mut i = 0;
+        while !(*neighbours.offset(i)).is_null() {
+            let _ = CString::from_raw(*neighbours.offset(i));
+            i += 1;
+        }
+        let _ = Box::from_raw(neighbours);
+    }
+}
 
 // Check if the node is a neighbour from c
 #[no_mangle]

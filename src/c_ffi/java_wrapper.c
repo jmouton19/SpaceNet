@@ -35,6 +35,30 @@ JNIEXPORT jint JNICALL Java_com_example_Node_getStatus(JNIEnv *env, jobject obj,
     return (jint) status;
 }
 
+JNIEXPORT jobjectArray JNICALL Java_com_example_Node_getNeighbours(JNIEnv *env, jobject obj, jlong nodePtr) {
+    // Call your C function here to get the neighbors as a C string array
+    char** neighbors = get_neighbours((void*) nodePtr);
+
+    // Count the number of neighbors in the C string array
+    int numNeighbors = 0;
+    while (neighbors[numNeighbors] != NULL) {
+        numNeighbors++;
+    }
+    // Create a Java array to store the neighbors
+    jclass stringClass = (*env)->FindClass(env, "java/lang/String");
+    jobjectArray neighborsArray = (*env)->NewObjectArray(env, numNeighbors, stringClass, NULL);
+    // Iterate over the C string array and populate the Java array
+    for (int i = 0; i < numNeighbors; i++) {
+        jstring neighborString = (*env)->NewStringUTF(env, neighbors[i]);
+        (*env)->SetObjectArrayElement(env, neighborsArray, i, neighborString);
+        (*env)->DeleteLocalRef(env, neighborString);
+        //free_neighbours(&neighbors[i]);
+    }
+    free_neighbours(neighbors);
+    return neighborsArray;
+}
+
+
 JNIEXPORT jint JNICALL Java_com_example_Node_isNeighbour(JNIEnv *env, jobject obj, jlong nodePtr, jstring zid) {
     const char *native_zid = (*env)->GetStringUTFChars(env, zid, 0);
     jint result = (jint) is_neighbour((void*) nodePtr, native_zid);

@@ -8,9 +8,9 @@ use bincode::serialize;
 
 use std::sync::Arc;
 
+use crate::payload_message::PayloadMessage;
 use zenoh::prelude::r#async::AsyncResolve;
 pub use zenoh::prelude::sync::*;
-use crate::payload_message::PayloadMessage;
 
 /// A node in a network that has a point site which is used in the calculation of the voronoi diagram of a cluster. Computes its own voronoi polygon from its list of neighbours. Does not store information on entire cluster.
 #[derive(Clone)]
@@ -189,7 +189,7 @@ impl Node {
     }
 
     pub fn closest_neighbour(&self, point: (f64, f64)) -> String {
-        let neighbours = self.get_neighbours();
+        let neighbours = self.get_neighbours_sites();
         let mut min_distance = f64::MAX;
         let mut min_neighbour = "";
         for (neighbour, site) in neighbours.iter() {
@@ -215,7 +215,7 @@ impl Node {
     }
 
     /// Get the neighbours of the node
-    pub fn get_neighbours(&self) -> Vec<(String, (f64, f64))> {
+    pub fn get_neighbours_sites(&self) -> Vec<(String, (f64, f64))> {
         self.api_requester_tx
             .send(ApiMessage::GetNeighbours)
             .unwrap();
@@ -223,6 +223,19 @@ impl Node {
             self.api_responder_rx.recv().unwrap()
         {
             neighbours
+        } else {
+            panic!("Wrong response type");
+        }
+    }
+
+    pub fn get_neighbours(&self) -> Vec<String> {
+        self.api_requester_tx
+            .send(ApiMessage::GetNeighbours)
+            .unwrap();
+        if let ApiResponse::GetNeighboursResponse(neighbours) =
+            self.api_responder_rx.recv().unwrap()
+        {
+            neighbours.iter().map(|(s, _)| s.clone()).collect()
         } else {
             panic!("Wrong response type");
         }

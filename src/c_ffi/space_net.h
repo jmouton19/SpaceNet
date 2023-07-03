@@ -10,6 +10,8 @@ typedef enum {
   Offline,
 } NodeStatus;
 
+typedef struct Node Node;
+
 typedef struct {
   uint8_t *data;
   uintptr_t len;
@@ -21,11 +23,15 @@ void free_boot_node(void *node);
 
 void free_c_string(char *s);
 
+void free_neighbours(char **neighbours);
+
 void free_node(void *node);
 
 void free_payload_message(void *payload_message);
 
 void free_subscriber(void *node);
+
+char **get_neighbours(Node *node_ptr);
 
 Buffer get_payload(void *payload_message_ptr);
 
