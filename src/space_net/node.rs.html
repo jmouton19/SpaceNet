@@ -305,6 +305,19 @@
 <a href="#305" id="305">305</a>
 <a href="#306" id="306">306</a>
 <a href="#307" id="307">307</a>
+<a href="#308" id="308">308</a>
+<a href="#309" id="309">309</a>
+<a href="#310" id="310">310</a>
+<a href="#311" id="311">311</a>
+<a href="#312" id="312">312</a>
+<a href="#313" id="313">313</a>
+<a href="#314" id="314">314</a>
+<a href="#315" id="315">315</a>
+<a href="#316" id="316">316</a>
+<a href="#317" id="317">317</a>
+<a href="#318" id="318">318</a>
+<a href="#319" id="319">319</a>
+<a href="#320" id="320">320</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::handlers::node::node_api_matcher::{node_api_matcher, ApiMessage, ApiResponse};
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::node_topic_matcher::node_topic_matcher;
 <span class="kw">use </span><span class="kw">crate</span>::message::{DefaultMessage, NewVoronoiRequest};
@@ -315,9 +328,9 @@
 
 <span class="kw">use </span>std::sync::Arc;
 
+<span class="kw">use </span><span class="kw">crate</span>::payload_message::PayloadMessage;
 <span class="kw">use </span>zenoh::prelude::r#async::AsyncResolve;
 <span class="kw">pub use </span>zenoh::prelude::sync::<span class="kw-2">*</span>;
-<span class="kw">use </span><span class="kw">crate</span>::payload_message::PayloadMessage;
 
 <span class="doccomment">/// A node in a network that has a point site which is used in the calculation of the voronoi diagram of a cluster. Computes its own voronoi polygon from its list of neighbours. Does not store information on entire cluster.
 </span><span class="attr">#[derive(Clone)]
@@ -496,7 +509,7 @@
     }
 
     <span class="kw">pub fn </span>closest_neighbour(<span class="kw-2">&amp;</span><span class="self">self</span>, point: (f64, f64)) -&gt; String {
-        <span class="kw">let </span>neighbours = <span class="self">self</span>.get_neighbours();
+        <span class="kw">let </span>neighbours = <span class="self">self</span>.get_neighbours_sites();
         <span class="kw">let </span><span class="kw-2">mut </span>min_distance = f64::MAX;
         <span class="kw">let </span><span class="kw-2">mut </span>min_neighbour = <span class="string">&quot;&quot;</span>;
         <span class="kw">for </span>(neighbour, site) <span class="kw">in </span>neighbours.iter() {
@@ -522,7 +535,7 @@
     }
 
     <span class="doccomment">/// Get the neighbours of the node
-    </span><span class="kw">pub fn </span>get_neighbours(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;(String, (f64, f64))&gt; {
+    </span><span class="kw">pub fn </span>get_neighbours_sites(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;(String, (f64, f64))&gt; {
         <span class="self">self</span>.api_requester_tx
             .send(ApiMessage::GetNeighbours)
             .unwrap();
@@ -530,6 +543,19 @@
             <span class="self">self</span>.api_responder_rx.recv().unwrap()
         {
             neighbours
+        } <span class="kw">else </span>{
+            <span class="macro">panic!</span>(<span class="string">&quot;Wrong response type&quot;</span>);
+        }
+    }
+
+    <span class="kw">pub fn </span>get_neighbours(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; Vec&lt;String&gt; {
+        <span class="self">self</span>.api_requester_tx
+            .send(ApiMessage::GetNeighbours)
+            .unwrap();
+        <span class="kw">if let </span>ApiResponse::GetNeighboursResponse(neighbours) =
+            <span class="self">self</span>.api_responder_rx.recv().unwrap()
+        {
+            neighbours.iter().map(|(s, <span class="kw">_</span>)| s.clone()).collect()
         } <span class="kw">else </span>{
             <span class="macro">panic!</span>(<span class="string">&quot;Wrong response type&quot;</span>);
         }
