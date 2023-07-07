@@ -28,7 +28,7 @@
 <a href="#28" id="28">28</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span>serde::{Deserialize, Serialize};
 
-<span class="attr">#[derive(Deserialize, Serialize)]
+<span class="attr">#[derive(Deserialize, Serialize, Debug)]
 </span><span class="kw">pub struct </span>PayloadMessage {
     <span class="kw">pub</span>(<span class="kw">crate</span>) payload: Vec&lt;u8&gt;,
     <span class="kw">pub</span>(<span class="kw">crate</span>) sender_id: String,

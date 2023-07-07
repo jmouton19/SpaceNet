@@ -318,8 +318,6 @@
 <a href="#318" id="318">318</a>
 <a href="#319" id="319">319</a>
 <a href="#320" id="320">320</a>
-<a href="#321" id="321">321</a>
-<a href="#322" id="322">322</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::handlers::node::node_api_matcher::{node_api_matcher, ApiMessage, ApiResponse};
 <span class="kw">use </span><span class="kw">crate</span>::handlers::node::node_topic_matcher::node_topic_matcher;
 <span class="kw">use </span><span class="kw">crate</span>::message::{DefaultMessage, NewVoronoiRequest};
@@ -404,8 +402,6 @@
                 }
                 <span class="kw">if let </span><span class="prelude-val">Ok</span>(api_message) = api_requester_rx.try_recv() {
                     node_api_matcher(api_message, <span class="kw-2">&amp;mut </span>node_data, <span class="kw-2">&amp;</span>api_responder_tx);
-                } <span class="kw">else </span>{
-                    <span class="kw">break</span>;
                 }
             }
         });
