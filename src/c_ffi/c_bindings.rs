@@ -5,6 +5,7 @@ use crate::payload_message::PayloadMessage;
 use crate::subscriber::NodeSubscriber;
 use libc::{c_char, c_int};
 use std::ffi::{c_void, CStr, CString};
+use std::mem::ManuallyDrop;
 use std::ptr;
 
 #[repr(C)]
@@ -50,6 +51,7 @@ pub extern "C" fn get_zid_node(node_ptr: *mut c_void) -> *const c_char {
     let c_string = CString::new(zid_str).unwrap();
     c_string.into_raw()
 }
+
 #[no_mangle]
 pub extern "C" fn free_c_string(s: *mut c_char) {
     unsafe {
@@ -85,7 +87,8 @@ pub extern "C" fn get_neighbours(node_ptr: *mut Node) -> *mut *mut c_char {
     // Convert the Vec<*mut c_char> to a *mut *mut c_char
     let c_array = c_pointers.as_mut_ptr();
     // Prevent the Vec from being deallocated
-    std::mem::forget(c_pointers);
+    //std::mem::forget(c_pointers);
+    let _ =ManuallyDrop::new(c_pointers);
     c_array
 }
 
@@ -279,10 +282,9 @@ pub extern "C" fn get_sender_id(payload_message_ptr: *mut c_void) -> *const c_ch
 #[no_mangle]
 pub extern "C" fn get_payload(payload_message_ptr: *mut c_void) -> Buffer {
     let payload_message = unsafe { &*(payload_message_ptr as *const PayloadMessage) };
-    let mut payload = payload_message.get_payload();
+    let mut payload = ManuallyDrop::new(payload_message.get_payload());
     let data_ptr = payload.as_mut_ptr();
     let len = payload.len();
-    std::mem::forget(payload);
     Buffer {
         data: data_ptr,
         len,
@@ -290,10 +292,8 @@ pub extern "C" fn get_payload(payload_message_ptr: *mut c_void) -> Buffer {
 }
 
 #[no_mangle]
-extern "C" fn free_buf(buf: Buffer) {
-    let s = unsafe { std::slice::from_raw_parts_mut(buf.data, buf.len) };
-    let s = s.as_mut_ptr();
-    unsafe {
-        let _ = Box::from_raw(s);
-    }
+pub extern "C" fn free_buf(buf: Buffer) {
+    let vec = unsafe { Vec::from_raw_parts(buf.data, buf.len, buf.len) };
+    drop(vec);
 }
+

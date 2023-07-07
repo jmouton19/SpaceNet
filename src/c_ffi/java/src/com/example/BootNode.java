@@ -15,13 +15,13 @@ public class BootNode {
         return getZid(nativePtr);
     }
 
-//     public void run() {
-//             run(nativePtr);
-//         }
+    public void free() {
+            free(nativePtr);
+        }
 
     private native String getZid(long nodePtr);
 
-//     private native void run(long nodePtr);
+     private native void free(long nodePtr);
 
     private static native long newBoot(String clusterName,boolean centralized_voronoi);
 

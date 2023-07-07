@@ -111,13 +111,9 @@ impl BootNode {
                     if !boot_node_data.cluster.is_empty() {
                         generate_output(&mut boot_node_data)
                     };
-                } else {
-                    break;
                 }
                 if let Ok(api_message) = api_requester_rx.try_recv() {
                     boot_api_matcher(api_message, &mut boot_node_data, &api_responder_tx);
-                } else {
-                    break;
                 }
             }
         });

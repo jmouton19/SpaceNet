@@ -5,13 +5,16 @@
 #include "com_example_Node.h"
 #include "space_net.h"
 
-
 //Node
 JNIEXPORT jlong JNICALL Java_com_example_Node_newNode(JNIEnv *env, jobject obj, jstring cluster_name) {
     const char *native_cluster_name = (*env)->GetStringUTFChars(env, cluster_name, 0);
     jlong result = (jlong) new_node(native_cluster_name);
     (*env)->ReleaseStringUTFChars(env, cluster_name, native_cluster_name);
     return result;
+}
+
+JNIEXPORT void JNICALL Java_com_example_Node_free(JNIEnv *env, jobject obj, jlong nodePtr) {
+    free_node((void*) nodePtr);
 }
 
 JNIEXPORT jstring JNICALL Java_com_example_Node_getZid(JNIEnv *env, jobject obj, jlong nodePtr) {
@@ -86,6 +89,15 @@ JNIEXPORT void JNICALL Java_com_example_Node_sendMessage(JNIEnv *env, jobject ob
     send_message((void*) nodePtr,cbuffer,ctopic);
 }
 
+JNIEXPORT jstring JNICALL Java_com_example_Node_closestNeighbour(JNIEnv *env, jobject obj, jlong nodePtr,jdouble x, jdouble y) {
+    const char* neighbour = closest_neighbour((void*) nodePtr,x,y);
+    jstring javaString = (*env)->NewStringUTF(env, neighbour);
+    free_c_string((char*)neighbour); // Free the memory allocated for the C string
+    return javaString;
+}
+
+
+
 
 
 
@@ -99,20 +111,16 @@ JNIEXPORT jlong JNICALL Java_com_example_BootNode_newBoot(JNIEnv *env, jobject o
     return result;
 }
 
-//JNIEXPORT void JNICALL Java_com_example_BootNode_run(JNIEnv *env, jobject obj, jlong nodePtr) {
-//    run_boot((void*) nodePtr);
-//}
+JNIEXPORT void JNICALL Java_com_example_BootNode_free(JNIEnv *env, jobject obj, jlong nodePtr) {
+    free_boot_node((void*) nodePtr);
+}
 
 JNIEXPORT jstring JNICALL Java_com_example_BootNode_getZid(JNIEnv *env, jobject obj, jlong nodePtr) {
     const char* zid = get_zid_boot((void*) nodePtr);
-    return (*env)->NewStringUTF(env, zid);
+    jstring javaString = (*env)->NewStringUTF(env, zid);
+    free_c_string((char*)zid); // Free the memory allocated for the C string
+    return javaString;
 }
-
-JNIEXPORT jstring JNICALL Java_com_example_Node_closestNeighbour(JNIEnv *env, jobject obj, jlong nodePtr,jdouble x, jdouble y) {
-    const char* zid = closest_neighbour((void*) nodePtr,x,y);
-    return (*env)->NewStringUTF(env, zid);
-}
-
 
 
 
@@ -121,9 +129,13 @@ JNIEXPORT jstring JNICALL Java_com_example_Node_closestNeighbour(JNIEnv *env, jo
 
 
 //subscriber
-JNIEXPORT jlong JNICALL Java_com_example_NodeSubscriber_newNodeSubscriber(JNIEnv *env, jobject obj, jlong nodePtr) {
-    jlong result = (jlong) new_subscriber((void*) nodePtr);
+JNIEXPORT jlong JNICALL Java_com_example_NodeSubscriber_newNodeSubscriber(JNIEnv *env, jobject obj, jlong subPtr) {
+    jlong result = (jlong) new_subscriber((void*) subPtr);
     return result;
+}
+
+JNIEXPORT void JNICALL Java_com_example_NodeSubscriber_free(JNIEnv *env, jobject obj, jlong subPtr) {
+    free_subscriber((void*) subPtr);
 }
 
 JNIEXPORT void JNICALL Java_com_example_NodeSubscriber_subscribe(JNIEnv *env, jobject obj, jlong subPtr,jstring topic) {
@@ -150,18 +162,23 @@ JNIEXPORT jlong JNICALL Java_com_example_NodeSubscriber_receive(JNIEnv *env, job
 ////////
 JNIEXPORT jstring JNICALL Java_com_example_PayloadMessage_getTopic(JNIEnv *env, jobject obj, jlong payloadPtr) {
     const char* topic = get_topic((void*) payloadPtr);
-    return (*env)->NewStringUTF(env, topic);
+    jstring javaString = (*env)->NewStringUTF(env, topic);
+    free_c_string((char*)topic); // Free the memory allocated for the C string
+    return javaString;
 }
 
 JNIEXPORT jstring JNICALL Java_com_example_PayloadMessage_getSenderId(JNIEnv *env, jobject obj, jlong payloadPtr) {
     const char* sender_id = get_sender_id((void*) payloadPtr);
-    return (*env)->NewStringUTF(env, sender_id);
+    jstring javaString = (*env)->NewStringUTF(env, sender_id);
+    free_c_string((char*)sender_id); // Free the memory allocated for the C string
+    return javaString;
 }
 
 JNIEXPORT jbyteArray JNICALL Java_com_example_PayloadMessage_getPayload(JNIEnv *env, jobject obj, jlong payloadPtr) {
     Buffer buffer=get_payload((void*) payloadPtr);
     jbyteArray byteArray = (*env)->NewByteArray(env, buffer.len);
     (*env)->SetByteArrayRegion(env, byteArray, 0, buffer.len, (jbyte*)buffer.data);
+    free_buf(buffer);
     return byteArray;
 }
 

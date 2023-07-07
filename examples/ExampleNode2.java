@@ -53,11 +53,13 @@ public class ExampleNode2 {
         Benny deserializedBen = deserializeObject(serializedBytes);
         System.out.println("Deserialized Benny object: " + deserializedBen.age + ", " + deserializedBen.gf);
 
-
+//
 //         while(true){
 //         if(node.getNeighbours().length!=0)
 //
-//             System.out.println("NEIGHBOURS: " +node.getNeighbours()[0]);
+//             for (String neighbour: node.getNeighbours()){
+//             System.out.println("NEIGHBOURS: " +neighbour);
+//             }
 //         }
 
 

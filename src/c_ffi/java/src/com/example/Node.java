@@ -48,6 +48,10 @@ public class Node {
           leave(nativePtr);
      }
 
+     public void free() {
+               free(nativePtr);
+     }
+
      public void leaveOnKey(char key) {
          leaveOnKey(nativePtr, key);
      }
@@ -80,6 +84,8 @@ public class Node {
     private native void leaveOnKey(long nodePtr, char key);
 
     private static native long newNode(String clusterName);
+
+    private native void free(long nodePtr);
 
     private native int getStatus(long nodePtr);
 
