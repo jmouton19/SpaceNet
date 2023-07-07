@@ -60,14 +60,14 @@ impl BootNode {
                         if let Ok(sample) = sample {
                             tx.send(sample).unwrap();
                         } else {
-                            break; // Exit the loop if receiving from `node_update_rx` fails
+                            break;
                         }
                     }
                     sample = counter_subscriber.recv_async() => {
                         if let Ok(sample) = sample {
                              tx2.send(sample).unwrap();
                         } else {
-                            break; // Exit the loop if receiving from `api_requester_rx` fails
+                            break;
                         }
                     }
                 }
@@ -111,9 +111,13 @@ impl BootNode {
                     if !boot_node_data.cluster.is_empty() {
                         generate_output(&mut boot_node_data)
                     };
+                } else {
+                    break;
                 }
                 if let Ok(api_message) = api_requester_rx.try_recv() {
                     boot_api_matcher(api_message, &mut boot_node_data, &api_responder_tx);
+                } else {
+                    break;
                 }
             }
         });

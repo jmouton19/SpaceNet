@@ -27,21 +27,6 @@ pub extern "C" fn free_node(node: *mut c_void) {
     }
 }
 
-//new boot node from C
-#[no_mangle]
-pub extern "C" fn new_boot(cluster_name: *const c_char, centralized_voronoi: bool) -> *mut c_void {
-    let c_str = unsafe { CStr::from_ptr(cluster_name) };
-    let cluster_name = c_str.to_str().unwrap();
-    let boot_node = Box::new(BootNode::new(cluster_name, centralized_voronoi));
-    Box::into_raw(boot_node) as *mut c_void
-}
-#[no_mangle]
-pub extern "C" fn free_boot_node(node: *mut c_void) {
-    unsafe {
-        let _ = Box::from_raw(node as *mut BootNode);
-    }
-}
-
 // leave node when key is pressed from C
 #[no_mangle]
 pub extern "C" fn leave_on_key(node_ptr: *mut c_void, key: c_char) {
@@ -80,15 +65,6 @@ pub extern "C" fn free_c_string(s: *mut c_char) {
 pub extern "C" fn get_status(node_ptr: *mut c_void) -> NodeStatus {
     let node = unsafe { &*(node_ptr as *mut Node) };
     node.get_status()
-}
-
-// get zid boot from C
-#[no_mangle]
-pub extern "C" fn get_zid_boot(boot_ptr: *mut c_void) -> *const c_char {
-    let boot = unsafe { &*(boot_ptr as *mut BootNode) };
-    let zid_str = boot.get_zid();
-    let c_string = CString::new(zid_str).unwrap();
-    c_string.into_raw()
 }
 
 #[no_mangle]
@@ -205,6 +181,31 @@ pub extern "C" fn send_message(
     // let receiver = c_str.to_str().unwrap();
 
     node.send_message(payload_vec, topic);
+}
+
+/////////
+//new boot node from C
+#[no_mangle]
+pub extern "C" fn new_boot(cluster_name: *const c_char, centralized_voronoi: bool) -> *mut c_void {
+    let c_str = unsafe { CStr::from_ptr(cluster_name) };
+    let cluster_name = c_str.to_str().unwrap();
+    let boot_node = Box::new(BootNode::new(cluster_name, centralized_voronoi));
+    Box::into_raw(boot_node) as *mut c_void
+}
+#[no_mangle]
+pub extern "C" fn free_boot_node(node: *mut c_void) {
+    unsafe {
+        let _ = Box::from_raw(node as *mut BootNode);
+    }
+}
+
+// get zid boot from C
+#[no_mangle]
+pub extern "C" fn get_zid_boot(boot_ptr: *mut c_void) -> *const c_char {
+    let boot = unsafe { &*(boot_ptr as *mut BootNode) };
+    let zid_str = boot.get_zid();
+    let c_string = CString::new(zid_str).unwrap();
+    c_string.into_raw()
 }
 
 //subscriber struct

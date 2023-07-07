@@ -16,7 +16,9 @@ JNIEXPORT jlong JNICALL Java_com_example_Node_newNode(JNIEnv *env, jobject obj, 
 
 JNIEXPORT jstring JNICALL Java_com_example_Node_getZid(JNIEnv *env, jobject obj, jlong nodePtr) {
     const char* zid = get_zid_node((void*) nodePtr);
-    return (*env)->NewStringUTF(env, zid);
+    jstring javaString = (*env)->NewStringUTF(env, zid);
+    free_c_string((char*)zid); // Free the memory allocated for the C string
+    return javaString;
 }
 JNIEXPORT void JNICALL Java_com_example_Node_join(JNIEnv *env, jobject obj, jlong nodePtr, jdouble x, jdouble y) {
     join((void*) nodePtr,x,y);
@@ -51,8 +53,7 @@ JNIEXPORT jobjectArray JNICALL Java_com_example_Node_getNeighbours(JNIEnv *env, 
     for (int i = 0; i < numNeighbors; i++) {
         jstring neighborString = (*env)->NewStringUTF(env, neighbors[i]);
         (*env)->SetObjectArrayElement(env, neighborsArray, i, neighborString);
-        (*env)->DeleteLocalRef(env, neighborString);
-        //free_neighbours(&neighbors[i]);
+        //(*env)->DeleteLocalRef(env, neighborString);
     }
     free_neighbours(neighbors);
     return neighborsArray;
@@ -70,6 +71,24 @@ JNIEXPORT jint JNICALL Java_com_example_Node_isInPolygon(JNIEnv *env, jobject ob
     jint result = (jint) is_in_polygon((void*) nodePtr, x, y);
     return result;
 }
+
+JNIEXPORT void JNICALL Java_com_example_Node_sendMessage(JNIEnv *env, jobject obj, jlong nodePtr,jbyteArray buffer,jstring topic) {
+    jsize len = (*env)->GetArrayLength(env, buffer);
+    jbyte* elements = (*env)->GetByteArrayElements(env, buffer, 0);
+    unsigned char* dataPtr = (unsigned char*)elements;
+
+    Buffer cbuffer;
+    cbuffer.data = dataPtr;
+    cbuffer.len = len;
+
+    // const char *cRecvNode = (*env)->GetStringUTFChars(env, recvNode, 0);
+    const char *ctopic = (*env)->GetStringUTFChars(env, topic, 0);
+    send_message((void*) nodePtr,cbuffer,ctopic);
+}
+
+
+
+
 
 
 //Boot Node
@@ -94,20 +113,12 @@ JNIEXPORT jstring JNICALL Java_com_example_Node_closestNeighbour(JNIEnv *env, jo
     return (*env)->NewStringUTF(env, zid);
 }
 
-JNIEXPORT void JNICALL Java_com_example_Node_sendMessage(JNIEnv *env, jobject obj, jlong nodePtr,jbyteArray buffer,jstring topic) {
-    jsize len = (*env)->GetArrayLength(env, buffer);
-    jbyte* elements = (*env)->GetByteArrayElements(env, buffer, 0);
-    unsigned char* dataPtr = (unsigned char*)elements;
 
-    Buffer cbuffer;
-    cbuffer.data = dataPtr;
-    cbuffer.len = len;
 
-   // const char *cRecvNode = (*env)->GetStringUTFChars(env, recvNode, 0);
-    const char *ctopic = (*env)->GetStringUTFChars(env, topic, 0);
 
-    send_message((void*) nodePtr,cbuffer,ctopic);
-}
+
+
+
 
 //subscriber
 JNIEXPORT jlong JNICALL Java_com_example_NodeSubscriber_newNodeSubscriber(JNIEnv *env, jobject obj, jlong nodePtr) {
@@ -127,6 +138,15 @@ JNIEXPORT jlong JNICALL Java_com_example_NodeSubscriber_receive(JNIEnv *env, job
     return result;
 }
 
+
+
+
+
+
+
+
+
+
 ////////
 JNIEXPORT jstring JNICALL Java_com_example_PayloadMessage_getTopic(JNIEnv *env, jobject obj, jlong payloadPtr) {
     const char* topic = get_topic((void*) payloadPtr);
@@ -143,5 +163,9 @@ JNIEXPORT jbyteArray JNICALL Java_com_example_PayloadMessage_getPayload(JNIEnv *
     jbyteArray byteArray = (*env)->NewByteArray(env, buffer.len);
     (*env)->SetByteArrayRegion(env, byteArray, 0, buffer.len, (jbyte*)buffer.data);
     return byteArray;
+}
+
+JNIEXPORT void JNICALL Java_com_example_PayloadMessage_flush(JNIEnv *env, jobject obj, jlong payloadPtr) {
+    free_payload_message((void*) payloadPtr);
 }
 

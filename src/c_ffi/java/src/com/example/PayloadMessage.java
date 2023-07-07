@@ -22,7 +22,12 @@ public class PayloadMessage {
           return getTopic(nativePtr);
     }
 
+    public void flush() {
+         flush(nativePtr);
+    }
+
     private native byte[] getPayload(long nodePtr);
     private native String getSenderId(long nodePtr);
     private native String getTopic(long nodePtr);
+    private native void flush(long nodePtr);
 }

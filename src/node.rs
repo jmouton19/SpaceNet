@@ -82,6 +82,8 @@ impl Node {
                 }
                 if let Ok(api_message) = api_requester_rx.try_recv() {
                     node_api_matcher(api_message, &mut node_data, &api_responder_tx);
+                } else {
+                    break;
                 }
             }
         });
