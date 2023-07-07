@@ -196,6 +196,10 @@
 <a href="#196" id="196">196</a>
 <a href="#197" id="197">197</a>
 <a href="#198" id="198">198</a>
+<a href="#199" id="199">199</a>
+<a href="#200" id="200">200</a>
+<a href="#201" id="201">201</a>
+<a href="#202" id="202">202</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::handlers::boot::boot_api_matcher::{boot_api_matcher, BootApiMessage, BootApiResponse};
 <span class="kw">use </span><span class="kw">crate</span>::handlers::boot::boot_topic_matcher::{boot_counter_topic_matcher, boot_topic_matcher};
 <span class="kw">use </span><span class="kw">crate</span>::handlers::boot::generate_output::generate_output;
@@ -258,15 +262,15 @@
                         <span class="kw">if let </span><span class="prelude-val">Ok</span>(sample) = sample {
                             tx.send(sample).unwrap();
                         } <span class="kw">else </span>{
-                            <span class="kw">break</span>; <span class="comment">// Exit the loop if receiving from `node_update_rx` fails
-                        </span>}
+                            <span class="kw">break</span>;
+                        }
                     }
                     sample = counter_subscriber.recv_async() =&gt; {
                         <span class="kw">if let </span><span class="prelude-val">Ok</span>(sample) = sample {
                              tx2.send(sample).unwrap();
                         } <span class="kw">else </span>{
-                            <span class="kw">break</span>; <span class="comment">// Exit the loop if receiving from `api_requester_rx` fails
-                        </span>}
+                            <span class="kw">break</span>;
+                        }
                     }
                 }
             }
@@ -309,9 +313,13 @@
                     <span class="kw">if </span>!boot_node_data.cluster.is_empty() {
                         generate_output(<span class="kw-2">&amp;mut </span>boot_node_data)
                     };
+                } <span class="kw">else </span>{
+                    <span class="kw">break</span>;
                 }
                 <span class="kw">if let </span><span class="prelude-val">Ok</span>(api_message) = api_requester_rx.try_recv() {
                     boot_api_matcher(api_message, <span class="kw-2">&amp;mut </span>boot_node_data, <span class="kw-2">&amp;</span>api_responder_tx);
+                } <span class="kw">else </span>{
+                    <span class="kw">break</span>;
                 }
             }
         });

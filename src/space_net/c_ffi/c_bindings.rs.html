@@ -296,6 +296,7 @@
 <a href="#296" id="296">296</a>
 <a href="#297" id="297">297</a>
 <a href="#298" id="298">298</a>
+<a href="#299" id="299">299</a>
 </pre></div><pre class="rust"><code><span class="kw">use </span><span class="kw">crate</span>::boot_node::BootNode;
 
 <span class="kw">use </span><span class="kw">crate</span>::node::{Node, NodeStatus};
@@ -322,21 +323,6 @@
 </span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>free_node(node: <span class="kw-2">*mut </span>c_void) {
     <span class="kw">unsafe </span>{
         <span class="kw">let _ </span>= Box::from_raw(node <span class="kw">as </span><span class="kw-2">*mut </span>Node);
-    }
-}
-
-<span class="comment">//new boot node from C
-</span><span class="attr">#[no_mangle]
-</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>new_boot(cluster_name: <span class="kw-2">*const </span>c_char, centralized_voronoi: bool) -&gt; <span class="kw-2">*mut </span>c_void {
-    <span class="kw">let </span>c_str = <span class="kw">unsafe </span>{ CStr::from_ptr(cluster_name) };
-    <span class="kw">let </span>cluster_name = c_str.to_str().unwrap();
-    <span class="kw">let </span>boot_node = Box::new(BootNode::new(cluster_name, centralized_voronoi));
-    Box::into_raw(boot_node) <span class="kw">as </span><span class="kw-2">*mut </span>c_void
-}
-<span class="attr">#[no_mangle]
-</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>free_boot_node(node: <span class="kw-2">*mut </span>c_void) {
-    <span class="kw">unsafe </span>{
-        <span class="kw">let _ </span>= Box::from_raw(node <span class="kw">as </span><span class="kw-2">*mut </span>BootNode);
     }
 }
 
@@ -378,15 +364,6 @@
 </span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>get_status(node_ptr: <span class="kw-2">*mut </span>c_void) -&gt; NodeStatus {
     <span class="kw">let </span>node = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(node_ptr <span class="kw">as </span><span class="kw-2">*mut </span>Node) };
     node.get_status()
-}
-
-<span class="comment">// get zid boot from C
-</span><span class="attr">#[no_mangle]
-</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>get_zid_boot(boot_ptr: <span class="kw-2">*mut </span>c_void) -&gt; <span class="kw-2">*const </span>c_char {
-    <span class="kw">let </span>boot = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(boot_ptr <span class="kw">as </span><span class="kw-2">*mut </span>BootNode) };
-    <span class="kw">let </span>zid_str = boot.get_zid();
-    <span class="kw">let </span>c_string = CString::new(zid_str).unwrap();
-    c_string.into_raw()
 }
 
 <span class="attr">#[no_mangle]
@@ -503,6 +480,31 @@
     // let receiver = c_str.to_str().unwrap();
 
     </span>node.send_message(payload_vec, topic);
+}
+
+<span class="comment">/////////
+//new boot node from C
+</span><span class="attr">#[no_mangle]
+</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>new_boot(cluster_name: <span class="kw-2">*const </span>c_char, centralized_voronoi: bool) -&gt; <span class="kw-2">*mut </span>c_void {
+    <span class="kw">let </span>c_str = <span class="kw">unsafe </span>{ CStr::from_ptr(cluster_name) };
+    <span class="kw">let </span>cluster_name = c_str.to_str().unwrap();
+    <span class="kw">let </span>boot_node = Box::new(BootNode::new(cluster_name, centralized_voronoi));
+    Box::into_raw(boot_node) <span class="kw">as </span><span class="kw-2">*mut </span>c_void
+}
+<span class="attr">#[no_mangle]
+</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>free_boot_node(node: <span class="kw-2">*mut </span>c_void) {
+    <span class="kw">unsafe </span>{
+        <span class="kw">let _ </span>= Box::from_raw(node <span class="kw">as </span><span class="kw-2">*mut </span>BootNode);
+    }
+}
+
+<span class="comment">// get zid boot from C
+</span><span class="attr">#[no_mangle]
+</span><span class="kw">pub extern </span><span class="string">&quot;C&quot; </span><span class="kw">fn </span>get_zid_boot(boot_ptr: <span class="kw-2">*mut </span>c_void) -&gt; <span class="kw-2">*const </span>c_char {
+    <span class="kw">let </span>boot = <span class="kw">unsafe </span>{ <span class="kw-2">&amp;*</span>(boot_ptr <span class="kw">as </span><span class="kw-2">*mut </span>BootNode) };
+    <span class="kw">let </span>zid_str = boot.get_zid();
+    <span class="kw">let </span>c_string = CString::new(zid_str).unwrap();
+    c_string.into_raw()
 }
 
 <span class="comment">//subscriber struct
