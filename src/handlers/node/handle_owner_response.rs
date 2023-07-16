@@ -70,11 +70,17 @@ pub fn handle_owner_response(
         })
         .unwrap();
         session
-            .put(format!("{}/counter/complete", cluster_name), message.clone())
+            .put(
+                format!("{}/counter/complete", cluster_name),
+                message.clone(),
+            )
             .res()
             .unwrap();
         session
-            .put(format!("{}/sse/polygon_update", cluster_name), message)
+            .put(
+                format!("{}/sse/event/polygon_update", cluster_name),
+                message,
+            )
             .res()
             .unwrap();
         node_data.status = NodeStatus::Online;

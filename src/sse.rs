@@ -18,9 +18,9 @@ pub struct Player {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct PlayerUpdate {
-    player: Player,
-    sender_id: String,
+pub(crate) struct PlayerUpdate {
+    pub(crate) player: Player,
+    pub(crate) sender_id: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -54,6 +54,7 @@ fn sse_polygon_update(payload: &[u8]) -> Result<Event, Infallible> {
 fn sse_player_add(payload: &[u8]) -> Result<Event, Infallible> {
     let data: PlayerUpdate = deserialize(payload).unwrap();
     let data_string = serde_json::to_string(&data).unwrap();
+    println!("sse_player_add: {}", data_string);
     Ok(warp::sse::Event::default()
         .event("player_add")
         .data(data_string))
@@ -75,14 +76,16 @@ fn sse_player_remove(payload: &[u8]) -> Result<Event, Infallible> {
 
 pub fn sse_server(session: Arc<Session>, cluster_name: String) {
     println!("STARTING SSE SERVER ON: http://127.0.0.1:3030/spacenet");
+    let cluster_name_clone = cluster_name.clone();
     async_std::task::spawn(async move {
         let routes = warp::path("spacenet").and(warp::get()).map(move || {
             let (zenoh_tx, zenoh_rx) = flume::unbounded();
             let session_clone = session.clone();
+            let cluster_name_clone = cluster_name.clone();
             let sse_id = Uuid::new_v4();
             async_std::task::spawn(async move {
                 let subscriber = session_clone
-                    .declare_subscriber("sse/*")
+                    .declare_subscriber(format!("{}/sse/event/**", cluster_name_clone))
                     .with(flume::unbounded())
                     .res_async()
                     .await
@@ -98,13 +101,14 @@ pub fn sse_server(session: Arc<Session>, cluster_name: String) {
             let stream = zenoh_rx.into_stream();
             let event_stream = stream.map(move |sample| {
                 let sse_id = sse_id.to_string();
-                let topic = sample.key_expr.split('/').nth(2).unwrap_or("");
+                let topic = sample.key_expr.split('/').nth(3).unwrap_or("");
+                println!("SSESERVER TOPIC: {}", topic);
                 // let contiguous_payload = sample.value.payload.contiguous();
                 // let payload = contiguous_payload.as_ref();
                 let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
                 match topic {
                     "initialize" => {
-                        let id = sample.key_expr.split('/').nth(3).unwrap_or("");
+                        let id = sample.key_expr.split('/').nth(4).unwrap_or("");
                         if id == &sse_id {
                             sse_initialize(payload)
                         } else {
@@ -118,8 +122,12 @@ pub fn sse_server(session: Arc<Session>, cluster_name: String) {
                     _ => sse_empty(),
                 }
             });
+
             session
-                .put(format!("{}/sse/get/{}",cluster_name,sse_id.to_string()), "")
+                .put(
+                    format!("{}/sse/get/{}", cluster_name, sse_id.to_string()),
+                    "",
+                )
                 .res_sync()
                 .unwrap();
             warp::sse::reply(warp::sse::keep_alive().stream(event_stream))

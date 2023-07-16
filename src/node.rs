@@ -58,7 +58,7 @@ impl Node {
                 .await
                 .unwrap();
             let sse_subscriber = session_clone
-                .declare_subscriber("sse/get")
+                .declare_subscriber(format!("{}/sse/get/*", cluster_name_clone))
                 .with(flume::unbounded())
                 .res_async()
                 .await
@@ -124,6 +124,7 @@ impl Node {
                         &api_responder_tx,
                         &session_clone,
                         cluster_name_clone.as_str(),
+                        zid_clone.as_str(),
                     );
                 }
                 if let Ok(sample) = sse_rx.try_recv() {
@@ -143,7 +144,10 @@ impl Node {
 
                     let message = serialize(&initial_message).unwrap();
                     session_clone
-                        .put(format!("{}/sse/initialize/{}", cluster_name_clone,sse_id), message)
+                        .put(
+                            format!("{}/sse/event/initialize/{}", cluster_name_clone, sse_id),
+                            message,
+                        )
                         .res_sync()
                         .unwrap();
                 }
@@ -252,22 +256,30 @@ impl Node {
             .unwrap();
     }
 
-    pub fn player_add(&self, player_id: String) {
+    pub fn add_player(&self, player_id: &str) {
         let (x, y) = self.get_site();
-        let player = Player { player_id, x, y };
+        let player = Player {
+            player_id: player_id.to_string(),
+            x,
+            y,
+        };
         self.api_requester_tx
             .send(ApiMessage::AddPlayer(player))
             .unwrap();
     }
-    pub fn player_update(&self, player_id: String, x: f64, y: f64) {
-        let player = Player { player_id, x, y };
+    pub fn update_player(&self, player_id: &str, x: f64, y: f64) {
+        let player = Player {
+            player_id: player_id.to_string(),
+            x,
+            y,
+        };
         self.api_requester_tx
             .send(ApiMessage::UpdatePlayer(player))
             .unwrap();
     }
-    pub fn remove_update(&self, player_id: String) {
+    pub fn remove_player(&self, player_id: &str) {
         self.api_requester_tx
-            .send(ApiMessage::RemovePlayer(player_id))
+            .send(ApiMessage::RemovePlayer(player_id.to_string()))
             .unwrap();
     }
 
