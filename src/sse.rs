@@ -11,11 +11,11 @@ use zenoh::Session;
 use uuid::Uuid;
 
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct Player {
-    player_id: String,
-    x: f64,
-    y: f64,
+#[derive(Serialize, Deserialize, PartialEq,Debug, Clone)]
+pub(crate) struct Player {
+    pub(crate) player_id: String,
+    pub(crate) x: f64,
+    pub(crate) y: f64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -81,7 +81,7 @@ pub fn sse_server(session: Arc<Session>) {
         let routes = warp::path("ticks").and(warp::get()).map(move || {
             let (zenoh_tx, zenoh_rx) = flume::unbounded();
             let session_clone = session.clone();
-            let sse_id = Uuid::new_v4().to_string();
+            let sse_id = Uuid::new_v4();
             async_std::task::spawn(async move {
                 let subscriber = session_clone
                     .declare_subscriber("sse/*")
@@ -99,6 +99,7 @@ pub fn sse_server(session: Arc<Session>) {
 
             let stream = zenoh_rx.into_stream();
             let event_stream = stream.map(move |sample| {
+                let sse_id=sse_id.to_string();
                 let topic = sample.key_expr.split('/').nth(1).unwrap_or("");
                 // let contiguous_payload = sample.value.payload.contiguous();
                 // let payload = contiguous_payload.as_ref();
@@ -119,7 +120,7 @@ pub fn sse_server(session: Arc<Session>) {
                     _ => sse_empty(),
                 }
             });
-            session.put("GIVE", "give").res_sync().unwrap();
+            session.put("GIVE", sse_id).res_sync().unwrap();
             warp::sse::reply(warp::sse::keep_alive().stream(event_stream))
         });
         warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;

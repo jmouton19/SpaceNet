@@ -1,4 +1,5 @@
 use crate::node::{NodeData, NodeStatus};
+use crate::sse::Player;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum ApiMessage {
@@ -9,6 +10,9 @@ pub enum ApiMessage {
     GetSite,
     SetStatus(NodeStatus),
     SetSite((f64, f64)),
+    AddPlayer(Player),
+    RemovePlayer(String),
+    UpdatePlayer(Player),
 }
 #[derive(PartialEq, Clone, Debug)]
 pub enum ApiResponse {
@@ -53,6 +57,15 @@ pub fn node_api_matcher(
         }
         ApiMessage::SetSite(site) => {
             node_data.site = site;
+        }
+        ApiMessage::AddPlayer(player) => {
+            node_data.players.insert(player.player_id, (player.x, player.y));
+        }
+        ApiMessage::RemovePlayer(player_id) => {
+            node_data.players.remove(&player_id);
+        }
+        ApiMessage::UpdatePlayer(player) => {
+            node_data.players.insert(player.player_id, (player.x, player.y));
         }
     };
 }

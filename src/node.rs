@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::handlers::node::node_api_matcher::{node_api_matcher, ApiMessage, ApiResponse};
 use crate::handlers::node::node_topic_matcher::node_topic_matcher;
 use crate::message::{DefaultMessage, NewVoronoiRequest};
@@ -11,6 +12,7 @@ use std::sync::Arc;
 use crate::payload_message::PayloadMessage;
 use zenoh::prelude::r#async::AsyncResolve;
 pub use zenoh::prelude::sync::*;
+use crate::sse::Player;
 
 /// A node in a network that has a point site which is used in the calculation of the voronoi diagram of a cluster. Computes its own voronoi polygon from its list of neighbours. Does not store information on entire cluster.
 #[derive(Clone)]
@@ -21,6 +23,7 @@ pub struct NodeData {
     pub(crate) received_counter: i32,
     pub(crate) expected_counter: i32,
     pub(crate) polygon: Vec<(f64, f64)>,
+    pub(crate) players: HashMap<String,(f64, f64)>,
     pub(crate) status: NodeStatus,
 }
 
@@ -53,10 +56,43 @@ impl Node {
                 .res_async()
                 .await
                 .unwrap();
-            while let Ok(sample) = subscriber.recv_async().await {
-                zenoh_tx.send(sample).unwrap();
+            let sse_subscriber = session_clone
+                .declare_subscriber("sse/get/*")
+                .with(flume::unbounded())
+                .res_async()
+                .await
+                .unwrap();
+            loop {
+                futures::select! {
+                       sample = subscriber.recv_async() => {
+                        if let Ok(sample) = sample {
+                            zenoh_tx.send(sample).unwrap();
+                        } else {
+                            break;
+                        }
+                    }
+                    sample = sse_subscriber.recv_async() => {
+                        if let Ok(sample) = sample {
+                             //tx2.send(sample).unwrap();
+                        } else {
+                            break;
+                        }
+                    }
+                }
             }
         });
+        // async_std::task::spawn(async move {
+        //     let subscriber = session_clone
+        //         .declare_subscriber(format!("{}/node/{}/*", cluster_name_clone, zid_clone))
+        //         .with(flume::unbounded())
+        //         .reliable()
+        //         .res_async()
+        //         .await
+        //         .unwrap();
+        //     while let Ok(sample) = subscriber.recv_async().await {
+        //         zenoh_tx.send(sample).unwrap();
+        //     }
+        // });
 
         //Processor task, handles messages from zenoh. Update node_data copy in API task
         let session_clone = Arc::clone(&session);
@@ -167,6 +203,15 @@ impl Node {
         }
     }
 
+    pub fn get_site(&self) -> (f64, f64) {
+        self.api_requester_tx.send(ApiMessage::GetSite).unwrap();
+        if let ApiResponse::GetSiteResponse(site) = self.api_responder_rx.recv().unwrap() {
+            site
+        } else {
+            panic!("Wrong response type");
+        }
+    }
+
     fn set_status(&self, status: NodeStatus) {
         self.api_requester_tx
             .send(ApiMessage::SetStatus(status))
@@ -179,13 +224,25 @@ impl Node {
             .unwrap();
     }
 
-    pub fn get_site(&self) -> (f64, f64) {
-        self.api_requester_tx.send(ApiMessage::GetSite).unwrap();
-        if let ApiResponse::GetSiteResponse(site) = self.api_responder_rx.recv().unwrap() {
-            site
-        } else {
-            panic!("Wrong response type");
-        }
+    pub fn player_add(&self,player_id: String) {
+        let (x,y) = self.get_site();
+        let player= Player{
+            player_id,
+            x,
+            y,
+        };
+        self.api_requester_tx.send(ApiMessage::AddPlayer(player)).unwrap();
+    }
+    pub fn player_update(&self,player_id: String, x: f64, y: f64) {
+        let player= Player{
+            player_id,
+            x,
+            y,
+        };
+        self.api_requester_tx.send(ApiMessage::UpdatePlayer(player)).unwrap();
+    }
+    pub fn remove_update(&self,player_id: String) {
+        self.api_requester_tx.send(ApiMessage::RemovePlayer(player_id)).unwrap();
     }
 
     pub fn closest_neighbour(&self, point: (f64, f64)) -> String {
@@ -312,6 +369,7 @@ impl NodeData {
             neighbours: OrderedMapPairs::new(),
             k_hop_neighbours: OrderedMapPairs::new(),
             polygon: vec![],
+            players: HashMap::new(),
             received_counter: 0,
             expected_counter: -1,
             status: NodeStatus::Offline,
