@@ -12,11 +12,11 @@ fn main() {
     node.add_player("jeff");
     node.add_player("bob");
     node.add_player("cj");
+    node.remove_player("cj");
 
     loop {
         node.update_player("jeff", rng.gen_range(1.0..=99.0), rng.gen_range(1.0..=99.0));
-        thread::sleep(std::time::Duration::from_secs(1));
-        node.remove_player("cj");
+        thread::sleep(std::time::Duration::from_secs(3));
         if node.get_status() == NodeStatus::Offline {
             break;
         }

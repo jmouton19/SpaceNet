@@ -35,6 +35,14 @@ fn sse_empty() -> Result<Event, Infallible> {
     Ok(warp::sse::Event::default().event("empty"))
 }
 
+fn sse_node_leave(payload: &[u8]) -> Result<Event, Infallible> {
+    let data: String = deserialize(payload).unwrap();
+    let data_string = serde_json::to_string(&data).unwrap();
+    Ok(warp::sse::Event::default()
+        .event("node_leave")
+        .data(data_string))
+}
+
 fn sse_initialize(payload: &[u8]) -> Result<Event, Infallible> {
     let data: Initialize = deserialize(payload).unwrap();
     let data_string = serde_json::to_string(&data).unwrap();
@@ -119,6 +127,7 @@ pub fn sse_server(session: Arc<Session>, cluster_name: String) {
                     "player_update" => sse_player_update(payload),
                     "remove_player" => sse_player_remove(payload),
                     "polygon_update" => sse_polygon_update(payload),
+                    "node_leave" => sse_node_leave(payload),
                     _ => sse_empty(),
                 }
             });

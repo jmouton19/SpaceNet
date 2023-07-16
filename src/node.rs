@@ -181,6 +181,13 @@ impl Node {
     pub fn leave(&mut self) {
         let status = self.get_status();
         if !matches!(status, NodeStatus::Leaving | NodeStatus::Offline) {
+            self.session
+                .put(
+                    format!("{}/sse/event/node_leave", self.cluster_name),
+                    self.zid.clone(),
+                )
+                .res_sync()
+                .unwrap();
             let message = serialize(&DefaultMessage {
                 sender_id: self.zid.clone(),
             })
@@ -208,6 +215,15 @@ impl Node {
                 if let Ok(()) = io::stdin().read_exact(&mut buffer).await {
                     if buffer[0] == key as u8 {
                         // Call the function when the user presses 'q'
+                        let message  = serialize(&zid).unwrap();
+                        session
+                            .put(
+                                format!("{}/sse/event/node_leave", cluster),
+                                message,
+                            )
+                            .res_sync()
+                            .unwrap();
+
                         let message = serialize(&DefaultMessage { sender_id: zid }).unwrap();
                         session
                             .put(format!("{}/node/boot/leave_request", cluster), message)
