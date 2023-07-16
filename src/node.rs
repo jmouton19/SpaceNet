@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use crate::handlers::node::node_api_matcher::{node_api_matcher, ApiMessage, ApiResponse};
 use crate::handlers::node::node_topic_matcher::node_topic_matcher;
 use crate::message::{DefaultMessage, NewVoronoiRequest};
@@ -6,13 +5,14 @@ use crate::types::OrderedMapPairs;
 use async_std::io::ReadExt;
 use async_std::{io, task};
 use bincode::serialize;
+use std::collections::HashMap;
 
 use std::sync::Arc;
 
 use crate::payload_message::PayloadMessage;
+use crate::sse::{Initialize, Player};
 use zenoh::prelude::r#async::AsyncResolve;
 pub use zenoh::prelude::sync::*;
-use crate::sse::Player;
 
 /// A node in a network that has a point site which is used in the calculation of the voronoi diagram of a cluster. Computes its own voronoi polygon from its list of neighbours. Does not store information on entire cluster.
 #[derive(Clone)]
@@ -23,7 +23,7 @@ pub struct NodeData {
     pub(crate) received_counter: i32,
     pub(crate) expected_counter: i32,
     pub(crate) polygon: Vec<(f64, f64)>,
-    pub(crate) players: HashMap<String,(f64, f64)>,
+    pub(crate) players: HashMap<String, (f64, f64)>,
     pub(crate) status: NodeStatus,
 }
 
@@ -47,6 +47,7 @@ impl Node {
         let cluster_name_clone = cluster_name.to_string();
         let zid_clone = zid.to_string();
         let (zenoh_tx, zenoh_rx) = flume::unbounded();
+        let (sse_tx, sse_rx) = flume::unbounded();
         //task to listen for zenoh messages, sends message to processor task.
         async_std::task::spawn(async move {
             let subscriber = session_clone
@@ -57,7 +58,7 @@ impl Node {
                 .await
                 .unwrap();
             let sse_subscriber = session_clone
-                .declare_subscriber("sse/get/*")
+                .declare_subscriber("sse/get")
                 .with(flume::unbounded())
                 .res_async()
                 .await
@@ -73,7 +74,7 @@ impl Node {
                     }
                     sample = sse_subscriber.recv_async() => {
                         if let Ok(sample) = sample {
-                             //tx2.send(sample).unwrap();
+                              sse_tx.send(sample).unwrap();
                         } else {
                             break;
                         }
@@ -111,13 +112,40 @@ impl Node {
                         topic,
                         payload,
                         &mut node_data,
-                        session_clone.clone(),
+                        &session_clone,
                         zid_clone.as_str(),
                         cluster_name_clone.as_str(),
                     );
                 }
                 if let Ok(api_message) = api_requester_rx.try_recv() {
-                    node_api_matcher(api_message, &mut node_data, &api_responder_tx);
+                    node_api_matcher(
+                        api_message,
+                        &mut node_data,
+                        &api_responder_tx,
+                        &session_clone,
+                        cluster_name_clone.as_str(),
+                    );
+                }
+                if let Ok(sample) = sse_rx.try_recv() {
+                    let sse_id = sample.key_expr.split('/').nth(3).unwrap_or("");
+                    let players: Vec<Player> = node_data
+                        .players
+                        .clone()
+                        .into_iter()
+                        .map(|(player_id, (x, y))| Player { player_id, x, y })
+                        .collect();
+                    let initial_message = Initialize {
+                        players,
+                        polygon: node_data.polygon.clone(),
+                        site: node_data.site,
+                        sender_id: zid_clone.clone(),
+                    };
+
+                    let message = serialize(&initial_message).unwrap();
+                    session_clone
+                        .put(format!("{}/sse/initialize/{}", cluster_name_clone,sse_id), message)
+                        .res_sync()
+                        .unwrap();
                 }
             }
         });
@@ -224,25 +252,23 @@ impl Node {
             .unwrap();
     }
 
-    pub fn player_add(&self,player_id: String) {
-        let (x,y) = self.get_site();
-        let player= Player{
-            player_id,
-            x,
-            y,
-        };
-        self.api_requester_tx.send(ApiMessage::AddPlayer(player)).unwrap();
+    pub fn player_add(&self, player_id: String) {
+        let (x, y) = self.get_site();
+        let player = Player { player_id, x, y };
+        self.api_requester_tx
+            .send(ApiMessage::AddPlayer(player))
+            .unwrap();
     }
-    pub fn player_update(&self,player_id: String, x: f64, y: f64) {
-        let player= Player{
-            player_id,
-            x,
-            y,
-        };
-        self.api_requester_tx.send(ApiMessage::UpdatePlayer(player)).unwrap();
+    pub fn player_update(&self, player_id: String, x: f64, y: f64) {
+        let player = Player { player_id, x, y };
+        self.api_requester_tx
+            .send(ApiMessage::UpdatePlayer(player))
+            .unwrap();
     }
-    pub fn remove_update(&self,player_id: String) {
-        self.api_requester_tx.send(ApiMessage::RemovePlayer(player_id)).unwrap();
+    pub fn remove_update(&self, player_id: String) {
+        self.api_requester_tx
+            .send(ApiMessage::RemovePlayer(player_id))
+            .unwrap();
     }
 
     pub fn closest_neighbour(&self, point: (f64, f64)) -> String {

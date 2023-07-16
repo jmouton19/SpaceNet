@@ -13,7 +13,7 @@ use zenoh::Session;
 pub fn handle_neighbours_neighbours_response(
     payload: &[u8],
     node_data: &mut NodeData,
-    session: Arc<Session>,
+    session: &Arc<Session>,
     zid: &str,
     cluster_name: &str,
 ) {
@@ -115,7 +115,11 @@ pub fn handle_neighbours_neighbours_response(
                 })
                 .unwrap();
                 session
-                    .put(format!("{}/counter/complete", cluster_name), message)
+                    .put(format!("{}/counter/complete", cluster_name), message.clone())
+                    .res()
+                    .unwrap();
+                session
+                    .put(format!("{}/sse/polygon_update", cluster_name), message)
                     .res()
                     .unwrap();
                 node_data.status = NodeStatus::Online;

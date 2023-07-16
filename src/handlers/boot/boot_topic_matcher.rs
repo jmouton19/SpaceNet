@@ -10,7 +10,7 @@ pub fn boot_topic_matcher(
     topic: &str,
     payload: &[u8],
     boot_node_data: &mut BootNodeData,
-    session: Arc<Session>,
+    session: &Arc<Session>,
     zid: &str,
     cluster_name: &str,
 ) {

@@ -9,7 +9,7 @@ use zenoh::Session;
 pub fn handle_leave_request(
     payload: &[u8],
     boot_node_data: &mut BootNodeData,
-    session: Arc<Session>,
+    session: &Arc<Session>,
     cluster_name: &str,
 ) {
     let data: DefaultMessage = deserialize(payload).unwrap();

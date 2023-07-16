@@ -14,7 +14,7 @@ pub fn node_topic_matcher(
     topic: &str,
     payload: &[u8],
     node_data: &mut NodeData,
-    session: Arc<Session>,
+    session: &Arc<Session>,
     zid: &str,
     cluster_name: &str,
 ) {

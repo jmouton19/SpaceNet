@@ -5,14 +5,13 @@ use futures::stream::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
 use std::sync::Arc;
+use uuid::Uuid;
 use warp::{sse::Event, Filter};
 use zenoh::prelude::r#async::AsyncResolve;
 use zenoh::Session;
-use uuid::Uuid;
 
-
-#[derive(Serialize, Deserialize, PartialEq,Debug, Clone)]
-pub(crate) struct Player {
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+pub struct Player {
     pub(crate) player_id: String,
     pub(crate) x: f64,
     pub(crate) y: f64,
@@ -25,13 +24,12 @@ struct PlayerUpdate {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct Initialize {
-    players: Vec<Player>,
-    polygon: Vec<(f64, f64)>,
-    site: (f64, f64),
-    sender_id: String,
+pub struct Initialize {
+    pub(crate) players: Vec<Player>,
+    pub(crate) polygon: Vec<(f64, f64)>,
+    pub(crate) site: (f64, f64),
+    pub(crate) sender_id: String,
 }
-
 
 fn sse_empty() -> Result<Event, Infallible> {
     Ok(warp::sse::Event::default().event("empty"))
@@ -68,17 +66,17 @@ fn sse_player_update(payload: &[u8]) -> Result<Event, Infallible> {
         .data(data_string))
 }
 fn sse_player_remove(payload: &[u8]) -> Result<Event, Infallible> {
-    let data: PlayerUpdate = deserialize(payload).unwrap();
+    let data: String = deserialize(payload).unwrap();
     let data_string = serde_json::to_string(&data).unwrap();
     Ok(warp::sse::Event::default()
         .event("remove_player")
         .data(data_string))
 }
 
-
-pub fn sse_server(session: Arc<Session>) {
+pub fn sse_server(session: Arc<Session>, cluster_name: String) {
+    println!("STARTING SSE SERVER ON: http://127.0.0.1:3030/spacenet");
     async_std::task::spawn(async move {
-        let routes = warp::path("ticks").and(warp::get()).map(move || {
+        let routes = warp::path("spacenet").and(warp::get()).map(move || {
             let (zenoh_tx, zenoh_rx) = flume::unbounded();
             let session_clone = session.clone();
             let sse_id = Uuid::new_v4();
@@ -99,14 +97,14 @@ pub fn sse_server(session: Arc<Session>) {
 
             let stream = zenoh_rx.into_stream();
             let event_stream = stream.map(move |sample| {
-                let sse_id=sse_id.to_string();
-                let topic = sample.key_expr.split('/').nth(1).unwrap_or("");
+                let sse_id = sse_id.to_string();
+                let topic = sample.key_expr.split('/').nth(2).unwrap_or("");
                 // let contiguous_payload = sample.value.payload.contiguous();
                 // let payload = contiguous_payload.as_ref();
                 let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
                 match topic {
                     "initialize" => {
-                        let id = sample.key_expr.split('/').nth(2).unwrap_or("");
+                        let id = sample.key_expr.split('/').nth(3).unwrap_or("");
                         if id == &sse_id {
                             sse_initialize(payload)
                         } else {
@@ -120,7 +118,10 @@ pub fn sse_server(session: Arc<Session>) {
                     _ => sse_empty(),
                 }
             });
-            session.put("GIVE", sse_id).res_sync().unwrap();
+            session
+                .put(format!("{}/sse/get/{}",cluster_name,sse_id.to_string()), "")
+                .res_sync()
+                .unwrap();
             warp::sse::reply(warp::sse::keep_alive().stream(event_stream))
         });
         warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;

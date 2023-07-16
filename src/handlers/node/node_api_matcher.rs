@@ -1,5 +1,8 @@
-use crate::node::{NodeData, NodeStatus};
+use crate::node::{NodeData, NodeStatus, SyncResolve};
 use crate::sse::Player;
+use bincode::serialize;
+use std::sync::Arc;
+use zenoh::Session;
 
 #[derive(PartialEq, Clone, Debug)]
 pub enum ApiMessage {
@@ -27,6 +30,8 @@ pub fn node_api_matcher(
     api_message: ApiMessage,
     node_data: &mut NodeData,
     api_responder_tx: &flume::Sender<ApiResponse>,
+    session: &Arc<Session>,
+    cluster_name:&str,
 ) {
     match api_message {
         ApiMessage::GetStatus => {
@@ -59,13 +64,33 @@ pub fn node_api_matcher(
             node_data.site = site;
         }
         ApiMessage::AddPlayer(player) => {
-            node_data.players.insert(player.player_id, (player.x, player.y));
+            let message = serialize(&player).unwrap();
+            session
+                .put(format!("{}/sse/player_add",cluster_name), message)
+                .res_sync()
+                .unwrap();
+            node_data
+                .players
+                .insert(player.player_id, (player.x, player.y));
         }
         ApiMessage::RemovePlayer(player_id) => {
+            let message = serialize(&player_id).unwrap();
+            session
+                .put(format!("{}/sse/remove_player",cluster_name), message)
+                .res_sync()
+                .unwrap();
             node_data.players.remove(&player_id);
         }
+
         ApiMessage::UpdatePlayer(player) => {
-            node_data.players.insert(player.player_id, (player.x, player.y));
+            let message = serialize(&player).unwrap();
+            session
+                .put(format!("{}/sse/player_update",cluster_name), message)
+                .res_sync()
+                .unwrap();
+            node_data
+                .players
+                .insert(player.player_id, (player.x, player.y));
         }
     };
 }

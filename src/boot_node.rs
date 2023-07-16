@@ -37,7 +37,7 @@ impl BootNode {
         let zid = session.zid().to_string();
 
         let session_clone = Arc::clone(&session);
-        sse_server(session_clone);
+        sse_server(session_clone, cluster_name.to_string());
 
         let cluster_name_clone = cluster_name.to_string();
         let session_clone = Arc::clone(&session);
@@ -99,7 +99,7 @@ impl BootNode {
                         topic,
                         payload,
                         &mut boot_node_data,
-                        session_clone.clone(),
+                        &session_clone,
                         zid_clone.as_str(),
                         cluster_name_clone.as_str(),
                     );
