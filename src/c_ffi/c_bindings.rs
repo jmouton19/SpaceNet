@@ -88,7 +88,7 @@ pub extern "C" fn get_neighbours(node_ptr: *mut Node) -> *mut *mut c_char {
     let c_array = c_pointers.as_mut_ptr();
     // Prevent the Vec from being deallocated
     //std::mem::forget(c_pointers);
-    let _ =ManuallyDrop::new(c_pointers);
+    let _ = ManuallyDrop::new(c_pointers);
     c_array
 }
 
@@ -296,4 +296,3 @@ pub extern "C" fn free_buf(buf: Buffer) {
     let vec = unsafe { Vec::from_raw_parts(buf.data, buf.len, buf.len) };
     drop(vec);
 }
-

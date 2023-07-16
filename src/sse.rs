@@ -1,0 +1,127 @@
+use crate::message::NewVoronoiResponse;
+use crate::node::SyncResolve;
+use bincode::deserialize;
+use futures::stream::StreamExt;
+use serde::{Deserialize, Serialize};
+use std::convert::Infallible;
+use std::sync::Arc;
+use warp::{sse::Event, Filter};
+use zenoh::prelude::r#async::AsyncResolve;
+use zenoh::Session;
+use uuid::Uuid;
+
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct Player {
+    player_id: String,
+    x: f64,
+    y: f64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct PlayerUpdate {
+    player: Player,
+    sender_id: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct Initialize {
+    players: Vec<Player>,
+    polygon: Vec<(f64, f64)>,
+    site: (f64, f64),
+    sender_id: String,
+}
+
+
+fn sse_empty() -> Result<Event, Infallible> {
+    Ok(warp::sse::Event::default().event("empty"))
+}
+
+fn sse_initialize(payload: &[u8]) -> Result<Event, Infallible> {
+    let data: Initialize = deserialize(payload).unwrap();
+    let data_string = serde_json::to_string(&data).unwrap();
+    Ok(warp::sse::Event::default()
+        .event("initialize")
+        .data(data_string))
+}
+
+fn sse_polygon_update(payload: &[u8]) -> Result<Event, Infallible> {
+    let data: NewVoronoiResponse = deserialize(payload).unwrap();
+    let data_string = serde_json::to_string(&data).unwrap();
+    Ok(warp::sse::Event::default()
+        .event("polygon_update")
+        .data(data_string))
+}
+
+fn sse_player_add(payload: &[u8]) -> Result<Event, Infallible> {
+    let data: PlayerUpdate = deserialize(payload).unwrap();
+    let data_string = serde_json::to_string(&data).unwrap();
+    Ok(warp::sse::Event::default()
+        .event("player_add")
+        .data(data_string))
+}
+fn sse_player_update(payload: &[u8]) -> Result<Event, Infallible> {
+    let data: PlayerUpdate = deserialize(payload).unwrap();
+    let data_string = serde_json::to_string(&data).unwrap();
+    Ok(warp::sse::Event::default()
+        .event("player_update")
+        .data(data_string))
+}
+fn sse_player_remove(payload: &[u8]) -> Result<Event, Infallible> {
+    let data: PlayerUpdate = deserialize(payload).unwrap();
+    let data_string = serde_json::to_string(&data).unwrap();
+    Ok(warp::sse::Event::default()
+        .event("remove_player")
+        .data(data_string))
+}
+
+
+pub fn sse_server(session: Arc<Session>) {
+    async_std::task::spawn(async move {
+        let routes = warp::path("ticks").and(warp::get()).map(move || {
+            let (zenoh_tx, zenoh_rx) = flume::unbounded();
+            let session_clone = session.clone();
+            let sse_id = Uuid::new_v4().to_string();
+            async_std::task::spawn(async move {
+                let subscriber = session_clone
+                    .declare_subscriber("sse/*")
+                    .with(flume::unbounded())
+                    .res_async()
+                    .await
+                    .unwrap();
+                while let Ok(sample) = subscriber.recv_async().await {
+                    println!("IM STILL ON");
+                    if zenoh_tx.send(sample).is_err() {
+                        break;
+                    }
+                }
+            });
+
+            let stream = zenoh_rx.into_stream();
+            let event_stream = stream.map(move |sample| {
+                let topic = sample.key_expr.split('/').nth(1).unwrap_or("");
+                // let contiguous_payload = sample.value.payload.contiguous();
+                // let payload = contiguous_payload.as_ref();
+                let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
+                match topic {
+                    "initialize" => {
+                        let id = sample.key_expr.split('/').nth(2).unwrap_or("");
+                        if id == &sse_id {
+                            sse_initialize(payload)
+                        } else {
+                            sse_empty()
+                        }
+                    }
+                    "player_add" => sse_player_add(payload),
+                    "player_update" => sse_player_update(payload),
+                    "remove_player" => sse_player_remove(payload),
+                    "polygon_update" => sse_polygon_update(payload),
+                    _ => sse_empty(),
+                }
+            });
+            session.put("GIVE", "give").res_sync().unwrap();
+            warp::sse::reply(warp::sse::keep_alive().stream(event_stream))
+        });
+        warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
+    });
+}

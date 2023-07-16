@@ -2,6 +2,7 @@ use crate::handlers::boot::boot_api_matcher::{boot_api_matcher, BootApiMessage, 
 use crate::handlers::boot::boot_topic_matcher::{boot_counter_topic_matcher, boot_topic_matcher};
 use crate::handlers::boot::generate_output::generate_output;
 use crate::node::SyncResolve;
+use crate::sse::sse_server;
 use crate::types::{OrderedMapPairs, OrderedMapPolygon};
 use std::sync::Arc;
 use zenoh::prelude::r#async::AsyncResolve;
@@ -34,6 +35,9 @@ impl BootNode {
             .unwrap()
             .into_arc();
         let zid = session.zid().to_string();
+
+        let session_clone = Arc::clone(&session);
+        sse_server(session_clone);
 
         let cluster_name_clone = cluster_name.to_string();
         let session_clone = Arc::clone(&session);
@@ -90,6 +94,7 @@ impl BootNode {
                     println!("Message received on topic... {:?}", topic);
                     let payload = sample.value.payload.get_zslice(0).unwrap().as_ref();
 
+                    //send new polgons
                     boot_topic_matcher(
                         topic,
                         payload,
