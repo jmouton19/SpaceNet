@@ -48,7 +48,7 @@ pub(crate) mod handlers;
 pub(crate) mod message;
 pub mod node;
 pub mod payload_message;
-pub(crate) mod sse;
 pub mod subscriber;
 pub mod types;
 pub mod utils;
+pub(crate) mod webpage;

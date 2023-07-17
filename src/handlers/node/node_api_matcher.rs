@@ -1,5 +1,5 @@
 use crate::node::{NodeData, NodeStatus, SyncResolve};
-use crate::sse::{Player, PlayerUpdate};
+use crate::webpage::sse::{Player, PlayerUpdate};
 use bincode::serialize;
 use std::sync::Arc;
 use zenoh::Session;

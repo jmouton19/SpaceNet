@@ -2,7 +2,7 @@ use crate::handlers::boot::boot_api_matcher::{boot_api_matcher, BootApiMessage, 
 use crate::handlers::boot::boot_topic_matcher::{boot_counter_topic_matcher, boot_topic_matcher};
 use crate::handlers::boot::generate_output::generate_output;
 use crate::node::SyncResolve;
-use crate::sse::sse_server;
+use crate::webpage::sse::sse_server;
 use crate::types::{OrderedMapPairs, OrderedMapPolygon};
 use std::sync::Arc;
 use zenoh::prelude::r#async::AsyncResolve;

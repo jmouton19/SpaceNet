@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::payload_message::PayloadMessage;
-use crate::sse::{Initialize, Player};
+use crate::webpage::sse::{Initialize, Player};
 use zenoh::prelude::r#async::AsyncResolve;
 pub use zenoh::prelude::sync::*;
 
