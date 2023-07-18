@@ -59,6 +59,15 @@ fn sse_polygon_update(payload: &[u8]) -> Result<Event, Infallible> {
         .data(data_string))
 }
 
+fn sse_polygon_add(payload: &[u8]) -> Result<Event, Infallible> {
+    let data: NewVoronoiResponse = deserialize(payload).unwrap();
+    let data_string = serde_json::to_string(&data).unwrap();
+    Ok(warp::sse::Event::default()
+        .event("polygon_add")
+        .data(data_string))
+}
+
+
 fn sse_player_add(payload: &[u8]) -> Result<Event, Infallible> {
     let data: PlayerUpdate = deserialize(payload).unwrap();
     let data_string = serde_json::to_string(&data).unwrap();
@@ -126,6 +135,7 @@ pub fn sse_server(session: Arc<Session>, cluster_name: String) {
                     "player_update" => sse_player_update(payload),
                     "remove_player" => sse_player_remove(payload),
                     "polygon_update" => sse_polygon_update(payload),
+                    "polygon_add" => sse_polygon_add(payload),
                     "node_leave" => sse_node_leave(payload),
                     _ => sse_empty(),
                 }

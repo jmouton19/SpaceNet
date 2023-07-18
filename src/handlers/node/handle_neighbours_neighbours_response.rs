@@ -123,7 +123,7 @@ pub fn handle_neighbours_neighbours_response(
                     .unwrap();
                 session
                     .put(
-                        format!("{}/sse/event/polygon_update", cluster_name),
+                        format!("{}/sse/event/polygon_add", cluster_name),
                         message,
                     )
                     .res()
