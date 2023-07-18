@@ -5,6 +5,7 @@ const source = new EventSource('http://127.0.0.1:3030/api');
 const trans_time=500;
 
 let node_polygons={};
+let node_players={};
 
 window.addEventListener("resize", updateSvgSize);
 
@@ -22,7 +23,9 @@ function updateSvgSize() {
     const containerSize = Math.min(window.innerWidth, window.innerHeight) * 0.8;
     svg.attr("width", containerSize);
     svg.attr("height", containerSize);
-    updatePolygons();
+    Object.keys(node_polygons).forEach(sender_id => {
+        updatePolygon(sender_id);
+    });
 }
 
 function scalePoint(point) {
@@ -54,7 +57,7 @@ function updatePolygon(sender_id) {
                 .attr("fill", color);
 
             // Update the data attribute of the existing polygons
-            existingPolygons.attr("data-sender-id", sender_id);
+           // existingPolygons.attr("data-sender-id", sender_id);
 
             existingCircles
                 .transition()
@@ -63,7 +66,7 @@ function updatePolygon(sender_id) {
                 .attr("cy", site[1]);
 
             // Update the data attribute of the existing circles
-            existingCircles.attr("data-sender-id", sender_id);
+            //existingCircles.attr("data-sender-id", sender_id);
         } else {
             // No existing polygons, create new ones
             svg.append("polygon")
@@ -80,6 +83,16 @@ function updatePolygon(sender_id) {
                 .attr("fill", "black")
                 .attr("data-sender-id", sender_id);
         }
+
+        const circles = svg.selectAll("circle");
+        circles.each(function() {
+            this.parentNode.appendChild(this); // Move the circle to the end of its parent
+        });
+
+        const texts = svg.selectAll("text");
+        texts.each(function() {
+            this.parentNode.appendChild(this); // Move the circle to the end of its parent
+        });
 
     }
 }
@@ -109,18 +122,96 @@ function removePolygon(sender_id) {
 
     //delete node_polygons[sender_id];
 }
+function updatePlayer(player_id) {
+    const player = node_players[player_id];
+    if (player) {
+        const site = scalePoint([player.x,player.y]);
+        const color = colorScale(player.sender_id+player.sender_id);
+        const circleRadius = svg.attr("width") * 0.004;
+        const textOffset = circleRadius * 1.5;
+        const fontSize = svg.attr("width") * 0.02;
+
+        // Select the existing polygon elements with the specified sender_id
+        const existingCircles = svg.selectAll(`circle[data-player-id="${player_id}"]`);
+        const existingTexts = svg.selectAll(`text[data-player-id="${player_id}"]`);
 
 
-// Define event handlers
+        // Check if there are existing polygons
+        if (existingCircles.size() > 0) {
+
+            existingCircles
+                .transition()
+                .duration(trans_time) // Set the duration of the transition in milliseconds
+                .attr("cx", site[0])
+                .attr("cy", site[1]);
+
+            existingTexts
+                .transition()
+                .duration(trans_time)
+                .attr("x", site[0] + textOffset)
+                .attr("y", site[1]);
+
+            // Update the data attribute of the existing circles
+            //existingCircles.attr("data-player-id", player_id);
+        } else {
+            svg.append("circle")
+                .attr("cx", site[0])
+                .attr("cy", site[1])
+                .attr("r", circleRadius)
+                .attr("fill", color)
+                .attr("data-player-id", player_id);
+
+            svg.append("text")
+                .attr("x", site[0] + textOffset)
+                .attr("y", site[1])
+                .attr("data-player-id", player_id)
+                .text(player_id)
+                .style("font-size", `${fontSize}px`);
+        }
+
+    }
+}
+
+function removePlayer(player_id) {
+    const existingCircles = svg.selectAll(`circle[data-player-id="${player_id}"]`);
+    const existingTexts = svg.selectAll(`text[data-player-id="${player_id}"]`);
+    existingCircles
+        .transition()
+        .duration(trans_time)
+        .style("opacity", 0)
+        .remove();
+    existingTexts
+        .transition()
+        .duration(trans_time)
+        .style("opacity", 0)
+        .remove();
+
+
+    delete node_players[player_id];
+}
+
 source.addEventListener('initialize', function(e) {
     const data = JSON.parse(e.data);
-    node_polygons[data.sender_id] = {polygon: data.polygon, site: data.site};
+    const sender_id = data.sender_id;
+    node_polygons[sender_id] = { polygon: data.polygon, site: data.site };
 
-    console.log('Initialization');
     Object.keys(node_polygons).forEach(sender_id => {
         updatePolygon(sender_id);
     });
+
+    const players = data.players;
+    players.forEach((player) => {
+        const player_id = player.player_id;
+        const { x, y } = player;
+        node_players[player_id] = { x, y, sender_id: sender_id };
+        console.log("TRYING TO UPDATE PLAYER");
+        updatePlayer(player_id);
+    });
+
+    console.log(node_players);
+    console.log('Initialization');
 }, false);
+
 
 source.addEventListener('polygon_add', function(e) {
     const data = JSON.parse(e.data);
@@ -151,19 +242,31 @@ source.addEventListener('node_leave', function(e) {
 
 source.addEventListener('player_add', function(e) {
     const data = JSON.parse(e.data);
-    // Handle player_add event
-    console.log('Player added:', data);
+    const player=data.player;
+    const player_id = player.player_id;
+    node_players[player_id] = { x: player.x, y: player.y,sender_id :data.sender_id};
+    console.log('Player added');
+    updatePlayer(player_id);
 }, false);
+
 
 source.addEventListener('player_update', function(e) {
     const data = JSON.parse(e.data);
-    // Handle player_update event
-    console.log('Player updated:', data);
+    const player=data.player;
+    const player_id = player.player_id;
+    if (node_players.hasOwnProperty(player_id)) {
+        node_players[player_id] = { x: player.x, y: player.y,sender_id :data.sender_id};
+        console.log('Player updated');
+        updatePlayer(player_id);
+    }
 }, false);
 
-source.addEventListener('remove_player', function(e) {
+source.addEventListener('player_leave', function(e) {
     const data = JSON.parse(e.data);
-    // Handle remove_player event
-    console.log('Player removed:', data);
+    const player = node_players[data];
+    if(player){
+        removePlayer(data)
+    }
+    console.log('Player left');
 }, false);
 

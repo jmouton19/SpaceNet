@@ -71,7 +71,6 @@ fn sse_polygon_add(payload: &[u8]) -> Result<Event, Infallible> {
 fn sse_player_add(payload: &[u8]) -> Result<Event, Infallible> {
     let data: PlayerUpdate = deserialize(payload).unwrap();
     let data_string = serde_json::to_string(&data).unwrap();
-    println!("sse_player_add: {}", data_string);
     Ok(warp::sse::Event::default()
         .event("player_add")
         .data(data_string))
@@ -87,7 +86,7 @@ fn sse_player_remove(payload: &[u8]) -> Result<Event, Infallible> {
     let data: String = deserialize(payload).unwrap();
     let data_string = serde_json::to_string(&data).unwrap();
     Ok(warp::sse::Event::default()
-        .event("remove_player")
+        .event("player_leave")
         .data(data_string))
 }
 
@@ -108,7 +107,6 @@ pub fn sse_server(session: Arc<Session>, cluster_name: String) {
                     .await
                     .unwrap();
                 while let Ok(sample) = subscriber.recv_async().await {
-                    println!("IM STILL ON");
                     if zenoh_tx.send(sample).is_err() {
                         break;
                     }
