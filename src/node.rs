@@ -215,12 +215,9 @@ impl Node {
                 if let Ok(()) = io::stdin().read_exact(&mut buffer).await {
                     if buffer[0] == key as u8 {
                         // Call the function when the user presses 'q'
-                        let message  = serialize(&zid).unwrap();
+                        let message = serialize(&zid).unwrap();
                         session
-                            .put(
-                                format!("{}/sse/event/node_leave", cluster),
-                                message,
-                            )
+                            .put(format!("{}/sse/event/node_leave", cluster), message)
                             .res_sync()
                             .unwrap();
 
@@ -428,5 +425,11 @@ impl NodeData {
             expected_counter: -1,
             status: NodeStatus::Offline,
         }
+    }
+}
+
+impl Default for NodeData {
+    fn default() -> Self {
+        Self::new()
     }
 }

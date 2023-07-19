@@ -57,12 +57,12 @@ pub fn handle_owner_response(
             .unwrap();
 
         println!("NEW NODE POLYGON DONE!");
-        let polygon: Vec<(f64, f64)> = diagram.diagram.cells()[0]
-            .points()
-            .iter()
-            .map(|x| (x.x, x.y))
-            .collect();
+
+        let polygon: Vec<(f64, f64)> =
+            vec![(-0.0, 100.0), (-0.0, 0.0), (100.0, -0.0), (100.0, 100.0)];
+
         node_data.polygon = polygon.clone();
+
         let message = serialize(&NewVoronoiResponse {
             polygon,
             sender_id: zid.to_string(),
@@ -77,10 +77,7 @@ pub fn handle_owner_response(
             .res()
             .unwrap();
         session
-            .put(
-                format!("{}/sse/event/polygon_add", cluster_name),
-                message,
-            )
+            .put(format!("{}/sse/event/polygon_add", cluster_name), message)
             .res()
             .unwrap();
         node_data.status = NodeStatus::Online;

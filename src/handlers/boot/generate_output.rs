@@ -21,7 +21,12 @@ pub fn generate_output(boot_node_data: &mut BootNodeData) {
         hash_map.swap_remove_index(0);
         let diagram = Voronoi::new((first_zid, first_site), &hash_map);
         for (i, cell) in diagram.diagram.cells().iter().enumerate() {
-            let polygon = cell.points().iter().map(|x| (x.x, x.y)).collect();
+            let polygon: Vec<(f64, f64)> = if i == 0 {
+                vec![(-0.0, 100.0), (-0.0, 0.0), (100.0, -0.0), (100., 100.0)]
+            } else {
+                cell.points().iter().map(|x| (x.x, x.y)).collect()
+            };
+
             let site_id = diagram.input.keys().nth(i).unwrap();
             boot_node_data
                 .correct_polygon_list

@@ -67,7 +67,6 @@ fn sse_polygon_add(payload: &[u8]) -> Result<Event, Infallible> {
         .data(data_string))
 }
 
-
 fn sse_player_add(payload: &[u8]) -> Result<Event, Infallible> {
     let data: PlayerUpdate = deserialize(payload).unwrap();
     let data_string = serde_json::to_string(&data).unwrap();
@@ -92,7 +91,6 @@ fn sse_player_remove(payload: &[u8]) -> Result<Event, Infallible> {
 
 pub fn sse_server(session: Arc<Session>, cluster_name: String) {
     println!("STARTING SSE SERVER ON: http://127.0.0.1:3030/spacenet");
-    let cluster_name_clone = cluster_name.clone();
     async_std::task::spawn(async move {
         let api_filter = warp::path("api").and(warp::get()).map(move || {
             let (zenoh_tx, zenoh_rx) = flume::unbounded();
@@ -123,7 +121,7 @@ pub fn sse_server(session: Arc<Session>, cluster_name: String) {
                 match topic {
                     "initialize" => {
                         let id = sample.key_expr.split('/').nth(4).unwrap_or("");
-                        if id == &sse_id {
+                        if id == sse_id {
                             sse_initialize(payload)
                         } else {
                             sse_empty()
@@ -140,10 +138,7 @@ pub fn sse_server(session: Arc<Session>, cluster_name: String) {
             });
 
             session
-                .put(
-                    format!("{}/sse/get/{}", cluster_name, sse_id.to_string()),
-                    "",
-                )
+                .put(format!("{}/sse/get/{}", cluster_name, sse_id), "")
                 .res_sync()
                 .unwrap();
             warp::sse::reply(warp::sse::keep_alive().stream(event_stream))
@@ -154,14 +149,13 @@ pub fn sse_server(session: Arc<Session>, cluster_name: String) {
             .map(move || warp::reply::html(std::str::from_utf8(html).unwrap()));
 
         let js = include_bytes!("script.js");
-        let js_filter = warp::path("script.js")
-            .map(move || {
-                let js_str = std::str::from_utf8(js).unwrap();
-                warp::reply::with_header(js_str, "Content-Type", "application/javascript")
-            });
+        let js_filter = warp::path("script.js").map(move || {
+            let js_str = std::str::from_utf8(js).unwrap();
+            warp::reply::with_header(js_str, "Content-Type", "application/javascript")
+        });
 
         let html_filter = html_filter.or(js_filter);
-        let routes= html_filter.or(api_filter);
+        let routes = html_filter.or(api_filter);
 
         warp::serve(routes).run(([127, 0, 0, 1], 3030)).await;
     });

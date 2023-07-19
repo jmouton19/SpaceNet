@@ -65,10 +65,9 @@ pub fn node_api_matcher(
             node_data.site = site;
         }
         ApiMessage::AddPlayer(player) => {
-            if node_data.players.contains_key(&player.player_id) {
-                println!("Player already exists!");
-                return;
-            } else {
+            if let std::collections::hash_map::Entry::Vacant(e) =
+                node_data.players.entry(player.player_id.clone())
+            {
                 let player_update = PlayerUpdate {
                     player: player.clone(),
                     sender_id: zid.to_string(),
@@ -78,15 +77,14 @@ pub fn node_api_matcher(
                     .put(format!("{}/sse/event/player_add", cluster_name), message)
                     .res_sync()
                     .unwrap();
-                node_data
-                    .players
-                    .insert(player.player_id, (player.x, player.y));
+                e.insert((player.x, player.y));
+            } else {
+                println!("Player already exists!");
             }
         }
         ApiMessage::RemovePlayer(player_id) => {
             if !node_data.players.contains_key(&player_id) {
-                println!("Player already removed!");
-                return;
+                println!("Player already removed!")
             } else {
                 let message = serialize(&player_id).unwrap();
                 session
@@ -111,5 +109,5 @@ pub fn node_api_matcher(
                 .players
                 .insert(player.player_id, (player.x, player.y));
         }
-    };
+    }
 }

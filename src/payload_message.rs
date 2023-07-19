@@ -17,12 +17,18 @@ impl PayloadMessage {
     }
 
     pub fn get_topic(&self) -> String {
-        return self.topic.clone();
+        self.topic.clone()
     }
     pub fn get_payload(&self) -> Vec<u8> {
-        return self.payload.clone();
+        self.payload.clone()
     }
     pub fn get_sender_id(&self) -> String {
-        return self.sender_id.clone();
+        self.sender_id.clone()
+    }
+}
+
+impl Default for PayloadMessage {
+    fn default() -> Self {
+        Self::new()
     }
 }

@@ -122,10 +122,7 @@ pub fn handle_neighbours_neighbours_response(
                     .res()
                     .unwrap();
                 session
-                    .put(
-                        format!("{}/sse/event/polygon_add", cluster_name),
-                        message,
-                    )
+                    .put(format!("{}/sse/event/polygon_add", cluster_name), message)
                     .res()
                     .unwrap();
                 node_data.status = NodeStatus::Online;

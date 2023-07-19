@@ -29,20 +29,23 @@ pub fn handle_leave_voronoi_request(
         let zid = zid.to_string();
         node_data.neighbours.remove(zid.as_str());
     }
+
+    println!("IM DONE BOOT!");
+    let polygon: Vec<(f64, f64)>;
     if node_data.neighbours.is_empty() {
-        node_data.site = (50.0, 50.0);
+        polygon = vec![(-0.0, 100.0), (-0.0, 0.0), (100.0, -0.0), (100., 100.0)];
+    } else {
+        let diagram = Voronoi::new((zid.to_string(), node_data.site), &node_data.neighbours);
+        // draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str());
+        //my new visible neighbours
+        node_data.neighbours = diagram.get_neighbours();
+        polygon = diagram.diagram.cells()[0]
+            .points()
+            .iter()
+            .map(|x| (x.x, x.y))
+            .collect();
     }
 
-    let diagram = Voronoi::new((zid.to_string(), node_data.site), &node_data.neighbours);
-    // draw_voronoi(&diagram.diagram,format!("new_{}",node.session.zid()).as_str());
-    //my new visible neighbours
-    node_data.neighbours = diagram.get_neighbours();
-    println!("IM DONE BOOT!");
-    let polygon: Vec<(f64, f64)> = diagram.diagram.cells()[0]
-        .points()
-        .iter()
-        .map(|x| (x.x, x.y))
-        .collect();
     node_data.polygon = polygon.clone();
     let message = serialize(&NewVoronoiResponse {
         polygon,
