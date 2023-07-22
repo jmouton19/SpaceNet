@@ -1,5 +1,6 @@
 #include "space_net.h"
 #include "stdio.h"
+#include <string.h>
 
 
 unsigned char *gen_rdm_bytestream (size_t num_bytes)
@@ -16,7 +17,6 @@ unsigned char *gen_rdm_bytestream (size_t num_bytes)
 }
 
 
-
 int main() {
     printf("CNode example...\n");
     const char* cluster_name = "network_1";
@@ -25,31 +25,28 @@ int main() {
 
     const char* zid_str = get_zid_node(node_ptr);
     printf("Node online... %s\n", zid_str);
+    free_c_string(zid_str);
     join(node_ptr,69.0,69.0);
 
-
+    char string[100];
+    strcpy(string, cluster_name);
+    strcat(string, "/test");
     int i=1;
-    while (i<=10) {
+    while (i<=5) {
         int size=10;
         Buffer buffer;
         buffer.data=gen_rdm_bytestream(size);
         buffer.len=size;
-        send_message(node_ptr,buffer,"pog");
-        printf("\nPayload %d sent!\n",i);
-
-        i+=1;
-        buffer.data=gen_rdm_bytestream(size);
-        send_message(node_ptr,buffer,"pog2");
-        printf("Payload %d sent!\n",i);
-        i+=1;
+        send_message(node_ptr,buffer,string);
+        printf("\nPayload sent: %s",buffer.data);
+        i++;
     }
-
 
     while(1) {
         if (get_status(node_ptr) == Offline) {
+            free_node(node_ptr);
             break;
         }
-        // run(node_ptr);
     }
 
     return 0;

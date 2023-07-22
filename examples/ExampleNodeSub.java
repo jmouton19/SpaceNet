@@ -1,8 +1,8 @@
 import com.example.Node;
-import com.example.NodeSubscriber;
+import com.example.Subscriber;
 import com.example.PayloadMessage;
 
-public class ExampleNode3 {
+public class ExampleNodeSub {
     public static void main(String[] args) {
         Node node = new Node("network_1");
          String zid = node.getZid();
@@ -10,8 +10,9 @@ public class ExampleNode3 {
          node.leaveOnKey('q');
          node.join(69.0,69.0);
 
-         NodeSubscriber sub= new NodeSubscriber(node);
-         sub.subscribe("pog");
+         Subscriber sub= new Subscriber();
+         String topic= node.getCluster()+"/test";
+         sub.subscribe(topic);
 
          while (true) {
                try {
@@ -23,6 +24,7 @@ public class ExampleNode3 {
                PayloadMessage message = new PayloadMessage(sub.receive());
                if(message.getPayload().length!=0)
                 System.out.println(message.getPayload()[0]+", length "+message.getPayload().length+" topic "+message.getTopic());
+               message.flush();
          }
     }
 }

@@ -10,6 +10,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::payload_message::PayloadMessage;
+use crate::utils::check_reserved_topics;
 use crate::webpage::sse::{Initialize, Player};
 use zenoh::prelude::r#async::AsyncResolve;
 pub use zenoh::prelude::sync::*;
@@ -238,6 +239,10 @@ impl Node {
     pub fn get_zid(&self) -> String {
         self.zid.clone()
     }
+
+    pub fn get_cluster_name(&self) -> String {
+        self.cluster_name.clone()
+    }
     ///Get node status
     pub fn get_status(&self) -> NodeStatus {
         self.api_requester_tx.send(ApiMessage::GetStatus).unwrap();
@@ -313,6 +318,10 @@ impl Node {
     }
 
     pub fn send_message(&self, payload: Vec<u8>, topic: &str) {
+        if check_reserved_topics(topic) {
+            return;
+        }
+
         let message = serialize(&PayloadMessage {
             payload,
             sender_id: self.zid.clone(),

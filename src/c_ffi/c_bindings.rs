@@ -2,7 +2,7 @@ use crate::boot_node::BootNode;
 
 use crate::node::{Node, NodeStatus};
 use crate::payload_message::PayloadMessage;
-use crate::subscriber::NodeSubscriber;
+use crate::subscriber::Subscriber;
 use libc::{c_char, c_int};
 use std::ffi::{c_void, CStr, CString};
 use std::mem::ManuallyDrop;
@@ -53,12 +53,21 @@ pub extern "C" fn get_zid_node(node_ptr: *mut c_void) -> *const c_char {
 }
 
 #[no_mangle]
-pub extern "C" fn free_c_string(s: *mut c_char) {
+pub extern "C" fn get_cluster(node_ptr: *mut c_void) -> *const c_char {
+    let node = unsafe { &*(node_ptr as *mut Node) };
+    let cluster_name = node.get_cluster_name();
+    let c_string = CString::new(cluster_name).unwrap();
+    c_string.into_raw()
+}
+
+
+#[no_mangle]
+pub extern "C" fn free_c_string(s: *const c_char) {
     unsafe {
         if s.is_null() {
             return;
         }
-        CString::from_raw(s)
+        CString::from_raw(s as *mut c_char)
     };
 }
 
@@ -213,15 +222,14 @@ pub extern "C" fn get_zid_boot(boot_ptr: *mut c_void) -> *const c_char {
 
 //subscriber struct
 #[no_mangle]
-pub extern "C" fn new_subscriber(node_ptr: *const c_void) -> *mut c_void {
-    let node = unsafe { &*(node_ptr as *const Node) };
-    let sub = Box::new(NodeSubscriber::new(node));
+pub extern "C" fn new_subscriber() -> *mut c_void {
+    let sub = Box::new(Subscriber::new());
     Box::into_raw(sub) as *mut c_void
 }
 #[no_mangle]
 pub extern "C" fn free_subscriber(node: *mut c_void) {
     unsafe {
-        let _ = Box::from_raw(node as *mut NodeSubscriber);
+        let _ = Box::from_raw(node as *mut Subscriber);
     }
 }
 
@@ -235,14 +243,14 @@ pub extern "C" fn subscribe(
 ) {
     let c_str = unsafe { CStr::from_ptr(topic) };
     let topic = c_str.to_str().unwrap();
-    let sub = unsafe { &mut *(subscriber_ptr as *mut NodeSubscriber) };
+    let sub = unsafe { &mut *(subscriber_ptr as *mut Subscriber) };
 
     sub.subscribe(topic);
 }
 
 #[no_mangle]
 pub extern "C" fn receive(subscriber_ptr: *const c_void) -> *mut c_void {
-    let sub = unsafe { &*(subscriber_ptr as *const NodeSubscriber) };
+    let sub = unsafe { &*(subscriber_ptr as *const Subscriber) };
     let payload_message = Box::new(sub.receive());
     Box::into_raw(payload_message) as *mut c_void
 }

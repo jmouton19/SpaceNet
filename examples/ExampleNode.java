@@ -9,7 +9,10 @@ public class ExampleNode {
          node.join(69.0,69.0);
 
          while (true) {
-
+            if(node.getStatus() == Node.NodeStatus.Offline){
+             node.free();
+                        break;
+            }
          }
     }
 }

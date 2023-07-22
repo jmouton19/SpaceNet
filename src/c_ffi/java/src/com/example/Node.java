@@ -28,6 +28,10 @@ public class Node {
         return getZid(nativePtr);
     }
 
+    public String getCluster() {
+            return getCluster(nativePtr);
+    }
+
      public long getPointer() {
             return nativePtr;
      }
@@ -74,6 +78,8 @@ public class Node {
           }
 
     private native String getZid(long nodePtr);
+
+     private native String getCluster(long nodePtr);
 
     private native void join(long nodePtr,double x, double y);
 

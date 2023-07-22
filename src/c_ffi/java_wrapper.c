@@ -23,6 +23,14 @@ JNIEXPORT jstring JNICALL Java_com_example_Node_getZid(JNIEnv *env, jobject obj,
     free_c_string((char*)zid); // Free the memory allocated for the C string
     return javaString;
 }
+
+JNIEXPORT jstring JNICALL Java_com_example_Node_getCluster(JNIEnv *env, jobject obj, jlong nodePtr) {
+    const char* cluster = get_cluster((void*) nodePtr);
+    jstring javaString = (*env)->NewStringUTF(env, cluster);
+    free_c_string((char*)cluster); // Free the memory allocated for the C string
+    return javaString;
+}
+
 JNIEXPORT void JNICALL Java_com_example_Node_join(JNIEnv *env, jobject obj, jlong nodePtr, jdouble x, jdouble y) {
     join((void*) nodePtr,x,y);
 }
@@ -129,23 +137,23 @@ JNIEXPORT jstring JNICALL Java_com_example_BootNode_getZid(JNIEnv *env, jobject 
 
 
 //subscriber
-JNIEXPORT jlong JNICALL Java_com_example_NodeSubscriber_newNodeSubscriber(JNIEnv *env, jobject obj, jlong subPtr) {
-    jlong result = (jlong) new_subscriber((void*) subPtr);
+JNIEXPORT jlong JNICALL Java_com_example_Subscriber_newSubscriber(JNIEnv *env, jobject obj) {
+    jlong result = (jlong) new_subscriber();
     return result;
 }
 
-JNIEXPORT void JNICALL Java_com_example_NodeSubscriber_free(JNIEnv *env, jobject obj, jlong subPtr) {
+JNIEXPORT void JNICALL Java_com_example_Subscriber_free(JNIEnv *env, jobject obj, jlong subPtr) {
     free_subscriber((void*) subPtr);
 }
 
-JNIEXPORT void JNICALL Java_com_example_NodeSubscriber_subscribe(JNIEnv *env, jobject obj, jlong subPtr,jstring topic) {
+JNIEXPORT void JNICALL Java_com_example_Subscriber_subscribe(JNIEnv *env, jobject obj, jlong subPtr,jstring topic) {
     const char *ctopic = (*env)->GetStringUTFChars(env, topic, 0);
 
     //int global=(global_sub==JNI_TRUE);
     subscribe((void*) subPtr, ctopic);
 }
 
-JNIEXPORT jlong JNICALL Java_com_example_NodeSubscriber_receive(JNIEnv *env, jobject obj, jlong subPtr) {
+JNIEXPORT jlong JNICALL Java_com_example_Subscriber_receive(JNIEnv *env, jobject obj, jlong subPtr) {
     jlong result = (jlong) receive((void*) subPtr);
     return result;
 }

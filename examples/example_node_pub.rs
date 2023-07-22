@@ -17,13 +17,10 @@ fn main() {
     let mut i = 1;
     while i <= 10 {
         let payload: Vec<u8> = (0..10).map(|_| rand::thread_rng().gen::<u8>()).collect();
-        node.send_message(payload, "pog");
+        let topic = format!("{}/test", node.get_cluster_name());
+        node.send_message(payload, topic.as_str());
         println!("Payload {} sent!", i);
         i += 1;
-        // let payload: Vec<u8> = (0..10).map(|_| rand::thread_rng().gen::<u8>()).collect();
-        // node.send_message(payload, "", "pog");
-        // println!("Payload {} sent!", i);
-        // i += 1;
     }
 
     loop {

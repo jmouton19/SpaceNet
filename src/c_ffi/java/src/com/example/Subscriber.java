@@ -1,14 +1,14 @@
 package com.example;
 
-public class NodeSubscriber {
+public class Subscriber {
     static {
         System.loadLibrary("space_net");
         System.loadLibrary("java_wrapper");
     }
     private final long nativePtr;
 
-    public NodeSubscriber(Node node) {
-        nativePtr = newNodeSubscriber(node.getPointer());
+    public Subscriber() {
+        nativePtr = newSubscriber();
     }
 
     public void subscribe(String topic) {
@@ -19,7 +19,7 @@ public class NodeSubscriber {
              return receive(nativePtr);
           }
 
-     private static native long newNodeSubscriber(long subPtr);
+     private static native long newSubscriber();
 
      private static native void subscribe(long subPtr,String topic);
 

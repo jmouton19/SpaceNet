@@ -158,4 +158,22 @@ fn dot_and_label(x_in: f64, y_in: f64, i: usize) -> DotAndLabelType {
             ("sans-serif", IMAGE_SCALE + 5.).into_font(),
         );
 }
+
+pub fn check_reserved_topics(topic: &str) -> bool {
+    let reserved = ["counter", "sse", "node", "bootnode"];
+    let first_slash_index = topic.find('/');
+    if let Some(index) = first_slash_index {
+        if index < topic.len() - 1 {
+            let after_first_slash = &topic[index + 1..];
+            if reserved.iter().any(|word| after_first_slash.contains(word)) {
+                println!("WARNING: TOPIC CONTAINS RESERVED WORD AFTER THE FIRST '/'.");
+                println!("WARNING: NOT SENDING OR SUBSCRIBING TO THIS TOPIC.");
+                println!("RESERVED: {:?}", reserved);
+                return true;
+            }
+        }
+    }
+    false
+}
+
 //todo: new drawing? cleanup
