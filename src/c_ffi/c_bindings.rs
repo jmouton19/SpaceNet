@@ -8,11 +8,15 @@ use std::ffi::{c_void, CStr, CString};
 use std::mem::ManuallyDrop;
 use std::ptr;
 
+
+//swap to c++? smart pointers?classes,easier memory mangement
+
 #[repr(C)]
 pub struct Buffer {
     data: *mut u8,
     len: usize,
 }
+
 
 #[no_mangle]
 pub extern "C" fn new_node(cluster_name: *const c_char) -> *mut c_void {
